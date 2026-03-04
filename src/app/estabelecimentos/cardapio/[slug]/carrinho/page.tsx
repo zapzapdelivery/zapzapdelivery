@@ -949,7 +949,7 @@ export default function CarrinhoPage() {
                       paymentMethod === 'PIX' ? 'Pix (Online)' :
                       paymentMethod === 'CARTÃO' ? 'Cartão (Na Entrega)' :
                       paymentMethod === 'DINHEIRO' ? 'Dinheiro (Na Entrega)' :
-                      paymentMethod.replace('_', ' ')
+                      (paymentMethod as string).replace('_', ' ')
                     }</strong></p>
                     {(paymentMethod === 'MERCADO_PAGO' || paymentMethod === 'PIX') && <p style={{ fontSize: '0.875rem', color: '#64748b' }}>Você será redirecionado para o pagamento seguro.</p>}
                 </div>
