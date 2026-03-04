@@ -94,6 +94,10 @@ export async function POST(request: Request) {
       }
     };
 
+    // URL da aplicação
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const isLocalhost = appUrl.includes('localhost') || appUrl.includes('127.0.0.1');
+
     // Só adiciona notification_url se NÃO for localhost e se a URL for válida (https)
     if (!isLocalhost && appUrl.startsWith('https')) {
        paymentData.notification_url = `${appUrl}/api/pagamentos/mercado-pago/webhook?estabelecimento_id=${pedido.estabelecimento_id}`;
