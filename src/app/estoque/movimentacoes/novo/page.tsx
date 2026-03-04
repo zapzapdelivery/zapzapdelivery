@@ -8,7 +8,7 @@ import { AdminHeader } from '@/components/Header/AdminHeader';
 import { ArrowLeft, Check, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/Toast/ToastProvider';
-import styles from '../../../produtos/novo/novo-produto.module.css';
+import styles from './page.module.css';
 import { OrderStatus } from '@/types/orderStatus';
 
 type MovementKind = 'entrada' | 'saida' | 'ajuste';
