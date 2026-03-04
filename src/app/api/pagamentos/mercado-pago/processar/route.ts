@@ -214,11 +214,11 @@ export async function POST(request: Request) {
        if (updateError) {
          console.error('Erro ao atualizar status do pedido:', updateError);
        }
-    } else if (result.status === 'in_process') {
+    } else if (result.status === 'in_process' || result.status === 'pending' || result.status === 'pending_waiting_transfer') {
        // Apenas logar ou adicionar observação de pendente
        let novaObservacao = pedido.observacao_cliente || '';
        if (!novaObservacao.includes('Pendente')) {
-          novaObservacao += ` (Pagamento Online - Pendente - ID: ${result.id})`;
+          novaObservacao += ` (Pagamento Online - Pendente/PIX - ID: ${result.id})`;
           
           await supabaseAdmin
             .from('pedidos')
