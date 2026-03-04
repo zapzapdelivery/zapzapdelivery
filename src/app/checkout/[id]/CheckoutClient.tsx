@@ -35,7 +35,6 @@ export default function CheckoutClient({ order, publicKey }: CheckoutClientProps
 
   const initialization = {
     amount: Number(order.total_pedido),
-    preferenceId: undefined,
   };
 
   // Se o método for explicitamente mercado_pago ou pix, é online.

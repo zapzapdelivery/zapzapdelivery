@@ -1,10 +1,27 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
+import fs from 'fs';
+import path from 'path';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+// Função auxiliar para log de erros em arquivo
+function logErrorToFile(message: string, details?: any) {
+  try {
+    const logDir = path.join(process.cwd(), 'logs');
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+    const logPath = path.join(logDir, 'mp-errors.log');
+    const logEntry = `[${new Date().toISOString()}] ${message}\n${details ? JSON.stringify(details, null, 2) : ''}\n\n`;
+    fs.appendFileSync(logPath, logEntry);
+  } catch (err) {
+    console.error('Falha ao escrever log:', err);
+  }
+}
 
 // Credenciais de Sandbox (Fallback) conhecidas
 const FALLBACK_TEST_ACCESS_TOKEN = 'APP_USR-6274208258320543-030313-3fa8d7d5813adf77a83475be4d1d231e-3240409509';
@@ -15,6 +32,7 @@ export async function POST(request: Request) {
     const { formData, orderId } = body;
 
     if (!orderId || !formData) {
+      logErrorToFile('Dados incompletos', { orderId, hasFormData: !!formData });
       return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 });
     }
 
@@ -26,6 +44,7 @@ export async function POST(request: Request) {
       .single();
 
     if (pedidoError || !pedido) {
+      logErrorToFile('Pedido não encontrado ou erro DB', { orderId, pedidoError });
       return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
     }
 
@@ -37,6 +56,7 @@ export async function POST(request: Request) {
       .single();
 
     if (configError || !configMp || !configMp.ativo) {
+      logErrorToFile('Configuração de pagamento inválida', { estabelecimentoId: pedido.estabelecimento_id, configError, configMp });
       return NextResponse.json({ error: 'Configuração de pagamento não encontrada' }, { status: 400 });
     }
 
@@ -45,6 +65,7 @@ export async function POST(request: Request) {
       : (configMp.access_token_teste || configMp.access_token);
 
     if (!accessToken) {
+      logErrorToFile('Access Token não encontrado', { ambiente: configMp.ambiente });
       return NextResponse.json({ error: 'Token de acesso não configurado' }, { status: 400 });
     }
 
@@ -76,22 +97,26 @@ export async function POST(request: Request) {
     console.log(`[MP] Is Localhost: ${isLocalhost}`);
     console.log(`[MP] Payer Email Input: ${payerEmail}`);
 
-    // Em ambiente de teste ou localhost, SEMPRE usamos um email de teste para garantir
-    // que a transação ocorra no contexto de sandbox/test user, evitando o erro "Unauthorized use of live credentials".
-    // Isso acontece porque credenciais de teste (mesmo APP_USR de test users) rejeitam emails reais de compradores.
-    if (isTestEnv || isLocalhost) {
+    // Lógica ajustada:
+    // Se o ambiente configurado for 'teste' ou 'sandbox', forçamos o email de teste (pois credenciais de teste exigem users de teste).
+    // Se for 'producao', usamos o email real, MESMO em localhost.
+    const isTestConfig = configMp.ambiente === 'teste' || configMp.ambiente === 'sandbox';
+
+    if (isTestConfig) {
         const randomId = Math.floor(Math.random() * 1000000);
+        const originalEmail = payerEmail;
         payerEmail = `test_user_${randomId}@testuser.com`;
-        console.log(`[Sandbox/Localhost] Forçando email de teste para evitar erro de credenciais.`);
-        console.log(`[Sandbox/Localhost] Email original: ${originalEmail} -> Novo: ${payerEmail}`);
+        console.log(`[Modo Teste] Forçando email de teste.`);
+        console.log(`[Modo Teste] Email original: ${originalEmail} -> Novo: ${payerEmail}`);
     } else {
-        // Em produção real, exigimos email válido
+        // Modo Produção: Exige email válido real
         if (!payerEmail || !emailRegex.test(payerEmail)) {
-            return NextResponse.json({ error: 'Email inválido. Por favor, insira um email válido.' }, { status: 400 });
+             logErrorToFile('Email inválido em produção', { payerEmail });
+             return NextResponse.json({ error: 'Email inválido. Por favor, insira um email válido.' }, { status: 400 });
         }
     }
 
-    const paymentData: any = {
+  const paymentData: any = {
       ...formData,
       transaction_amount: Number(pedido.total_pedido),
       description: `Pedido #${pedido.numero_pedido} - ZapZap Delivery`,
@@ -149,14 +174,16 @@ export async function POST(request: Request) {
       }
 
       if (!fallbackSuccess) {
-          return NextResponse.json({ 
-            error: error.message || 'Erro ao processar pagamento',
-            details: error.cause || error 
-          }, { status: 400 });
+        logErrorToFile('Erro no processamento do pagamento', { error: error.message, details: error.cause || error });
+        return NextResponse.json({ 
+          error: error.message || 'Erro ao processar pagamento',
+          details: error.cause || error 
+        }, { status: 400 });
       }
     }
 
     if (!result) {
+      logErrorToFile('Resultado do pagamento indefinido');
       return NextResponse.json({ error: 'Erro ao processar pagamento: Resultado indefinido' }, { status: 500 });
     }
 
@@ -203,6 +230,7 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error('Erro ao processar pagamento:', error);
+    logErrorToFile('Exceção não tratada', { error: error.message, stack: error.stack });
     return NextResponse.json({ 
       error: error.message || 'Erro ao processar pagamento',
       details: error.cause 
