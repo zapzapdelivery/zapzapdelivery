@@ -34,6 +34,42 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 });
     }
 
+    // 1.5. Ensure Client Exists (Fix for foreign key violation)
+    // Verifica se o cliente existe na tabela 'clientes'. Se não, cria o registro usando dados do Auth.
+    const { data: clientExists } = await supabaseAdmin
+      .from('clientes')
+      .select('id')
+      .eq('id', user_id)
+      .maybeSingle();
+
+    if (!clientExists) {
+      console.log(`[OrderCreate] Cliente ${user_id} não encontrado na tabela. Tentando criar...`);
+      // Fetch user data from Auth to populate client record
+      const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(user_id);
+      
+      if (user) {
+        const { error: createClientError } = await supabaseAdmin
+          .from('clientes')
+          .insert([
+            {
+              id: user_id,
+              email: user.email,
+              nome: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Cliente',
+              criado_em: new Date().toISOString()
+            }
+          ]);
+          
+        if (createClientError) {
+          console.error('[OrderCreate] Erro ao criar registro de cliente:', createClientError);
+          // Se falhar (ex: chave duplicada em race condition), assume que já existe e prossegue
+        } else {
+          console.log(`[OrderCreate] Cliente ${user_id} criado com sucesso.`);
+        }
+      } else {
+         console.warn(`[OrderCreate] Usuário Auth ${user_id} não encontrado. Pedido pode falhar.`);
+      }
+    }
+
     // 2. Calculate Totals (Security: Recalculate on server)
     let subtotal = 0;
     const orderItemsData = items.map((item: any) => {

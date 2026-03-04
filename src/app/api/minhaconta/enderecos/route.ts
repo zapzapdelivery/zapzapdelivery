@@ -3,23 +3,50 @@ import { supabaseAdmin, getAuthContext } from '@/lib/server-auth';
 
 // Helper to get client ID
 async function getClientId(user: any) {
+  // 1. Tenta buscar pelo ID direto
   const { data: client } = await supabaseAdmin
     .from('clientes')
     .select('id')
     .eq('id', user.id)
     .maybeSingle();
 
-  let clientId = client?.id;
+  if (client?.id) return client.id;
 
-  if (!clientId) {
+  // 2. Tenta buscar pelo email (caso ID seja diferente por algum motivo de migração)
+  if (user.email) {
     const { data: clientByEmail } = await supabaseAdmin
       .from('clientes')
       .select('id')
       .eq('email', user.email)
       .maybeSingle();
-    clientId = clientByEmail?.id;
+      
+    if (clientByEmail?.id) return clientByEmail.id;
   }
-  return clientId;
+
+  // 3. Se não encontrar, CRIA o cliente automaticamente (Lazy Creation)
+  // Isso resolve o problema de usuários criados no Auth mas sem registro na tabela clientes
+  console.log(`[GetClientId] Cliente não encontrado para user ${user.id}. Criando registro...`);
+  
+  const { data: newClient, error: createError } = await supabaseAdmin
+    .from('clientes')
+    .insert([
+      {
+        id: user.id,
+        email: user.email,
+        nome: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Cliente',
+        criado_em: new Date().toISOString()
+      }
+    ])
+    .select('id')
+    .single();
+
+  if (createError) {
+    console.error('[GetClientId] Erro ao criar cliente automaticamente:', createError);
+    // Se falhar a criação (ex: race condition), tenta buscar de novo ou retorna null
+    return null; 
+  }
+
+  return newClient?.id;
 }
 
 export async function GET(request: Request) {
