@@ -52,6 +52,10 @@ export async function POST(request: Request) {
     const client = new MercadoPagoConfig({ accessToken: accessToken });
     const payment = new Payment(client);
 
+    // URL da aplicação
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const isLocalhost = appUrl.includes('localhost') || appUrl.includes('127.0.0.1');
+
     // 4. Criar pagamento
     // O ambiente de teste deve ser determinado SOMENTE pela configuração.
     const isTestEnv = configMp.ambiente === 'teste';
@@ -66,21 +70,21 @@ export async function POST(request: Request) {
     console.log(`[MP] Ambiente Configurado: ${configMp.ambiente}`);
     console.log(`[MP] Token Prefix: ${tokenPrefix}...`);
     console.log(`[MP] Is Test Env (Logic): ${isTestEnv}`);
+    console.log(`[MP] Is Localhost: ${isLocalhost}`);
     console.log(`[MP] Payer Email Input: ${payerEmail}`);
 
-    // Em ambiente de teste, para evitar erros de "self-payment" (pagar a si mesmo) ou email inválido,
+    // Em ambiente de teste ou localhost, para evitar erros de "self-payment" (pagar a si mesmo) ou email inválido,
     // forçamos um email de teste aleatório APENAS se o email fornecido for inválido ou vazio.
-    // REMOVIDO: Forçar email aleatório em localhost mesmo com email válido. Agora respeita o email inserido se for válido.
-    if (isTestEnv) {
+    if (isTestEnv || isLocalhost) {
         if (!payerEmail || !emailRegex.test(payerEmail)) {
             const randomId = Math.floor(Math.random() * 1000000);
             payerEmail = `test_user_${randomId}@testuser.com`;
-            console.log(`[Sandbox] Email inválido ou ausente. Usando email de teste gerado: ${payerEmail}`);
+            console.log(`[Sandbox/Localhost] Email inválido ou ausente. Usando email de teste gerado: ${payerEmail}`);
         } else {
-             console.log(`[Sandbox] Usando email fornecido: ${payerEmail}`);
+             console.log(`[Sandbox/Localhost] Usando email fornecido: ${payerEmail}`);
         }
     } else {
-        // Em produção, exigimos email válido
+        // Em produção real, exigimos email válido
         if (!payerEmail || !emailRegex.test(payerEmail)) {
             return NextResponse.json({ error: 'Email inválido. Por favor, insira um email válido.' }, { status: 400 });
         }
@@ -96,10 +100,6 @@ export async function POST(request: Request) {
         first_name: payerFirstName,
       }
     };
-
-    // URL da aplicação
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const isLocalhost = appUrl.includes('localhost') || appUrl.includes('127.0.0.1');
 
     // Só adiciona notification_url se NÃO for localhost e se a URL for válida (https)
     if (!isLocalhost && appUrl.startsWith('https')) {
