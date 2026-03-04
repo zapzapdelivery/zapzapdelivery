@@ -174,9 +174,16 @@ export async function POST(request: Request) {
       }
 
       if (!fallbackSuccess) {
+        let errorMessage = error.message || 'Erro ao processar pagamento';
+        
+        // Tradução de erros comuns do Mercado Pago
+        if (errorMessage.includes('Payer email forbidden') || (error.cause && JSON.stringify(error.cause).includes('Payer email forbidden'))) {
+            errorMessage = 'Você não pode realizar o pagamento usando o mesmo e-mail da conta do vendedor (Mercado Pago). Por favor, utilize um e-mail diferente para a compra.';
+        }
+
         logErrorToFile('Erro no processamento do pagamento', { error: error.message, details: error.cause || error });
         return NextResponse.json({ 
-          error: error.message || 'Erro ao processar pagamento',
+          error: errorMessage,
           details: error.cause || error 
         }, { status: 400 });
       }
