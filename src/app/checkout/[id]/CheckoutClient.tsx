@@ -69,8 +69,20 @@ export default function CheckoutClient({ order, publicKey }: CheckoutClientProps
       if (data.status === 'approved' || data.status === 'in_process' || data.status === 'pending' || data.status === 'pending_waiting_transfer') {
          // Limpar o carrinho quando o pagamento for aprovado ou estiver em processamento (PIX)
          clearCart();
+         
+         // Se for PIX e estiver pendente, adicionar flag para abrir modal automaticamente
+         const isPixPending = (data.status === 'pending' || data.status === 'in_process') && order.forma_pagamento === 'pix';
+         const queryParams = new URLSearchParams({
+            status: isPixPending ? 'pending' : 'success',
+            pedido: order.numero_pedido
+         });
+         
+         if (isPixPending) {
+            queryParams.append('open_pix', 'true');
+         }
+
          // Redirecionar para pedidos com sucesso
-         router.push(`/minhaconta/pedidos?status=success&pedido=${order.numero_pedido}`);
+         router.push(`/minhaconta/pedidos?${queryParams.toString()}`);
       } else {
          // Mostrar erro detalhado vindo do backend
          const errorMessage = data.detail || data.error || data.status || 'Erro desconhecido';
