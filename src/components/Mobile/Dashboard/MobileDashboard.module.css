@@ -1,0 +1,190 @@
+.container {
+  padding: 0 1rem 1rem 1rem;
+  margin-top: -1.5rem;
+  position: relative;
+  z-index: 20;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.card {
+  background-color: white;
+  padding: 1rem;
+  border-radius: 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.iconBox {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.greenIcon { background-color: #d1fae5; color: #10b981; }
+.blueIcon { background-color: #dbeafe; color: #3b82f6; }
+.orangeIcon { background-color: #ffedd5; color: #f97316; }
+.purpleIcon { background-color: #f3e8ff; color: #a855f7; }
+
+.badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 1rem;
+}
+
+.greenBadge { background-color: #d1fae5; color: #047857; }
+.redBadge { background-color: #fee2e2; color: #b91c1c; }
+
+.cardValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.cardLabel {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin: 0.25rem 0 0 0;
+}
+
+.section {
+  background-color: white;
+  border-radius: 1rem;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.sectionTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin: 0.25rem 0 0 0;
+}
+
+.chartValue {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #065f46;
+}
+
+.orderCard {
+  background-color: white;
+  border-radius: 1rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border: 1px solid #f3f4f6;
+}
+
+.orderHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.orderId {
+  font-weight: 700;
+  color: #6b7280;
+  font-size: 0.9rem;
+  background-color: #f3f4f6;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+}
+
+.orderTime {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.customerInfo {
+  margin-bottom: 1rem;
+}
+
+.customerName {
+  font-weight: 600;
+  color: #111827;
+  display: block;
+}
+
+.orderItems {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.orderActions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.actionButton {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: 2rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.secondaryButton {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.primaryButton {
+  background-color: #10b981;
+  color: white;
+}
+
+.sectionLabel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.countBadge {
+  background-color: #fef3c7;
+  color: #d97706;
+  font-weight: 700;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.85rem;
+}

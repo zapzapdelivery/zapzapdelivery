@@ -1,0 +1,108 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 9999;
+}
+
+.modal {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 460px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  text-align: center;
+  animation: modalFadeIn 0.2s ease-out;
+  overflow: hidden;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.header {
+  padding-top: 1.5rem;
+}
+
+.iconContainer {
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #d97706;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #111827;
+  margin: 0;
+  padding: 0 1.5rem;
+}
+
+.content {
+  padding: 1rem 1.5rem 1.5rem;
+}
+
+.description {
+  color: #4b5563;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 0 0 0.5rem 0;
+}
+
+.subDescription {
+  color: #111827;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.footer {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid #f3f4f6;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  background: #f9fafb;
+}
+
+.stayButton {
+  padding: 0.625rem 1.25rem;
+  background: #6b7280;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.stayButton:hover {
+  background: #4b5563;
+}
+
+.discardButton {
+  padding: 0.625rem 1.25rem;
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.discardButton:hover {
+  background: #dc2626;
+}

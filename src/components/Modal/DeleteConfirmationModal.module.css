@@ -1,0 +1,111 @@
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 9999;
+}
+
+.modal {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 460px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  text-align: center;
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.modalFooter {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid #f3f4f6;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.btnDeleteConfirm {
+  padding: 0.625rem 1.25rem;
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btnDeleteConfirm:hover {
+  background: #dc2626;
+}
+
+.btnDeleteConfirm:disabled {
+  background: #fca5a5;
+  cursor: not-allowed;
+}
+
+.btnCancel {
+  padding: 0.625rem 1.25rem;
+  background: #6b7280;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btnCancel:hover {
+  background: #4b5563;
+}
+
+.btnCancel:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.deleteIconWrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #ef4444;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  margin: 1.5rem auto 1rem;
+}
+
+.deleteIcon {
+  display: inline-block;
+}
+
+.deleteTitle {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 0.5rem;
+}
+
+.deleteDesc {
+  color: #4b5563;
+  padding: 0 1.5rem 1.5rem;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.modalDivider {
+  height: 1px;
+  background: #f3f4f6;
+  width: 100%;
+}

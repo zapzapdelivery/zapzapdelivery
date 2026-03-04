@@ -1,0 +1,51 @@
+ .container {
+   position: fixed;
+   top: 16px;
+   right: 16px;
+   display: flex;
+   flex-direction: column;
+   gap: 8px;
+   z-index: 9999;
+   pointer-events: none;
+ }
+ 
+ .toast {
+   min-width: 280px;
+   max-width: 360px;
+   padding: 12px 14px;
+   border-radius: 8px;
+   color: #ffffff;
+   font-size: 0.875rem;
+   font-weight: 600;
+   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+   animation: slideIn 0.2s ease;
+   pointer-events: auto;
+ }
+ 
+ .success {
+   background-color: #16a34a;
+ }
+ 
+ .error {
+   background-color: #ef4444;
+ }
+ 
+ .warning {
+   background-color: #f59e0b;
+   color: #111827;
+ }
+ 
+ .info {
+   background-color: #374151;
+ }
+ 
+ @keyframes slideIn {
+   from {
+     transform: translateY(-8px);
+     opacity: 0;
+   }
+   to {
+     transform: translateY(0);
+     opacity: 1;
+   }
+ }

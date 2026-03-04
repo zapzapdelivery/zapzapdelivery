@@ -1,0 +1,632 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+  overflow-x: hidden;
+}
+
+.modal {
+  background: #f8fafc;
+  width: 100%;
+  max-width: 960px;
+  max-height: 95vh;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalIn 0.3s ease-out;
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.95) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.header {
+  padding: 1.5rem 2rem;
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.headerContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+}
+
+.leftHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.orderTitle {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.orderSubtitle {
+  color: #64748b;
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.rightHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cancelButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border: 1px solid #ef4444;
+  background: transparent;
+  color: #ef4444;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancelButton:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+.cancelButton:disabled {
+  border-color: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.divider {
+  width: 1px;
+  height: 24px;
+  background: #e2e8f0;
+  margin: 0 0.5rem;
+}
+
+.iconButton {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #64748b;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.iconButton:hover {
+  background: #f8fafc;
+  color: #1e293b;
+  border-color: #cbd5e1;
+}
+
+.closeButton {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+  margin-left: 0.5rem;
+}
+
+.closeButton:hover {
+  background: #e2e8f0;
+  color: #ef4444;
+  transform: rotate(90deg);
+}
+
+.content {
+  padding: 2rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 2rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.leftColumn,
+.rightColumn {
+  min-width: 0;
+}
+
+/* Sections */
+.section {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.sectionHeader {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sectionHeader h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.sectionIcon {
+  color: #1BBC87;
+}
+
+/* Items Table */
+.itemsTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.itemsTable th {
+  text-align: left;
+  padding: 0.75rem 1.5rem;
+  background: #f8fafc;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.itemsTable td {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.productCell {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.productImage {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.productName {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+
+.qtyCell {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.qtyInput {
+  width: 64px;
+  text-align: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.priceCell {
+  color: #64748b;
+}
+
+.subtotalCell {
+  font-weight: 700;
+  color: #1BBC87;
+}
+
+/* Timeline */
+.timeline {
+  padding: 1.5rem;
+}
+
+.timelineItem {
+  display: flex;
+  gap: 1.5rem;
+  position: relative;
+  padding-bottom: 2rem;
+}
+
+.timelineItem:last-child {
+  padding-bottom: 0;
+}
+
+.timelineItem:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 24px;
+  bottom: 0;
+  width: 2px;
+  background: #e2e8f0;
+}
+
+.timelineIcon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.timelineIconActive {
+  background: #f97316;
+  color: white;
+}
+
+.timelineIconCompleted {
+  background: #10b981;
+  color: white;
+}
+
+.timelineIconPrevious {
+  background: rgba(148, 163, 184, 0.6);
+  color: white;
+}
+
+.timelineContent h4 {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.timelineStatusCompleted {
+  text-decoration: line-through;
+  color: #64748b;
+}
+
+.timelineContent p {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin: 0.25rem 0 0 0;
+}
+
+.statusWaiting {
+  color: #94a3b8 !important;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 0.7rem !important;
+}
+
+/* Customer Info */
+.customerCard {
+  padding: 1.5rem;
+}
+
+.customerHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  background: #f8fafc;
+  padding: 1rem;
+  border-radius: 12px;
+}
+
+.customerAvatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #ffedd5;
+  color: #1BBC87;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.customerHeaderInfo h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: #1e293b;
+}
+
+.customerHeaderInfo p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.customerAddress {
+  display: flex;
+  gap: 0.75rem;
+  color: #64748b;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.addressIcon {
+  color: #94a3b8;
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+}
+
+.cep {
+  display: block;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 0.5rem;
+}
+
+/* Financial Summary */
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 1.5rem;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.summaryRow:first-child {
+  padding-top: 1.5rem;
+}
+
+.discount {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 0.5rem;
+}
+
+.totalLabel {
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.totalValue {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1BBC87;
+}
+
+/* Payment */
+.paymentBox {
+  margin: 1.5rem;
+  padding: 1rem;
+  background: #fff7ed;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.paymentInfo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  font-weight: 700;
+  color: #1e293b;
+  width: 100%;
+}
+
+.paymentBadge {
+  background: #1BBC87;
+  color: white;
+  font-size: 0.625rem;
+  font-weight: 800;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+/* Action Buttons */
+.modalActions {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1.5rem 2rem;
+  border-top: 1px solid #e2e8f0;
+  background: white;
+}
+
+.btnPrint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem;
+  background: #1BBC87;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btnPrint:hover {
+  background: #16a06f;
+}
+
+.btnExportPdf {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem;
+  background: #e2e8f0;
+  color: #475569;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btnExportPdf:hover {
+  background: #cbd5e1;
+}
+
+/* Observations */
+.observations {
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  color: #64748b;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  font-style: italic;
+  margin-top: 0.5rem;
+}
+
+.observationText {
+  margin: 0;
+}
+
+.summaryTotal {
+  font-weight: 800;
+  font-size: 1.125rem;
+  color: #1e293b;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+/* Status Badges */
+.statusBadge {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.status_pendente {
+  background: #fef9c3;
+  color: #ca8a04;
+}
+
+.status_empreparo, .status_preparacao, .status_emproducao {
+  background: #eff6ff;
+  color: #3b82f6;
+}
+
+.status_emandamento, .status_saiuparaentrega, .status_ementrega {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+
+.status_pronto, .status_aguardandoretirada, .status_pedidopronto {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.status_entregue, .status_concluido, .status_pedidoconfirmado, .status_pedidoentregue {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status_cancelado,
+.status_canceladopelocliente,
+.status_canceladopeloestabelecimento {
+  background: #fef2f2;
+  color: #ef4444;
+}
+
+.statusSelectInline {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.primaryButton {
+  background: #1BBC87;
+  color: #fff;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
+.formRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1rem 1.5rem;
+}
+
+.formLabel {
+  font-size: 0.875rem;
+  color: #334155;
+  font-weight: 600;
+}
+
+.selectInput, .textareaInput {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.textareaInput {
+  resize: vertical;
+}
+
+/* Mobile adjustments */
+@media (max-width: 1024px) {
+  .content {
+    grid-template-columns: 1fr;
+  }
+}

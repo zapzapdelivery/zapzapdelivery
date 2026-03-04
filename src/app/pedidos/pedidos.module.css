@@ -1,0 +1,1096 @@
+.container {
+  min-height: 100vh;
+  background-color: #f3f4f6;
+  /* padding-left removed - handled by AdminLayout */
+}
+
+.content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.mainContent {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.pageHeader {
+  margin-bottom: 2rem;
+}
+
+.title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+/* Actions Bar */
+.actionsBar {
+  background: white;
+  padding: 1.25rem 1.5rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  gap: 1rem;
+  border: 1px solid #f1f5f9;
+}
+
+.searchWrapper {
+  flex: 1;
+  position: relative;
+  max-width: 450px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.75rem;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: #1e293b;
+  transition: all 0.2s;
+}
+
+.searchInput:focus {
+  background-color: white;
+  border-color: #3b82f6;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.filterWrapper {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.filterSelect {
+  padding: 0.75rem 1rem;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: #1e293b;
+  min-width: 180px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.filterSelect:hover {
+  border-color: #cbd5e1;
+}
+
+.actionButtons {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.viewToggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-right: 0.5rem;
+}
+
+.toggleBtn {
+  width: 38px;
+  height: 38px;
+  border-radius: 0.375rem;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  border: 1px solid #e2e8f0;
+  background: white;
+}
+
+.toggleBtnActive {
+  color: #f97316;
+  border-color: #f97316;
+  background-color: #fff7ed;
+}
+
+.btnAction {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  color: white;
+  transition: all 0.2s;
+}
+
+.btnImport {
+  background-color: #3b82f6;
+}
+
+.btnImport:hover {
+  background-color: #2563eb;
+  transform: translateY(-1px);
+}
+
+.btnExport {
+  background-color: #f97316;
+}
+
+.btnExport:hover {
+  background-color: #ea580c;
+  transform: translateY(-1px);
+}
+
+.btnNew {
+  background-color: #10b981;
+}
+
+.btnNew:hover {
+  background-color: #059669;
+  transform: translateY(-1px);
+}
+
+.filtersSection {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  background: #f3f4f6;
+  border-radius: 0.5rem;
+}
+
+.stockTabsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 320px;
+}
+
+.tab {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  transition: all 0.2s;
+}
+
+.tabActive {
+  background-color: white;
+  color: #111827;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.viewToggle {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.toggleBtn {
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  color: #9ca3af;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  border: 1px solid #e5e7eb;
+  background: white;
+}
+
+.toggleBtnActive {
+  color: #f97316;
+  border-color: #f97316;
+  background-color: #fff7ed;
+}
+
+.tableContainer {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  text-align: left;
+  padding: 1rem 1.5rem;
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  color: #6b7280;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.table td {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: middle;
+}
+
+.orderId {
+  color: #f97316;
+  font-weight: 600;
+}
+
+.clientCell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.clientInfo h4 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.clientInfo p {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.dateTime h4 {
+  font-size: 0.875rem;
+  color: #374151;
+  margin: 0;
+}
+
+.dateTime p {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin: 0;
+}
+
+.paymentCell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #4b5563;
+  font-size: 0.875rem;
+}
+
+.paymentIcon {
+  color: #3b82f6;
+}
+
+.totalCell {
+  font-weight: 600;
+  color: #111827;
+}
+
+.statusBadge {
+  padding: 0.375rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tableStatusSelect {
+  appearance: none;
+  -webkit-appearance: none;
+  text-align: center;
+  width: auto;
+  min-width: 140px;
+  outline: none;
+}
+
+.tableStatusSelect:hover {
+  filter: brightness(0.95);
+  transform: translateY(-1px);
+}
+
+.tableStatusSelect option {
+  background-color: white;
+  color: #1e293b;
+  font-weight: 600;
+  padding: 0.5rem;
+}
+
+.statusPendente {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.statusPreparacao {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.statusRota {
+  background-color: #e0f2fe;
+  color: #075985;
+}
+
+.statusConcluido {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.statusCancelado {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btnIcon {
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  border: 1px solid #e5e7eb;
+  background-color: white;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btnView {
+  color: #3b82f6;
+}
+
+.btnView:hover {
+  background-color: #eff6ff;
+  border-color: #bfdbfe;
+  color: #2563eb;
+}
+
+.btnEdit {
+  color: #f97316;
+}
+
+.btnEdit:hover {
+  background-color: #fff7ed;
+  border-color: #ffedd5;
+  color: #ea580c;
+}
+
+.btnDelete {
+  color: #ef4444;
+}
+
+.btnDelete:hover {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background-color: white;
+}
+
+.paginationInfo {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.pageBtn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #374151;
+}
+
+.pageBtn:hover:not(.disabled) {
+  background-color: #f9fafb;
+}
+
+.pageActive {
+  background-color: #f97316;
+  color: white;
+  border-color: #f97316;
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive Styles */
+.mobileList {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .container {
+    padding-left: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .mainContent {
+    padding: 1rem;
+  }
+
+  .tableContainer {
+    display: none !important;
+  }
+
+  .mobileList {
+    display: block !important;
+    padding: 0;
+  }
+
+  .mobileCard {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 0.85rem 0.85rem 0.75rem 0.85rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e5e7eb;
+  }
+
+  .mobileHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+    gap: 1rem;
+  }
+
+  .mobileLabel {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #94a3b8;
+    letter-spacing: 0.08em;
+  }
+
+  .mobileMainRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.4rem;
+  }
+
+  .mobileOrderId {
+    font-size: 1rem;
+    font-weight: 800;
+    color: #111827;
+    margin: 0;
+  }
+
+  .mobilePrice {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #f97316;
+    white-space: nowrap;
+  }
+
+  .mobileClientRow {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .cardAvatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  .mobileClientText h4 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mobileTime {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #9ca3af;
+    font-size: 0.875rem;
+  }
+
+  /* Compactar badge de status dentro do card mobile */
+  .mobileHeader .statusBadge {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.65rem;
+  }
+
+  .mobileActions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
+  .btnMobile {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.65rem 0.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+    font-weight: 700;
+  background: #ffffff;
+    cursor: pointer;
+    min-width: 0;
+  }
+
+  .btnViewMobile {
+    color: #0ea5e9;
+  }
+
+  .btnEditMobile {
+    color: #f97316;
+  }
+
+  .btnDeleteMobile {
+    color: #ef4444;
+  }
+
+  /* Hide old structures not used in mobile cards redesign */
+  .cardClient {
+    display: flex;
+    gap: 0.75rem;
+    flex: 1;
+  }
+
+  .cardAvatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .cardText h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+  }
+
+  .cardText p {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin: 0;
+  }
+
+  .cardBody {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .bodyItem {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.875rem;
+  }
+
+  .itemLabel {
+    color: #6b7280;
+  }
+
+  .itemValue {
+    color: #111827;
+    font-weight: 500;
+  }
+
+  .cardActions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+  }
+
+  .actionsBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* Reorganizar botões no mobile:
+     - Novo Pedido em cima (full width)
+     - Importar e Exportar lado a lado abaixo */
+  .actionButtons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    width: 100%;
+    overflow: visible;
+    padding-bottom: 0;
+    justify-content: unset;
+  }
+
+  .btnAction {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    padding: 0.75rem;
+  }
+
+  .btnNew {
+    grid-column: 1 / -1; /* ocupa a linha inteira */
+    font-size: 1rem;
+    padding: 0.9rem 1rem;
+  }
+
+  .btnImport,
+  .btnExport {
+    font-size: 0.95rem;
+  }
+
+  .searchWrapper {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .actionButtons {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+    justify-content: flex-start;
+  }
+
+  .filtersSection {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .tabs {
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+    justify-content: flex-start;
+  }
+
+  .viewToggle {
+    display: none !important;
+  }
+}
+
+/* Kanban Styles */
+.kanbanBoard {
+  display: flex;
+  gap: 1.5rem;
+  overflow-x: auto;
+  padding-bottom: 1.5rem;
+  min-height: calc(100vh - 350px);
+}
+
+.kanbanColumn {
+  flex: 0 0 320px;
+  background-color: #f9fafb;
+  border-radius: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 350px);
+  border: 1px solid #e5e7eb;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.columnDragOver {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+  border-style: dashed;
+}
+
+.columnHeader {
+  padding: 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: white;
+  border-radius: 0.75rem 0.75rem 0 0;
+  border-top: 4px solid #e5e7eb; /* Default */
+}
+
+.columnHeader.header_pedindo { border-top-color: #22c55e; }
+.columnHeader.header_confirmado { border-top-color: #3b82f6; }
+.columnHeader.header_preparacao { border-top-color: #f97316; }
+.columnHeader.header_pronto { border-top-color: #0d9488; }
+.columnHeader.header_entrega { border-top-color: #6366f1; }
+.columnHeader.header_entregue { border-top-color: #94a3b8; }
+.columnHeader.header_cancelado_cliente { border-top-color: #f87171; }
+.columnHeader.header_cancelado_loja { border-top-color: #ef4444; }
+
+.columnHeader.header_pedindo .columnTitle { color: #22c55e; }
+.columnHeader.header_confirmado .columnTitle { color: #3b82f6; }
+.columnHeader.header_preparacao .columnTitle { color: #f97316; }
+.columnHeader.header_pronto .columnTitle { color: #0d9488; }
+.columnHeader.header_entrega .columnTitle { color: #6366f1; }
+.columnHeader.header_entregue .columnTitle { color: #94a3b8; }
+.columnHeader.header_cancelado_cliente .columnTitle { color: #f87171; }
+.columnHeader.header_cancelado_loja .columnTitle { color: #ef4444; }
+
+.columnTitle {
+  font-size: 0.875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.columnCount {
+  background-color: #e5e7eb;
+  color: #4b5563;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: 1rem;
+}
+
+.columnContent {
+  padding: 1rem;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.kanbanCard {
+  background-color: white;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border-left: 5px solid transparent;
+  cursor: grab;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid #f1f5f9;
+  border-left-width: 5px;
+}
+
+.kanbanCard:active {
+  cursor: grabbing;
+}
+
+.cardDragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+.kanbanCard:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.orderNumber {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.orderTime {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #9ca3af;
+  font-size: 0.75rem;
+}
+
+.cardMain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.statusSelector {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  outline: none;
+}
+
+.statusSelector:hover {
+  border-color: #cbd5e1;
+  background-color: #f1f5f9;
+}
+
+.statusSelector:focus {
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.1);
+}
+
+.clientInfoMain {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cardAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+.cardName {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.cardBottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cardPrice {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #059669;
+}
+
+.cardActions {
+  display: flex;
+  gap: 0.5rem;
+  color: #94a3b8;
+}
+
+.actionIconButton {
+  padding: 0.45rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+  background-color: #ffffff;
+  color: #6b7280;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.actionIconButton:hover {
+  background-color: #f9fafb;
+  transform: translateY(-1px);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.actionIconButtonView {
+  color: #3b82f6;
+}
+
+.actionIconButtonView:hover {
+  background-color: #eff6ff;
+  border-color: #bfdbfe;
+  color: #2563eb;
+}
+
+.actionIconButtonDelete {
+  color: #ef4444;
+}
+
+.actionIconButtonDelete:hover {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+.emptyColumn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100px;
+  color: #9ca3af;
+  font-size: 0.875rem;
+  font-style: italic;
+}
+
+/* Status Colors for Kanban */
+.status_pedindo { border-left-color: #22c55e; background-color: #f0fdf4; }
+.status_confirmado { border-left-color: #3b82f6; background-color: #eff6ff; }
+.status_preparacao { border-left-color: #f97316; background-color: #fff7ed; }
+.status_pronto { border-left-color: #0d9488; background-color: #f0fdfa; }
+.status_entrega { border-left-color: #6366f1; background-color: #eef2ff; }
+.status_entregue { border-left-color: #94a3b8; background-color: #f8fafc; }
+.status_cancelado_cliente { border-left-color: #f87171; background-color: #fef2f2; }
+.status_cancelado_loja { border-left-color: #ef4444; background-color: #fef2f2; }
+
+/* Status Badges for Table */
+.badge_pedindo { background-color: #dcfce7; color: #15803d; }
+.badge_confirmado { background-color: #dbeafe; color: #1d4ed8; }
+.badge_preparacao { background-color: #ffedd5; color: #c2410c; }
+.badge_pronto { background-color: #ccfbf1; color: #0f766e; }
+.badge_entrega { background-color: #e0e7ff; color: #4338ca; }
+.badge_entregue { background-color: #f1f5f9; color: #475569; }
+.badge_cancelado_cliente { background-color: #fee2e2; color: #b91c1c; }
+.badge_cancelado_loja { background-color: #fee2e2; color: #991b1b; }
+
+/* Stats Cards */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.statCard {
+  background: white;
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #f1f5f9;
+  border-top: 4px solid #e5e7eb; /* Default */
+  transition: transform 0.2s;
+}
+
+.statCard:hover {
+  transform: translateY(-2px);
+}
+
+.statCard.stat_pedindo { border-top-color: #22c55e; }
+.statCard.stat_confirmado { border-top-color: #3b82f6; }
+.statCard.stat_preparacao { border-top-color: #f97316; }
+.statCard.stat_pronto { border-top-color: #0d9488; }
+.statCard.stat_entrega { border-top-color: #6366f1; }
+.statCard.stat_entregue { border-top-color: #94a3b8; }
+.statCard.stat_cancelado_cliente { border-top-color: #f87171; }
+.statCard.stat_cancelado_loja { border-top-color: #ef4444; }
+
+.statInfo h3 {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.025em;
+}
+
+.statValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.statIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid currentColor;
+}
+
+.icon_pedindo { background-color: #f0fdf4; color: #22c55e; border-color: #bcf0da; }
+.icon_confirmado { background-color: #eff6ff; color: #3b82f6; border-color: #bfdbfe; }
+.icon_preparacao { background-color: #fff7ed; color: #f97316; border-color: #fed7aa; }
+.icon_pronto { background-color: #f0fdfa; color: #0d9488; border-color: #99f6e4; }
+.icon_entrega { background-color: #eef2ff; color: #6366f1; border-color: #c7d2fe; }
+.icon_entregue { background-color: #f8fafc; color: #94a3b8; border-color: #e2e8f0; }
+.icon_cancelado_cliente { background-color: #fef2f2; color: #f87171; border-color: #fecaca; }
+.icon_cancelado_loja { background-color: #fef2f2; color: #ef4444; border-color: #fecaca; }
+
+@media (max-width: 1280px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+}

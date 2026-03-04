@@ -1,0 +1,197 @@
+.container {
+  display: flex;
+  min-height: 100vh;
+  background-color: white; /* Changed from gray to white to match clean design */
+}
+
+.mainContent {
+  flex: 1;
+  padding: 2rem;
+  margin-left: 250px;
+}
+
+.backLink {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #6b7280;
+  font-weight: 500;
+  font-size: 0.875rem;
+  text-decoration: none;
+  margin-bottom: 1.5rem;
+  width: fit-content;
+}
+
+.title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 3rem;
+}
+
+.formContainer {
+  width: 100%;
+  max-width: 1200px;
+}
+
+.gridContainer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem; /* Generous gap between columns */
+  margin-bottom: 4rem;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+}
+
+.sectionHeader {
+  margin-bottom: 1.5rem;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 0.5rem;
+}
+
+.sectionDescription {
+  font-size: 0.875rem;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.formGroup {
+  margin-bottom: 1.5rem;
+}
+
+.label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 700; /* Bold label */
+  color: #374151;
+  margin-bottom: 0.75rem;
+}
+
+.input, .textarea {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 0.9375rem;
+  outline: none;
+  transition: all 0.2s;
+  background-color: white;
+  color: #374151;
+}
+
+.input::placeholder, .textarea::placeholder {
+  color: #9ca3af;
+}
+
+.textarea {
+  min-height: 180px; /* Taller textarea */
+  resize: vertical;
+}
+
+.input:focus, .textarea:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 1px #10b981;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding-top: 2rem;
+  border-top: 1px solid #f3f4f6;
+  margin-top: auto;
+}
+
+.btnCancel, .btnSave {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.875rem;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.2s;
+  text-transform: uppercase; /* Uppercase buttons */
+  min-width: 120px;
+}
+
+.btnCancel {
+  background-color: #6b7280; /* Gray background */
+  color: white;
+}
+
+.btnSave {
+  background-color: #10b981; /* Green background */
+  color: white;
+}
+
+.btnSave:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btnCancel:hover {
+  background-color: #4b5563;
+}
+
+.btnSave:hover:not(:disabled) {
+  background-color: #059669;
+}
+
+@media (max-width: 768px) {
+  .mainContent {
+    margin-left: 0;
+    padding: 1rem;
+    padding-top: 5rem; /* Space for mobile header */
+  }
+
+  .gridContainer {
+    grid-template-columns: 1fr; /* Stack columns on mobile */
+    gap: 1.5rem;
+  }
+
+  /* Hide section headers on mobile */
+  .sectionHeader {
+    display: none;
+  }
+
+  .title {
+    font-size: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .footer {
+    display: flex;
+    flex-direction: row; /* Ensure row layout */
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: none; /* Clean look */
+    width: 100%;
+    margin-top: 2rem;
+  }
+  
+  /* Ensure the link wraps the button correctly to take 50% width */
+  .linkCancel {
+    flex: 1;
+    display: flex;
+  }
+
+  .btnCancel, .btnSave {
+    flex: 1; /* Take equal width */
+    width: 100%;
+    height: 48px; /* Taller touch target */
+    text-transform: none; /* Remove uppercase for mobile */
+    font-size: 1rem;
+    border-radius: 8px;
+  }
+}

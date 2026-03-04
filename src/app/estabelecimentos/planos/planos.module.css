@@ -1,0 +1,505 @@
+.container {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f9fafb;
+}
+
+/* Visibility Utilities - DEFINITIVE */
+.desktopOnly {
+  display: block !important;
+}
+
+.mobileOnly {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .desktopOnly {
+    display: none !important;
+  }
+
+  .mobileOnly {
+    display: block !important;
+  }
+}
+
+.mainContent {
+  flex: 1;
+  padding: 2rem;
+  margin-left: 250px; /* Sidebar width */
+  transition: margin-left 0.3s ease;
+}
+
+/* ... existing styles ... */
+
+/* Visibility utilities moved to end of file */
+
+.backLink {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #6b7280;
+  text-decoration: none;
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+  transition: color 0.2s;
+}
+
+.backLink:hover {
+  color: #111827;
+}
+
+.pageHeader {
+  margin-bottom: 2rem;
+}
+
+.title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.searchContainer {
+  flex: 1;
+  min-width: 300px;
+  position: relative;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.searchInput:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.actionButtons {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btnIconOnly {
+  padding: 0.625rem;
+}
+
+.btnImport {
+  background-color: #2563eb;
+  color: white;
+}
+
+.btnImport:hover {
+  background-color: #1d4ed8;
+}
+
+.btnExport {
+  background-color: #f97316;
+  color: white;
+}
+
+.btnExport:hover {
+  background-color: #ea580c;
+}
+
+.btnNew {
+  background-color: #10b981;
+  color: white;
+  text-decoration: none;
+}
+
+.btnNew:hover {
+  background-color: #059669;
+}
+
+/* Filters & View Toggle */
+.filtersBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  background: white;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tab {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.tabActive {
+  background-color: #111827; /* Dark background for active tab in desktop usually, but image shows black pill */
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.viewToggle {
+  display: flex;
+  gap: 0.25rem;
+  background-color: #f3f4f6;
+  padding: 0.25rem;
+  border-radius: 0.375rem;
+}
+
+.toggleBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.375rem;
+  border-radius: 0.25rem;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggleBtn:hover {
+  color: #374151;
+}
+
+.toggleBtnActive {
+  background-color: white;
+  color: #111827;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* Table Styles */
+.tableContainer {
+  background: white;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  background-color: #f9fafb;
+  padding: 0.75rem 1.5rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #6b7280;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.table td {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.planName {
+  font-weight: 600;
+  color: #111827;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badgeActive {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.badgeInactive {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.actionButton {
+  padding: 0.375rem;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  background-color: white;
+  color: #6b7280;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.viewButton {
+  color: #3b82f6;
+}
+.viewButton:hover {
+  background-color: #eff6ff;
+  border-color: #bfdbfe;
+  color: #2563eb;
+}
+
+.editButton {
+  color: #f59e0b;
+}
+.editButton:hover {
+  background-color: #fffbeb;
+  border-color: #fde68a;
+  color: #d97706;
+}
+
+.deleteButton {
+  color: #ef4444;
+}
+.deleteButton:hover {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+/* Mobile Card Styles */
+.mobileList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.mobileCard {
+  background: white;
+  border-radius: 1rem;
+  padding: 1.25rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border: 1px solid #f3f4f6;
+  position: relative;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.cardTitle {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.cardBody {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.cardField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cardLabel {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.cardValue {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.cardActions {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 1rem;
+  border-top: 1px solid #f3f4f6;
+}
+
+.mobileActionBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  font-size: 0.625rem;
+  font-weight: 600;
+}
+
+.mobileActionBtn svg {
+  color: inherit;
+}
+
+.mobileActionBtn:hover {
+  color: #111827;
+}
+
+.actionView { color: #3b82f6 !important; background: #eff6ff; padding: 8px; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+.actionEdit { color: #f97316 !important; background: #fff7ed; padding: 8px; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+.actionDelete { color: #ef4444 !important; background: #fef2f2; padding: 8px; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+
+.mobileActionWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.mobileActionLabel {
+  font-size: 0.65rem;
+  color: #9ca3af;
+  font-weight: 600;
+}
+
+/* Mobile Toolbar Adaptations */
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .searchContainer {
+    min-width: auto;
+  }
+  
+  .searchInput {
+    background-color: #f3f4f6;
+    border: none;
+  }
+  
+  .filtersBar {
+    background: transparent;
+    border: none;
+    padding: 0;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: space-between;
+  }
+  
+  .tabs {
+    background: #f3f4f6;
+    padding: 0.25rem;
+    border-radius: 2rem;
+  }
+  
+  .tab {
+    padding: 0.375rem 1rem;
+    border-radius: 1.5rem;
+    font-size: 0.8rem;
+  }
+  
+  .tabActive {
+    background-color: #111827;
+    color: white;
+  }
+  
+  .actionButtons {
+    margin-left: auto;
+  }
+  
+  .viewToggle {
+    display: none;
+  }
+
+  .mobileHeaderRow {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .mobileTitle {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+  }
+
+  .mobileBack {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+}
