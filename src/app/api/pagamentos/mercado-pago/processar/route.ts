@@ -155,6 +155,10 @@ export async function POST(request: Request) {
       }
     }
 
+    if (!result) {
+      return NextResponse.json({ error: 'Erro ao processar pagamento: Resultado indefinido' }, { status: 500 });
+    }
+
     if (result.status === 'approved') {
        // Atualizar pedido para 'Pedido Confirmado' e adicionar info na observação
        let novaObservacao = pedido.observacao_cliente || '';
