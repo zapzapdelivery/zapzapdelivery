@@ -153,6 +153,24 @@ function CustomerOrdersContent() {
     };
   }, [userId, selectedOrder]);
 
+  // Handle auto-open PIX modal from URL param
+  useEffect(() => {
+    const openPix = searchParams.get('open_pix');
+    const orderNumber = searchParams.get('pedido');
+
+    if (openPix === 'true' && orderNumber && orders.length > 0 && !pixModalOpen) {
+      const targetOrder = orders.find(o => String(o.numero_pedido) === String(orderNumber));
+      if (targetOrder) {
+         handleOpenPix(targetOrder);
+         
+         // Remove o parâmetro para não reabrir ao fechar o modal
+         const newParams = new URLSearchParams(searchParams.toString());
+         newParams.delete('open_pix');
+         router.replace(`/minhaconta/pedidos?${newParams.toString()}`, { scroll: false });
+      }
+    }
+  }, [orders, searchParams, pixModalOpen, router]);
+
   const getStatusClass = (status: string) => {
     const s = status || '';
     
