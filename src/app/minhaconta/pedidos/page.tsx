@@ -339,7 +339,7 @@ function CustomerOrdersContent() {
                     </td>
                     <td className={styles.actions}>
                       {order.originalData.forma_pagamento === 'pix' && 
-                       (order.status === 'Pendente' || order.status === 'Aguardando Pagamento') && (
+                       (order.status === 'Pendente' || order.status === 'Aguardando Pagamento' || order.status === 'Pedindo') && (
                           <button 
                               className={styles.actionBtn}
                               onClick={() => handleOpenPix(order.originalData)}
@@ -403,7 +403,7 @@ function CustomerOrdersContent() {
                     {order.status.toUpperCase()}
                   </div>
                   {order.originalData.forma_pagamento === 'pix' && 
-                   (order.status === 'Pendente' || order.status === 'Aguardando Pagamento') && (
+                   (order.status === 'Pendente' || order.status === 'Aguardando Pagamento' || order.status === 'Pedindo') && (
                       <button 
                           onClick={(e) => { e.stopPropagation(); handleOpenPix(order.originalData); }}
                           style={{
