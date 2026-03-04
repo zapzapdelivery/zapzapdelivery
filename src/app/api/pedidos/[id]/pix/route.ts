@@ -82,7 +82,7 @@ export async function GET(
         return NextResponse.json({ error: 'Pagamento não encontrado no Mercado Pago' }, { status: 404 });
         }
 
-        const lastPayment = searchResult.results[0];
+        const lastPayment: any = searchResult.results[0];
 
         // Extrair dados do PIX
         const pointOfInteraction = lastPayment.point_of_interaction;
