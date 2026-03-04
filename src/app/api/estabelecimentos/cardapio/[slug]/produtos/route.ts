@@ -145,6 +145,8 @@ export async function GET(request: Request, props: { params: Promise<{ slug: str
 
     const now = new Date();
     const filtered = (prods || []).filter((p: any) => {
+      // Remover filtro de estoque para exibir todos os produtos ativos
+      /*
       const qty = stockMap.get(String(p.id));
       if (!(typeof qty === 'number') || qty <= 0) return false;
       // Se houver variações e nenhuma variação tem estoque > 0, excluir
@@ -152,6 +154,8 @@ export async function GET(request: Request, props: { params: Promise<{ slug: str
         const countWithStock = variationsByProduct.get(String(p.id)) || 0;
         if (countWithStock <= 0) return false;
       }
+      */
+      
       if (typeof p.pre_venda === 'boolean' && p.pre_venda === true) return false;
       if (p.disponivel_em) {
         const dt = new Date(p.disponivel_em);
