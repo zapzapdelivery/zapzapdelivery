@@ -66,7 +66,7 @@ export default function CheckoutClient({ order, publicKey }: CheckoutClientProps
       });
       const data = await response.json();
       
-      if (data.status === 'approved' || data.status === 'in_process') {
+      if (data.status === 'approved' || data.status === 'in_process' || data.status === 'pending' || data.status === 'pending_waiting_transfer') {
          // Limpar o carrinho quando o pagamento for aprovado ou estiver em processamento (PIX)
          clearCart();
          // Redirecionar para pedidos com sucesso
