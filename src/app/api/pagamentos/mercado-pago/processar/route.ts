@@ -64,6 +64,9 @@ export async function POST(request: Request) {
     let payerEmail = formData.payer.email;
     let payerFirstName = formData.payer.first_name || 'Cliente';
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    // Variável para armazenar o email original do payer para logs/referência
+    let originalEmail = payerEmail;
 
     // Log para depuração das credenciais (mostrando apenas prefixo)
     const tokenPrefix = accessToken.substring(0, 10);
@@ -73,16 +76,14 @@ export async function POST(request: Request) {
     console.log(`[MP] Is Localhost: ${isLocalhost}`);
     console.log(`[MP] Payer Email Input: ${payerEmail}`);
 
-    // Em ambiente de teste ou localhost, para evitar erros de "self-payment" (pagar a si mesmo) ou email inválido,
-    // forçamos um email de teste aleatório APENAS se o email fornecido for inválido ou vazio.
+    // Em ambiente de teste ou localhost, SEMPRE usamos um email de teste para garantir
+    // que a transação ocorra no contexto de sandbox/test user, evitando o erro "Unauthorized use of live credentials".
+    // Isso acontece porque credenciais de teste (mesmo APP_USR de test users) rejeitam emails reais de compradores.
     if (isTestEnv || isLocalhost) {
-        if (!payerEmail || !emailRegex.test(payerEmail)) {
-            const randomId = Math.floor(Math.random() * 1000000);
-            payerEmail = `test_user_${randomId}@testuser.com`;
-            console.log(`[Sandbox/Localhost] Email inválido ou ausente. Usando email de teste gerado: ${payerEmail}`);
-        } else {
-             console.log(`[Sandbox/Localhost] Usando email fornecido: ${payerEmail}`);
-        }
+        const randomId = Math.floor(Math.random() * 1000000);
+        payerEmail = `test_user_${randomId}@testuser.com`;
+        console.log(`[Sandbox/Localhost] Forçando email de teste para evitar erro de credenciais.`);
+        console.log(`[Sandbox/Localhost] Email original: ${originalEmail} -> Novo: ${payerEmail}`);
     } else {
         // Em produção real, exigimos email válido
         if (!payerEmail || !emailRegex.test(payerEmail)) {
