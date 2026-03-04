@@ -10,11 +10,13 @@ import {
   ChevronLeft,
   Menu,
   CheckCircle,
-  XCircle
+  XCircle,
+  QrCode
 } from 'lucide-react';
 import { CustomerSidebar } from '@/components/CustomerSidebar/CustomerSidebar';
 import { CustomerBottomNav } from '@/components/CustomerBottomNav/CustomerBottomNav';
 import { OrderTrackingModal } from '@/components/OrderTrackingModal/OrderTrackingModal';
+import { PixModal } from '@/components/PixModal/PixModal';
 import { supabase } from '@/lib/supabase';
 import styles from './pedidos.module.css';
 import { OrderStatus, LEGACY_STATUS_MAP } from '@/types/orderStatus';
@@ -31,6 +33,35 @@ function CustomerOrdersContent() {
   const [orders, setOrders] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // PIX Modal States
+  const [pixModalOpen, setPixModalOpen] = useState(false);
+  const [pixData, setPixData] = useState<any>(null);
+  const [pixLoading, setPixLoading] = useState(false);
+  const [pixError, setPixError] = useState<string | null>(null);
+
+  const handleOpenPix = async (orderData: any) => {
+    setPixLoading(true);
+    setPixError(null);
+    setPixData(null);
+    setPixModalOpen(true);
+    
+    try {
+        const res = await fetch(`/api/pedidos/${orderData.id}/pix`);
+        const data = await res.json();
+        
+        if (res.ok) {
+            setPixData(data);
+        } else {
+            setPixError(data.error || 'Erro ao carregar dados do PIX');
+        }
+    } catch (err) {
+        console.error(err);
+        setPixError('Erro de conexão ao buscar PIX');
+    } finally {
+        setPixLoading(false);
+    }
+  };
 
   const fetchOrders = async (uid: string) => {
     const { data: ordersData, error } = await supabase
@@ -184,6 +215,13 @@ function CustomerOrdersContent() {
         onClose={() => setIsModalOpen(false)} 
         order={selectedOrder} 
       />
+      <PixModal 
+        isOpen={pixModalOpen}
+        onClose={() => setPixModalOpen(false)}
+        pixData={pixData}
+        loading={pixLoading}
+        error={pixError}
+      />
       <CustomerSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       
       <main className={styles.mainContent}>
@@ -300,6 +338,17 @@ function CustomerOrdersContent() {
                       </span>
                     </td>
                     <td className={styles.actions}>
+                      {order.originalData.forma_pagamento === 'pix' && 
+                       (order.status === 'Pendente' || order.status === 'Aguardando Pagamento') && (
+                          <button 
+                              className={styles.actionBtn}
+                              onClick={() => handleOpenPix(order.originalData)}
+                              title="Ver Código PIX"
+                              style={{ color: '#2563eb', marginRight: '0.5rem' }}
+                          >
+                              <QrCode size={18} />
+                          </button>
+                      )}
                       <button 
                         className={styles.actionBtn}
                         onClick={() => handleOpenModal(order.originalData)}
@@ -349,8 +398,33 @@ function CustomerOrdersContent() {
                      </p>
                   </div>
                 </div>
-                <div className={`${styles.orderStatusBadge} ${styles[order.statusClass]}`}>
-                  {order.status.toUpperCase()}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+                  <div className={`${styles.orderStatusBadge} ${styles[order.statusClass]}`}>
+                    {order.status.toUpperCase()}
+                  </div>
+                  {order.originalData.forma_pagamento === 'pix' && 
+                   (order.status === 'Pendente' || order.status === 'Aguardando Pagamento') && (
+                      <button 
+                          onClick={(e) => { e.stopPropagation(); handleOpenPix(order.originalData); }}
+                          style={{
+                              background: '#eff6ff',
+                              color: '#2563eb',
+                              border: '1px solid #bfdbfe',
+                              borderRadius: '8px',
+                              padding: '0.4rem 0.8rem',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              cursor: 'pointer',
+                              zIndex: 10
+                          }}
+                      >
+                          <QrCode size={14} />
+                          Ver PIX
+                      </button>
+                  )}
                 </div>
               </div>
             ))
