@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Sidebar } from '@/components/Sidebar/Sidebar';
@@ -18,7 +18,7 @@ interface ProductOption {
   nome_produto: string;
 }
 
-export default function NovaMovimentacaoEstoquePage() {
+function NovaMovimentacaoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { success, error: toastError, warning } = useToast();
@@ -594,101 +594,35 @@ export default function NovaMovimentacaoEstoquePage() {
                 </div>
               </div>
             </div>
-
-            <div className={styles.card}>
-              <h2 className={styles.cardTitle}>Controle de bloqueio</h2>
-              <p className={styles.switchDescription}>
-                Ao ativar o controle de estoque, o sistema poderá bloquear vendas
-                automaticamente quando o estoque chegar a zero.
-              </p>
-              <div
-                style={{
-                  marginTop: 12,
-                  padding: '0.75rem 1rem',
-                  borderRadius: 8,
-                  backgroundColor: '#fff7ed',
-                  color: '#9a3412',
-                  fontSize: 13,
-                  display: 'flex',
-                  gap: 8
-                }}
+            
+            <div className={styles.actions}>
+              <button
+                className={styles.cancelButton}
+                onClick={handleCancel}
+                disabled={saving}
               >
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 20,
-                    height: 20,
-                    borderRadius: '999px',
-                    background: '#fed7aa',
-                    fontWeight: 700
-                  }}
-                >
-                  i
-                </span>
-                <span>
-                  Esta tela registra movimentações reais de estoque. Entradas,
-                  saídas e ajustes são aplicados imediatamente no banco de dados.
-                </span>
-              </div>
+                Cancelar
+              </button>
+              <button
+                className={styles.saveButton}
+                onClick={handleSave}
+                disabled={saving || loading}
+              >
+                {saving ? 'Salvando...' : 'Salvar Movimentação'}
+              </button>
             </div>
           </div>
-          </div>
-        )}
-
-        {!loading && (
-          <div
-            style={{
-              marginTop: 24,
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: 12
-            }}
-          >
-            <button
-              type="button"
-              onClick={handleCancel}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '0.75rem 1.5rem',
-                borderRadius: 999,
-                border: '1px solid #d1d5db',
-                backgroundColor: '#ffffff',
-                color: '#374151',
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
-              <X size={18} />
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '0.75rem 1.5rem',
-                borderRadius: 999,
-                border: 'none',
-                backgroundColor: saving ? '#6b7280' : '#10b981',
-                color: '#ffffff',
-                fontWeight: 600,
-                cursor: 'pointer',
-                opacity: saving ? 0.8 : 1
-              }}
-            >
-              <Check size={18} />
-              {saving ? 'Salvando...' : 'Salvar Estoque'}
-            </button>
-          </div>
+        </div>
         )}
       </main>
     </div>
+  );
+}
+
+export default function NovaMovimentacaoEstoquePage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 20 }}>Carregando...</div>}>
+      <NovaMovimentacaoContent />
+    </Suspense>
   );
 }

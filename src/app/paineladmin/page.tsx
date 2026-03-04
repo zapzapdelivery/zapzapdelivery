@@ -1,15 +1,14 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
 
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/Toast/ToastProvider';
 import { User, Lock, Eye, EyeOff, HelpCircle, MessageSquare, Bike } from 'lucide-react';
 import styles from './paineladmin.module.css';
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get('redirect');
@@ -200,5 +199,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className={styles.loading}>Carregando...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

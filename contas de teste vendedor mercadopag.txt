@@ -1,0 +1,18 @@
+contas de teste vendedor mercadopago
+userid: 3240409509
+usuário: TESTUSER3615261945961691874
+senha:oWBBYyigxk
+código e verificação: 409509
+
+conta de teste comprador.
+userid: 3240409587
+usuário: TESTUSER20423695165120987
+senha:7QiBkp0jNF
+código e verificação: 409587
+
+
+senha root
+kx9R6p2aZikBTf5oRFx8
+
+senha de app gmail zapzapdelivery
+pfqlbrdxebxithea

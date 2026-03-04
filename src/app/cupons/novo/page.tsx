@@ -1,8 +1,7 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
 
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Sidebar } from '@/components/Sidebar/Sidebar';
@@ -20,7 +19,7 @@ interface EstablishmentOption {
   nome_estabelecimento: string;
 }
 
-export default function NovoCupomPage() {
+function NovoCupomContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { role, establishmentId, establishmentName, loading: loadingRole } = useUserRole();
@@ -198,7 +197,6 @@ export default function NovoCupomPage() {
       });
 
       const data = await res.json();
-
       if (!res.ok) {
         throw new Error(data?.error || 'Erro ao salvar cupom');
       }
@@ -411,5 +409,13 @@ export default function NovoCupomPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function NovoCupomPage() {
+  return (
+    <Suspense fallback={<div className={styles.loading}>Carregando...</div>}>
+      <NovoCupomContent />
+    </Suspense>
   );
 }
