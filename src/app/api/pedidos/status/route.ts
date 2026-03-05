@@ -218,6 +218,84 @@ export async function POST(request: Request) {
           );
         }
       }
+    } else if (
+      newStatus === OrderStatus.PEDINDO || 
+      newStatus === OrderStatus.CANCELADO_CLIENTE || 
+      newStatus === OrderStatus.CANCELADO_ESTABELECIMENTO
+    ) {
+      // Check for existing 'venda' movements to reverse them
+      const { data: existingMovements, error: movementError } = await supabaseAdmin
+        .from('estoque_movimentacoes')
+        .select('*')
+        .eq('pedido_id', safeId)
+        .eq('tipo_movimento', 'venda');
+
+      if (!movementError && existingMovements && existingMovements.length > 0) {
+        // Prepare to restore stock
+        const aggregatedByProduct: Record<string, number> = {};
+        const establishmentId = existingMovements[0].estabelecimento_id; // Assume all same establishment
+
+        for (const mov of existingMovements) {
+          const pid = mov.produto_id;
+          const qty = Number(mov.quantidade) || 0;
+          if (pid && qty > 0) {
+            aggregatedByProduct[pid] = (aggregatedByProduct[pid] || 0) + qty;
+          }
+        }
+
+        const productIds = Object.keys(aggregatedByProduct);
+        if (productIds.length > 0) {
+          // Fetch current stock
+          const { data: stockRows } = await supabaseAdmin
+            .from('estoque_produtos')
+            .select('id, produto_id, estoque_atual')
+            .eq('estabelecimento_id', establishmentId)
+            .in('produto_id', productIds);
+            
+          const stockMap = new Map<string, any>(
+            (stockRows || []).map((row: any) => [String(row.produto_id), row])
+          );
+
+          const updates = [];
+          for (const pid of productIds) {
+            const row = stockMap.get(pid);
+            if (!row) continue;
+            const currentStock = Number(row.estoque_atual) || 0;
+            const toRestore = aggregatedByProduct[pid];
+            const newStock = currentStock + toRestore;
+            
+            updates.push(
+              supabaseAdmin
+                .from('estoque_produtos')
+                .update({ estoque_atual: newStock })
+                .eq('id', row.id)
+            );
+          }
+          
+          await Promise.all(updates);
+
+          // Log restoration in movimentacoes_estoque
+          const resumoMovements = productIds.map((pid) => ({
+            estabelecimento_id: establishmentId,
+            produto_id: pid,
+            tipo_movimentacao: 'devolucao',
+            quantidade: aggregatedByProduct[pid],
+            motivo: `Retorno ao status ${newStatus} (Estorno)`,
+            criado_em: new Date().toISOString()
+          }));
+
+          await supabaseAdmin
+            .from('movimentacoes_estoque')
+            .insert(resumoMovements);
+
+          // Delete the original 'venda' movements so they can be re-deducted if confirmed again
+          const movementIds = existingMovements.map((m: any) => m.id);
+          await supabaseAdmin
+            .from('estoque_movimentacoes')
+            .delete()
+            .in('id', movementIds);
+        }
+      }
     }
 
     const { error: updateError } = await supabaseAdmin
