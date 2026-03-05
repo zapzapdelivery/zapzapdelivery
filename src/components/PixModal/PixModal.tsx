@@ -24,6 +24,15 @@ export function PixModal({ isOpen, onClose, pixData, loading, error, onPaymentCo
   useEffect(() => {
     if (pixData) {
       setStatus(pixData.status);
+      
+      // Verificação imediata de expiração ao abrir
+      if (pixData.date_expiration) {
+        const now = new Date().getTime();
+        const expiration = new Date(pixData.date_expiration).getTime();
+        if (now > expiration) {
+          setTimeLeft('EXPIRADO');
+        }
+      }
     }
   }, [pixData]);
 
@@ -139,7 +148,7 @@ export function PixModal({ isOpen, onClose, pixData, loading, error, onPaymentCo
                   <div className={styles.copyContainer}>
                     <input 
                       type="text" 
-                      value={pixData.qr_code} 
+                      value={pixData.qr_code || ''} 
                       readOnly 
                       className={styles.copyInput}
                     />

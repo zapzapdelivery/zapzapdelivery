@@ -66,7 +66,7 @@ export default function CustomerDashboard() {
   };
 
   const fetchOrders = async (uid: string) => {
-    const { data: ordersData, error } = await supabase
+    let { data: ordersData, error } = await supabase
       .from('pedidos')
       .select(`
         id,
@@ -83,8 +83,32 @@ export default function CustomerDashboard() {
       .eq('cliente_id', uid)
       .order('criado_em', { ascending: false });
 
+    // Fallback: Try fetching without relation if it fails (e.g. RLS on estabelecimentos)
+    if (error) {
+      console.warn('Failed to fetch orders with establishment details. Retrying without relation...', error);
+      const retry = await supabase
+        .from('pedidos')
+        .select(`
+            id,
+            numero_pedido,
+            criado_em,
+            total_pedido,
+            status_pedido,
+            forma_pagamento
+          `)
+        .eq('cliente_id', uid)
+        .order('criado_em', { ascending: false });
+        
+      ordersData = retry.data;
+      error = retry.error;
+    }
+
     if (ordersData) {
       setOrders(ordersData);
+    }
+
+    if (error) {
+      console.error('Error fetching orders:', JSON.stringify(error, null, 2));
     }
   };
 

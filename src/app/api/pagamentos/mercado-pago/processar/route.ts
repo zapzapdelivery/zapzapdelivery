@@ -127,10 +127,11 @@ export async function POST(request: Request) {
       }
     };
 
-    // Configurar expiração do PIX para 15 minutos
+    // Configurar expiração do PIX para 15 minutos (MOBILE/DESKTOP)
     if (formData.payment_method_id === 'pix') {
       const expirationDate = new Date();
       expirationDate.setMinutes(expirationDate.getMinutes() + 15);
+      // expirationDate.setSeconds(expirationDate.getSeconds() + 10); // TESTE
       paymentData.date_of_expiration = expirationDate.toISOString();
       console.log(`[MP] PIX Expiration set to: ${paymentData.date_of_expiration}`);
     }
