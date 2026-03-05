@@ -72,7 +72,7 @@ function CustomerOrdersContent() {
   };
 
   const fetchOrders = async (uid: string) => {
-    const { data: ordersData, error } = await supabase
+    let { data: ordersData, error } = await supabase
       .from('pedidos')
       .select(`
           id,
@@ -90,13 +90,38 @@ function CustomerOrdersContent() {
       .eq('cliente_id', uid)
       .order('criado_em', { ascending: false });
 
+    // Fallback: Try fetching without relation if it fails (e.g. RLS on estabelecimentos)
+    if (error) {
+      console.warn('Failed to fetch orders with establishment details. Retrying without relation...', error);
+      const retry = await supabase
+        .from('pedidos')
+        .select(`
+            id,
+            numero_pedido,
+            criado_em,
+            total_pedido,
+            status_pedido,
+            forma_pagamento,
+            observacao_cliente
+          `)
+        .eq('cliente_id', uid)
+        .order('criado_em', { ascending: false });
+        
+      ordersData = retry.data;
+      error = retry.error;
+    }
+
     if (ordersData) {
       console.log('Orders data:', ordersData);
       setOrders(ordersData);
     }
     
     if (error) {
-      console.error('Error fetching orders:', error);
+      console.error('Error fetching orders:', JSON.stringify(error, null, 2));
+      // Fallback for simple error logging
+      if (Object.keys(error).length === 0) {
+          console.error('Error object is empty. Full error:', error);
+      }
     }
   };
 
@@ -307,25 +332,7 @@ function CustomerOrdersContent() {
           </div>
         )}
 
-        {paymentStatus === 'pending' && (
-          <div className={styles.paymentPendingBanner} style={{ 
-            backgroundColor: '#fef9c3', 
-            color: '#854d0e', 
-            padding: '1rem', 
-            borderRadius: '0.5rem', 
-            marginBottom: '1.5rem', 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '0.75rem',
-            border: '1px solid #fde047'
-          }}>
-            <CheckCircle size={24} />
-            <div>
-              <strong style={{ display: 'block' }}>Pagamento em Processamento</strong>
-              <span style={{ fontSize: '0.9rem' }}>O pagamento do pedido #{paymentOrder} está sendo processado. Atualize a página em instantes.</span>
-            </div>
-          </div>
-        )}
+
 
         {/* Desktop Table */}
         <div className={styles.tableContainer}>

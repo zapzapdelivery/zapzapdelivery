@@ -84,19 +84,23 @@ export async function GET(
 
         const lastPayment: any = searchResult.results[0];
 
+        // [TESTE] Forçar expiração em 10 segundos baseada na data de criação
+        const paymentCreated = new Date(lastPayment.date_created);
+        const expirationDate = new Date(paymentCreated.getTime() + 10000); // 10 segundos
+        // const expirationDate = new Date(lastPayment.date_of_expiration);
+
+        const now = new Date();
+
         // Verificar expiração e cancelar pedido se necessário
         if (lastPayment.status === 'pending' || lastPayment.status === 'in_process') {
-          const expirationDate = new Date(lastPayment.date_of_expiration);
-          const now = new Date();
-
           if (now > expirationDate) {
             // Cancelar pedido no Supabase se expirado
-            if (pedido.status_pedido !== 'Cancelado Pelo Sistema') {
+            if (pedido.status_pedido !== 'Cancelado Pelo Estabelecimento') {
                await supabaseAdmin
                 .from('pedidos')
                 .update({ 
-                  status_pedido: 'Cancelado Pelo Sistema',
-                  motivo_cancelamento: 'Pagamento PIX expirado'
+                  status_pedido: 'Cancelado Pelo Estabelecimento',
+                  motivo_cancelamento: 'Cancelado por falta de pagamento.'
                 })
                 .eq('id', orderId);
             }
@@ -105,7 +109,7 @@ export async function GET(
               id: lastPayment.id,
               status: 'cancelled', // Força status cancelado para o frontend
               status_detail: 'pix_expired',
-              date_expiration: lastPayment.date_of_expiration,
+              date_expiration: expirationDate.toISOString(),
               qr_code: null, // Não retorna QR code se expirado
               qr_code_base64: null
             });
@@ -134,12 +138,12 @@ export async function GET(
         return NextResponse.json({
           id: lastPayment.id,
           status: lastPayment.status,
-        status_detail: lastPayment.status_detail,
-        qr_code: transactionData.qr_code,
-        qr_code_base64: transactionData.qr_code_base64,
-        ticket_url: transactionData.ticket_url,
-        date_expiration: lastPayment.date_of_expiration,
-        amount: lastPayment.transaction_amount
+          status_detail: lastPayment.status_detail,
+          qr_code: transactionData.qr_code,
+          qr_code_base64: transactionData.qr_code_base64,
+          ticket_url: transactionData.ticket_url,
+          date_expiration: expirationDate.toISOString(),
+          amount: lastPayment.transaction_amount
         });
 
     } catch (mpError: any) {
