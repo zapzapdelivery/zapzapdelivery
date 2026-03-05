@@ -33,6 +33,7 @@ import styles from './carrinho.module.css';
 import { supabase } from '@/lib/supabase';
 import { useCart } from '@/context/CartContext';
 import Link from 'next/link';
+import { PixModal } from '@/components/PixModal/PixModal';
 
 interface DeliveryFeeConfig {
   tipo_taxa: 'fixo' | 'bairro' | 'distancia';
@@ -95,6 +96,12 @@ export default function CarrinhoPage() {
   const [validatingCoupon, setValidatingCoupon] = useState(false);
   const [userName, setUserName] = useState<string>('');
   const [mpReady, setMpReady] = useState(false);
+  
+  // PIX Modal State
+  const [pixModalOpen, setPixModalOpen] = useState(false);
+  const [pixData, setPixData] = useState<any>(null);
+  const [pixLoading, setPixLoading] = useState(false);
+  const [pixError, setPixError] = useState<string | null>(null);
 
   // Initialize Mercado Pago
   useEffect(() => {
@@ -173,6 +180,21 @@ export default function CarrinhoPage() {
               setSavedAddress(address);
               if (address.cep) {
                 setCep(address.cep);
+              }
+              
+              // Auto-fill address details from saved address
+              setAddressDetails(prev => ({
+                ...prev,
+                rua: address.rua || prev.rua,
+                numero: address.numero || prev.numero,
+                complemento: address.complemento || prev.complemento,
+                referencia: address.referencia || prev.referencia,
+                cidade: address.cidade || prev.cidade,
+                uf: address.uf || prev.uf
+              }));
+
+              if (address.bairro) {
+                setSelectedNeighborhood(address.bairro);
               }
             }
           }
@@ -590,13 +612,109 @@ export default function CarrinhoPage() {
 
   const finalTotal = Math.max(0, totalPrice + deliveryFee - calculateDiscount());
 
-  const handleFinalizeOrder = async () => {
+  const submitOrder = async () => {
     if (isFinalizing) return;
     
-    // Step 1: Validate Delivery Option and CEP (only if delivery AND distance based)
+    setIsFinalizing(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        sessionStorage.setItem('pendingOrder', 'true');
+        const returnUrl = encodeURIComponent(window.location.pathname);
+        router.push(`/paineladmin?redirect=${returnUrl}`);
+        return;
+      }
+
+      console.log('Usuário logado, criando pedido...');
+      
+      if (items.length === 0) {
+        showModal('warning', 'Carrinho Vazio', 'Seu carrinho está vazio!');
+        return;
+      }
+
+      const deliveryMap: Record<string, string> = {
+        'DELIVERY': 'delivery',
+        'RETIRADA': 'retirada',
+        'CONSUMO': 'retirada'
+      };
+
+      const paymentMap: Record<string, string> = {
+        'PIX': 'pix',
+        'DINHEIRO': 'dinheiro',
+        'CARTÃO': 'cartao_entrega',
+        'MERCADO_PAGO': 'mercado_pago'
+      };
+
+      const finalDeliveryOption = deliveryMap[deliveryOption] || 'delivery';
+      const finalPaymentMethod = paymentMap[paymentMethod] || 'pix';
+
+      const fullAddress = deliveryOption === 'DELIVERY' 
+        ? `${addressDetails.rua}, ${addressDetails.numero}${addressDetails.complemento ? ` - ${addressDetails.complemento}` : ''}, ${selectedNeighborhood}, ${addressDetails.cidade} - ${addressDetails.uf} (CEP: ${cep})`
+        : 'Retirada no Local';
+
+      let observacaoExtra = deliveryOption === 'CONSUMO' ? ' (Consumo no local)' : '';
+      if (deliveryOption === 'DELIVERY') {
+        observacaoExtra += `\nEndereço: ${fullAddress}`;
+        if (addressDetails.referencia) {
+          observacaoExtra += `\nReferência: ${addressDetails.referencia}`;
+        }
+      }
+      if (finalPaymentMethod === 'mercado_pago') {
+        observacaoExtra += '\n(Pagamento Online - Pendente)';
+      }
+      
+      const response = await fetch('/api/pedidos/criar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          items,
+          estabelecimento_id: estabelecimento?.id,
+          forma_pagamento: finalPaymentMethod,
+          forma_entrega: finalDeliveryOption,
+          observacao: observacaoExtra.trim(),
+          user_id: user.id,
+          cupom_id: appliedCoupon ? appliedCoupon.id : null,
+          valor_desconto: calculateDiscount(),
+          endereco_entrega: deliveryOption === 'DELIVERY' ? fullAddress : null
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao criar pedido via API');
+      }
+
+      const order = result.order;
+
+      if (order) {
+        console.log('Pedido criado com sucesso:', order);
+        
+        sessionStorage.removeItem('pendingOrder');
+
+        if (['DINHEIRO', 'CARTÃO'].includes(paymentMethod)) {
+           clearCart();
+        }
+
+        window.location.href = `/checkout/${order.id}`;
+        return;
+      }
+      
+    } catch (error: any) {
+      console.error('Erro ao finalizar pedido:', error);
+      showModal('error', 'Erro ao realizar pedido', error.message || 'Erro desconhecido');
+    } finally {
+      setIsFinalizing(false);
+    }
+  };
+
+  const handleFinalizeOrder = async () => {
+    // Step 1: Validate Delivery Option and CEP
     if (currentStep === 1) {
       if (deliveryOption === 'DELIVERY') {
-        // Only validate CEP if fee type is 'distancia'
         if (estabelecimento?.taxa_entrega?.tipo_taxa === 'distancia') {
           if (!cep || cep.length < 9) {
             showModal('warning', 'CEP Obrigatório', 'Por favor, informe seu CEP para entrega.');
@@ -608,18 +726,15 @@ export default function CarrinhoPage() {
           }
         }
         
-        // If fee type is 'bairro', maybe validate if a neighborhood is selected (if possible in this step)
-        // But usually neighborhood selection is part of address details or separate. 
-        // Based on current UI, neighborhood selection for 'bairro' type is in Step 1 mobile (lines 1044+) or desktop right column.
         if (estabelecimento?.taxa_entrega?.tipo_taxa === 'bairro' && !selectedNeighborhood) {
-            // Check if user has selected a neighborhood in the dropdown
              showModal('warning', 'Bairro Obrigatório', 'Por favor, selecione seu bairro para calcular a taxa.');
              return;
         }
 
         setCurrentStep(2); // Go to Address Details
       } else {
-        setCurrentStep(3); // Go to Confirmation (Skip Address)
+        // Retirada/Consumo -> Go to Confirmation (Step 3) where payment is selected
+        setCurrentStep(3);
       }
       return;
     }
@@ -652,6 +767,8 @@ export default function CarrinhoPage() {
            return;
         }
       }
+      
+      // Go to Confirmation (Step 3) where payment is selected
       setCurrentStep(3);
       return;
     }
@@ -662,113 +779,7 @@ export default function CarrinhoPage() {
         showModal('error', 'Erro', 'Estabelecimento não carregado. Tente recarregar a página.');
         return;
       }
-    
-      setIsFinalizing(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        // Salva a intenção de finalizar o pedido
-        sessionStorage.setItem('pendingOrder', 'true');
-        // Redireciona para o login com a URL de retorno
-        const returnUrl = encodeURIComponent(window.location.pathname);
-        router.push(`/paineladmin?redirect=${returnUrl}`);
-        return;
-      }
-
-      // Se usuário estiver logado, cria o pedido
-      console.log('Usuário logado, criando pedido...');
-      
-      // Validações básicas
-      if (items.length === 0) {
-        showModal('warning', 'Carrinho Vazio', 'Seu carrinho está vazio!');
-        return;
-      }
-
-      // Mapeamento para valores aceitos pelo banco de dados (enums)
-      const deliveryMap: Record<string, string> = {
-        'DELIVERY': 'delivery',
-        'RETIRADA': 'retirada',
-        'CONSUMO': 'retirada'
-      };
-
-      const paymentMap: Record<string, string> = {
-        'PIX': 'pix',
-        'DINHEIRO': 'dinheiro',
-        'CARTÃO': 'cartao_entrega',
-        'MERCADO_PAGO': 'mercado_pago'
-      };
-
-      const finalDeliveryOption = deliveryMap[deliveryOption] || 'delivery';
-      const finalPaymentMethod = paymentMap[paymentMethod] || 'pix';
-
-      // Construir endereço completo para observação ou campo específico
-      const fullAddress = deliveryOption === 'DELIVERY' 
-        ? `${addressDetails.rua}, ${addressDetails.numero}${addressDetails.complemento ? ` - ${addressDetails.complemento}` : ''}, ${selectedNeighborhood}, ${addressDetails.cidade} - ${addressDetails.uf} (CEP: ${cep})`
-        : 'Retirada no Local';
-
-      // Adiciona observação se for consumo no local ou pagamento online
-      let observacaoExtra = deliveryOption === 'CONSUMO' ? ' (Consumo no local)' : '';
-      if (deliveryOption === 'DELIVERY') {
-        observacaoExtra += `\nEndereço: ${fullAddress}`;
-        if (addressDetails.referencia) {
-          observacaoExtra += `\nReferência: ${addressDetails.referencia}`;
-        }
-      }
-      if (finalPaymentMethod === 'mercado_pago') {
-        observacaoExtra += '\n(Pagamento Online - Pendente)';
-      }
-      
-      // Chamada para a API server-side para criar o pedido (bypass RLS)
-      const response = await fetch('/api/pedidos/criar', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          items,
-          estabelecimento_id: estabelecimento.id,
-          forma_pagamento: finalPaymentMethod,
-          forma_entrega: finalDeliveryOption,
-          observacao: observacaoExtra.trim(),
-          user_id: user.id,
-          cupom_id: appliedCoupon ? appliedCoupon.id : null,
-          valor_desconto: calculateDiscount(),
-          // Se o backend suportar campos de endereço separados, adicione-os aqui
-          endereco_entrega: deliveryOption === 'DELIVERY' ? fullAddress : null
-        })
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Erro ao criar pedido via API');
-      }
-
-      const order = result.order;
-
-      if (order) {
-        console.log('Pedido criado com sucesso:', order);
-        
-        sessionStorage.removeItem('pendingOrder');
-
-        // Limpa o carrinho APENAS se for Dinheiro ou Cartão (Entrega)
-        // NÃO limpa se for Mercado Pago (Online) ou PIX (Online via MP)
-        if (['DINHEIRO', 'CARTÃO'].includes(paymentMethod)) {
-           clearCart();
-        }
-
-        // Redireciona SEMPRE para a página de checkout
-        window.location.href = `/checkout/${order.id}`;
-        return;
-      }
-      
-    } catch (error: any) {
-      console.error('Erro ao finalizar pedido:', error);
-      showModal('error', 'Erro ao realizar pedido', error.message || 'Erro desconhecido');
-    } finally {
-      setIsFinalizing(false);
-    }
+      await submitOrder();
     }
   };
 
@@ -844,6 +855,30 @@ export default function CarrinhoPage() {
           </div>
         </div>
       </header>
+
+      {modalConfig.isOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={`${styles.modalIcon} ${styles[modalConfig.type]}`}>
+              {renderModalIcon()}
+            </div>
+            <h2 className={styles.modalTitle}>{modalConfig.title}</h2>
+            {renderModalContent()}
+            <button 
+              className={`${styles.modalButton} ${styles[modalConfig.type]}`} 
+              onClick={() => {
+                if (modalConfig.type === 'success' && modalConfig.orderNumber) {
+                  // O redirecionamento já foi feito automaticamente para o checkout
+                  // Não é necessário redirecionar novamente aqui
+                }
+                setModalConfig(prev => ({ ...prev, isOpen: false }));
+              }}
+            >
+              {modalConfig.type === 'success' && modalConfig.orderNumber ? 'Fechar' : 'OK'}
+            </button>
+          </div>
+        </div>
+      )}
 
       <main className={styles.cartMain}>
         {/* Stepper */}
@@ -941,18 +976,43 @@ export default function CarrinhoPage() {
                 </div>
             </div>
 
-            <div className={styles.sideCard} style={{ marginTop: '1rem' }}>
-                <h3 className={styles.sideCardTitle}><CreditCard size={16} /> Pagamento</h3>
-                <div style={{ padding: '1rem', backgroundColor: '#f8fafc', borderRadius: '0.5rem' }}>
-                    <p>Forma de Pagamento: <strong>{
-                      paymentMethod === 'MERCADO_PAGO' ? 'Cartão de Crédito' :
-                      paymentMethod === 'PIX' ? 'Pix (Online)' :
-                      paymentMethod === 'CARTÃO' ? 'Cartão (Na Entrega)' :
-                      paymentMethod === 'DINHEIRO' ? 'Dinheiro (Na Entrega)' :
-                      (paymentMethod as string).replace('_', ' ')
-                    }</strong></p>
-                    {(paymentMethod === 'MERCADO_PAGO' || paymentMethod === 'PIX') && <p style={{ fontSize: '0.875rem', color: '#64748b' }}>Você será redirecionado para o pagamento seguro.</p>}
+              <div className={styles.sideCard} style={{ marginTop: '1rem' }}>
+                <h3 className={styles.sideCardTitle}><CreditCard size={16} /> Forma de Pagamento</h3>
+                <div className={styles.paymentGrid}>
+                  <button 
+                    className={`${styles.paymentOption} ${paymentMethod === 'MERCADO_PAGO' ? styles.paymentOptionActive : ''} ${styles.desktopOnly}`}
+                    onClick={() => setPaymentMethod('MERCADO_PAGO')}
+                  >
+                    <CreditCard size={20} className={paymentMethod === 'MERCADO_PAGO' ? styles.iconActive : ''} />
+                    <span>Cartão de Crédito (Online)</span>
+                  </button>
+                  <button 
+                    className={`${styles.paymentOption} ${paymentMethod === 'PIX' ? styles.paymentOptionActive : ''}`}
+                    onClick={() => setPaymentMethod('PIX')}
+                  >
+                    <QrCode size={20} className={paymentMethod === 'PIX' ? styles.iconActive : ''} />
+                    <span>Pix (Online)</span>
+                  </button>
+                  <button 
+                    className={`${styles.paymentOption} ${paymentMethod === 'DINHEIRO' ? styles.paymentOptionActive : ''}`}
+                    onClick={() => setPaymentMethod('DINHEIRO')}
+                  >
+                    <Banknote size={20} className={paymentMethod === 'DINHEIRO' ? styles.iconActive : ''} />
+                    <span>Dinheiro (Na Entrega)</span>
+                  </button>
+                  <button 
+                    className={`${styles.paymentOption} ${paymentMethod === 'CARTÃO' ? styles.paymentOptionActive : ''}`}
+                    onClick={() => setPaymentMethod('CARTÃO')}
+                  >
+                    <CreditCard size={20} className={paymentMethod === 'CARTÃO' ? styles.iconActive : ''} />
+                    <span>Cartão (Na Entrega)</span>
+                  </button>
                 </div>
+                {(paymentMethod === 'MERCADO_PAGO' || paymentMethod === 'PIX') && (
+                  <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#f0fdf4', color: '#166534', borderRadius: '0.5rem', fontSize: '0.875rem' }}>
+                    Você será redirecionado para o pagamento seguro após confirmar.
+                  </div>
+                )}
             </div>
 
             <div className={styles.summaryCard} style={{ marginTop: '1.5rem' }}>
@@ -985,7 +1045,7 @@ export default function CarrinhoPage() {
               </div>
 
               <button 
-                className={styles.btnFinalizeLarge} 
+                className={styles.btnFinalizeLarge}
                 onClick={handleFinalizeOrder}
                 disabled={isFinalizing}
                 style={{ opacity: isFinalizing ? 0.8 : 1 }}
@@ -997,7 +1057,7 @@ export default function CarrinhoPage() {
                   </>
                 ) : (
                   <>
-                    <span>CONFIRMAR E PAGAR</span>
+                    <span>{(paymentMethod === 'DINHEIRO' || paymentMethod === 'CARTÃO') ? 'FINALIZAR PEDIDO' : 'CONFIRMAR E PAGAR'}</span>
                     <Send size={20} />
                   </>
                 )}
@@ -1008,29 +1068,6 @@ export default function CarrinhoPage() {
 
         {currentStep === 1 && (
         <>
-        {modalConfig.isOpen && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContent}>
-            <div className={`${styles.modalIcon} ${styles[modalConfig.type]}`}>
-              {renderModalIcon()}
-            </div>
-            <h2 className={styles.modalTitle}>{modalConfig.title}</h2>
-            {renderModalContent()}
-            <button 
-              className={`${styles.modalButton} ${styles[modalConfig.type]}`} 
-              onClick={() => {
-                if (modalConfig.type === 'success' && modalConfig.orderNumber) {
-                  // O redirecionamento já foi feito automaticamente para o checkout
-                  // Não é necessário redirecionar novamente aqui
-                }
-                setModalConfig(prev => ({ ...prev, isOpen: false }));
-              }}
-            >
-              {modalConfig.type === 'success' && modalConfig.orderNumber ? 'Fechar' : 'OK'}
-            </button>
-          </div>
-        </div>
-      )}
         <div className={styles.cartTitleSection}>
           <h1 className={styles.mainTitle}>Meu Carrinho</h1>
           <p className={styles.subTitle}>Você tem {totalItems} itens no seu pedido</p>
@@ -1231,77 +1268,69 @@ export default function CarrinhoPage() {
                 )}
               </section>
 
-              <section className={styles.mobileSection}>
-                <h2 className={styles.mobileSectionTitle}>FORMA DE PAGAMENTO</h2>
-                <div className={styles.mobilePaymentList}>
-                  <div 
-                    className={`${styles.mobilePaymentCard} ${paymentMethod === 'MERCADO_PAGO' ? styles.mobilePaymentCardActive : ''}`}
-                    onClick={() => setPaymentMethod('MERCADO_PAGO')}
-                  >
-                    <div className={styles.paymentInfo}>
-                      <CreditCard size={20} color="#22c55e" />
-                      <span>Cartão de Crédito (Online)</span>
-                    </div>
-                    <div className={`${styles.mobileRadioCircle} ${paymentMethod === 'MERCADO_PAGO' ? styles.mobileRadioActive : ''}`}>
-                      {paymentMethod === 'MERCADO_PAGO' && <div className={styles.mobileRadioInner} />}
-                    </div>
-                  </div>
-
-                  <div 
-                    className={`${styles.mobilePaymentCard} ${paymentMethod === 'DINHEIRO' ? styles.mobilePaymentCardActive : ''}`}
-                    onClick={() => setPaymentMethod('DINHEIRO')}
-                  >
-                    <div className={styles.paymentInfo}>
-                      <Banknote size={20} color="#22c55e" />
-                      <span>Dinheiro (Na Entrega)</span>
-                    </div>
-                    <div className={`${styles.mobileRadioCircle} ${paymentMethod === 'DINHEIRO' ? styles.mobileRadioActive : ''}`}>
-                      {paymentMethod === 'DINHEIRO' && <div className={styles.mobileRadioInner} />}
-                    </div>
-                  </div>
-
-                  <div 
-                    className={`${styles.mobilePaymentCard} ${paymentMethod === 'PIX' ? styles.mobilePaymentCardActive : ''}`}
-                    onClick={() => setPaymentMethod('PIX')}
-                  >
-                    <div className={styles.paymentInfo}>
-                      <QrCode size={20} color="#22c55e" />
-                      <span>Pix (Online)</span>
-                    </div>
-                    <div className={`${styles.mobileRadioCircle} ${paymentMethod === 'PIX' ? styles.mobileRadioActive : ''}`}>
-                      {paymentMethod === 'PIX' && <div className={styles.mobileRadioInner} />}
-                    </div>
-                  </div>
-
-                  <div 
-                    className={`${styles.mobilePaymentCard} ${paymentMethod === 'CARTÃO' ? styles.mobilePaymentCardActive : ''}`}
-                    onClick={() => setPaymentMethod('CARTÃO')}
-                  >
-                    <div className={styles.paymentInfo}>
-                      <CreditCard size={20} color="#22c55e" />
-                      <span>Cartão (Na Entrega)</span>
-                    </div>
-                    <div className={`${styles.mobileRadioCircle} ${paymentMethod === 'CARTÃO' ? styles.mobileRadioActive : ''}`}>
-                      {paymentMethod === 'CARTÃO' && <div className={styles.mobileRadioInner} />}
-                    </div>
-                  </div>
-                </div>
-              </section>
-
               <section className={styles.mobileSummarySection}>
                 <div className={styles.summaryRow}>
                   <span>Subtotal</span>
                   <span>R$ {totalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 </div>
+                
+                <div className={styles.summaryRow}>
+                  <span>Entrega</span>
+                  <span style={{ fontWeight: 600 }}>
+                    {deliveryOption === 'RETIRADA' ? 'Retirar no Local' : 
+                     deliveryOption === 'CONSUMO' ? 'Consumir no Local' : 'Delivery'}
+                  </span>
+                </div>
+
                 {deliveryOption === 'DELIVERY' && (
                   <div className={styles.summaryRow}>
-                    <span>Taxa de Entrega</span>
+                    <span>Valor da Entrega</span>
                     <span className={deliveryFee === 0 ? styles.summaryValueGreen : ''}>
                       {deliveryFee === 0 ? 'Grátis' : `R$ ${deliveryFee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                     </span>
                   </div>
                 )}
+
+                <div className={styles.summaryRow}>
+                  <span>Desconto</span>
+                  <span className={styles.summaryValueGreen}>
+                    - R$ {calculateDiscount().toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+
                 <div className={styles.summaryDivider}></div>
+                
+                <div className={styles.totalRow} style={{ marginTop: '0.5rem' }}>
+                  <div className={styles.totalLabels}>
+                    <span className={styles.totalLabel}>TOTAL DO PEDIDO</span>
+                  </div>
+                  <span className={styles.totalPriceLarge}>
+                    R$ {finalTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+
+                <button 
+                  className={styles.btnFinalizeLarge} 
+                  onClick={handleFinalizeOrder}
+                  disabled={isFinalizing}
+                  style={{ marginTop: '1.5rem', opacity: isFinalizing ? 0.8 : 1 }}
+                >
+                  {isFinalizing ? (
+                    <>
+                      <Loader2 size={20} className={styles.spin} />
+                      <span>Processando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>CONTINUAR</span>
+                      <Navigation size={20} />
+                    </>
+                  )}
+                </button>
+                <div style={{ textAlign: 'center', marginTop: '1rem', color: '#64748b', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
+                  <ShieldCheck size={14} />
+                  <span>PAGAMENTO SEGURO</span>
+                </div>
               </section>
             </div>
           </div>
@@ -1470,11 +1499,18 @@ export default function CarrinhoPage() {
                   <span>DINHEIRO (Na Entrega)</span>
                 </button>
                 <button 
+                  className={`${styles.paymentOption} ${paymentMethod === 'CARTÃO' ? styles.paymentOptionActive : ''}`}
+                  onClick={() => setPaymentMethod('CARTÃO')}
+                >
+                  <CreditCard size={20} className={paymentMethod === 'CARTÃO' ? styles.iconActive : ''} />
+                  <span>Cartão (Na Entrega)</span>
+                </button>
+                <button 
                   className={`${styles.paymentOption} ${paymentMethod === 'MERCADO_PAGO' ? styles.paymentOptionActive : ''}`}
                   onClick={() => setPaymentMethod('MERCADO_PAGO')}
                 >
                   <CreditCard size={20} className={paymentMethod === 'MERCADO_PAGO' ? styles.iconActive : ''} />
-                  <span>Cartão de Crédito</span>
+                  <span>Cartão de Crédito (Online)</span>
                 </button>
               </div>
             </div>
@@ -1533,10 +1569,17 @@ export default function CarrinhoPage() {
                     <Loader2 size={20} className={styles.spin} />
                   </>
                 ) : (
-                  <>
-                    <span>CONTINUAR</span>
-                    <Navigation size={20} />
-                  </>
+                  (deliveryOption !== 'DELIVERY' && (paymentMethod === 'DINHEIRO' || paymentMethod === 'CARTÃO')) ? (
+                    <>
+                      <span>FINALIZAR PEDIDO</span>
+                      <Send size={20} />
+                    </>
+                  ) : (
+                    <>
+                      <span>CONTINUAR</span>
+                      <Navigation size={20} />
+                    </>
+                  )
                 )}
               </button>
 
@@ -1561,8 +1604,8 @@ export default function CarrinhoPage() {
         
         <div className={styles.sideCard}>
           <div style={{ padding: '1rem' }}>
-            <div className={styles.inputGroup}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>CEP</label>
+            <div className={styles.inputGroup} style={{ flexDirection: 'column' }}>
+              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>CEP</label>
               <div style={{ position: 'relative' }}>
                 <input 
                   type="text" 
@@ -1579,6 +1622,11 @@ export default function CarrinhoPage() {
                   </div>
                 )}
               </div>
+              {deliveryError && (
+                <div style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.5rem', fontWeight: 600 }}>
+                  {deliveryError}
+                </div>
+              )}
               {deliveryOption === 'DELIVERY' && distance !== null && !deliveryError && estabelecimento?.taxa_entrega?.tipo_taxa === 'distancia' && (
                  <div style={{ color: '#166534', fontSize: '0.875rem', marginTop: '0.5rem', fontWeight: 600 }}>
                    Distância: {distance} km
@@ -1586,8 +1634,8 @@ export default function CarrinhoPage() {
               )}
             </div>
 
-            <div className={styles.inputGroup}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Rua / Logradouro</label>
+            <div className={styles.inputGroup} style={{ flexDirection: 'column' }}>
+              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Rua / Logradouro</label>
               <input 
                 type="text" 
                 placeholder="Ex: Av. Paulista" 
@@ -1600,7 +1648,7 @@ export default function CarrinhoPage() {
 
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
               <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Número</label>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Número</label>
                 <input 
                   type="text" 
                   placeholder="123" 
@@ -1611,7 +1659,7 @@ export default function CarrinhoPage() {
                 />
               </div>
               <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Complemento</label>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Complemento</label>
                 <input 
                   type="text" 
                   placeholder="Apto 101" 
@@ -1623,8 +1671,8 @@ export default function CarrinhoPage() {
               </div>
             </div>
 
-            <div className={styles.inputGroup}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Bairro</label>
+            <div className={styles.inputGroup} style={{ flexDirection: 'column' }}>
+              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Bairro</label>
               {estabelecimento?.taxa_entrega?.tipo_taxa === 'bairro' ? (
                 <select 
                   className={styles.neighborhoodSelect}
@@ -1651,9 +1699,9 @@ export default function CarrinhoPage() {
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1rem' }}>
                <div style={{ flex: 2 }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Cidade</label>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Cidade</label>
                 <input 
                   type="text" 
                   placeholder="Cidade" 
@@ -1665,7 +1713,7 @@ export default function CarrinhoPage() {
                 />
                </div>
                <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>UF</label>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>UF</label>
                 <input 
                   type="text" 
                   placeholder="UF" 
@@ -1678,8 +1726,8 @@ export default function CarrinhoPage() {
                </div>
             </div>
 
-            <div className={styles.inputGroup}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Ponto de Referência</label>
+            <div className={styles.inputGroup} style={{ flexDirection: 'column' }}>
+              <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Ponto de Referência</label>
               <input 
                 type="text" 
                 placeholder="Próximo ao mercado..." 
@@ -1696,27 +1744,8 @@ export default function CarrinhoPage() {
         <button 
           className={styles.btnFinalizeLarge} 
           onClick={handleFinalizeOrder}
-          style={{ marginTop: '2rem' }}
-        >
-            <span>CONTINUAR</span>
-            <Navigation size={20} />
-        </button>
-      </div>
-      )}
-
-      {currentStep === 1 && (
-      <div className={styles.mobileStickyFooter}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-          <span className={styles.totalLabel}>TOTAL</span>
-          <span className={styles.totalPriceLarge}>
-            R$ {totalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-          </span>
-        </div>
-        <button 
-          className={styles.btnFinalizeLarge} 
-          onClick={handleFinalizeOrder}
           disabled={isFinalizing}
-          style={{ opacity: isFinalizing ? 0.8 : 1, marginTop: 0 }}
+          style={{ marginTop: '2rem', opacity: isFinalizing ? 0.8 : 1 }}
         >
           {isFinalizing ? (
             <>
@@ -1725,17 +1754,26 @@ export default function CarrinhoPage() {
             </>
           ) : (
             <>
+              <span>CONTINUAR</span>
               <Navigation size={20} />
-              <span>Continuar</span>
             </>
           )}
         </button>
       </div>
       )}
 
-      <footer className={styles.footerInfo}>
-        <p>©2026 ZapZap Delivery - Todos os direitos reservados.</p>
-      </footer>
+      {currentStep === 1 && (
+        <div style={{ height: '2rem' }}></div>
+      )}
+
+      <PixModal 
+        isOpen={pixModalOpen} 
+        onClose={() => setPixModalOpen(false)} 
+        pixData={pixData} 
+        loading={pixLoading} 
+        error={pixError} 
+        onPaymentConfirmed={handlePixPaymentConfirmed}
+      />
     </div>
   );
 }

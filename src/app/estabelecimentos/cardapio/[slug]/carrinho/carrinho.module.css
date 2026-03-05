@@ -898,7 +898,17 @@
   .mobileOnlySections {
     display: block; /* Show mobile sections */
   }
+
+  .desktopOnly {
+    display: none !important;
+  }
+  
+  .cartContainer {
+    padding-bottom: 2rem;
+  }
 }
+
+/* Mobile Sticky Footer removed as per user request */
 
 .neighborhoodSelect {
   width: 100%;
@@ -915,15 +925,9 @@
   .mobileSectionTitle {
     display: block;
   }
-
-  .mobileStickyFooter {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
   
   .cartContainer {
-    padding-bottom: 140px;
+    padding-bottom: 2rem;
   }
 }
 
@@ -996,19 +1000,7 @@
   }
 }
 
-/* Mobile Sticky Footer Base Styles */
-.mobileStickyFooter {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background-color: white;
-  padding: 1rem 1.5rem;
-  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
-  border-top: 1px solid #e2e8f0;
-  z-index: 100;
-  display: none; /* Hidden on desktop by default */
-}
+/* Mobile Sticky Footer Base Styles - REMOVED (Handled by Media Queries) */
 
 /* Footer Info */
 .footerInfo {

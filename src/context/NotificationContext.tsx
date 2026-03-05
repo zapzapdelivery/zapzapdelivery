@@ -37,7 +37,42 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     // Initialize audio
-    audioRef.current = new Audio(NOTIFICATION_SOUND);
+    const audio = new Audio(NOTIFICATION_SOUND);
+    audio.load();
+    audioRef.current = audio;
+
+    // Unlock audio context for mobile browsers (iOS/Android)
+    // Mobile browsers require a user interaction before playing audio
+    const unlockAudio = () => {
+      if (audioRef.current) {
+        // Mute, play, pause, then unmute to unlock without noise
+        const originalVolume = audioRef.current.volume;
+        audioRef.current.volume = 0;
+        
+        audioRef.current.play().then(() => {
+          audioRef.current?.pause();
+          audioRef.current!.currentTime = 0;
+          audioRef.current!.volume = originalVolume;
+          console.log('Audio context unlocked');
+        }).catch((e) => {
+          console.log('Audio unlock attempt failed:', e);
+        });
+      }
+      // Remove listeners once executed
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('touchstart', unlockAudio);
+      document.removeEventListener('keydown', unlockAudio);
+    };
+
+    document.addEventListener('click', unlockAudio);
+    document.addEventListener('touchstart', unlockAudio);
+    document.addEventListener('keydown', unlockAudio);
+
+    return () => {
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('touchstart', unlockAudio);
+      document.removeEventListener('keydown', unlockAudio);
+    };
   }, []);
 
   const playNotificationSound = (repeats = 1) => {
