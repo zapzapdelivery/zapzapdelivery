@@ -37,6 +37,7 @@ function CustomerOrdersContent() {
   // PIX Modal States
   const [pixModalOpen, setPixModalOpen] = useState(false);
   const [pixData, setPixData] = useState<any>(null);
+  const [pixOrderId, setPixOrderId] = useState<string | null>(null);
   const [pixLoading, setPixLoading] = useState(false);
   const [pixError, setPixError] = useState<string | null>(null);
 
@@ -44,6 +45,7 @@ function CustomerOrdersContent() {
     setPixLoading(true);
     setPixError(null);
     setPixData(null);
+    setPixOrderId(orderData.id);
     setPixModalOpen(true);
     
     try {
@@ -107,7 +109,7 @@ function CustomerOrdersContent() {
         .eq('cliente_id', uid)
         .order('criado_em', { ascending: false });
         
-      ordersData = retry.data;
+      ordersData = retry.data as any;
       error = retry.error;
     }
 
@@ -273,6 +275,7 @@ function CustomerOrdersContent() {
         loading={pixLoading}
         error={pixError}
         onPaymentConfirmed={onPaymentConfirmed}
+        orderId={pixOrderId}
       />
       <CustomerSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       
@@ -373,7 +376,11 @@ function CustomerOrdersContent() {
                     </td>
                     <td className={styles.actions}>
                       {order.originalData.forma_pagamento === 'pix' && 
-                       (order.status === 'Pendente' || order.status === 'Aguardando Pagamento' || order.status === 'Pedindo') && (
+                       (order.status === 'Pendente' || 
+                        order.status === 'Aguardando Pagamento' || 
+                        order.status === 'Pedindo' ||
+                        (order.status === 'Cancelado Pelo Estabelecimento' && order.originalData.observacao_cliente?.includes('Cancelado por falta de pagamento'))
+                       ) && (
                           <button 
                               className={styles.actionBtn}
                               onClick={() => handleOpenPix(order.originalData)}
@@ -437,7 +444,11 @@ function CustomerOrdersContent() {
                     {order.status.toUpperCase()}
                   </div>
                   {order.originalData.forma_pagamento === 'pix' && 
-                   (order.status === 'Pendente' || order.status === 'Aguardando Pagamento' || order.status === 'Pedindo') && (
+                   (order.status === 'Pendente' || 
+                    order.status === 'Aguardando Pagamento' || 
+                    order.status === 'Pedindo' ||
+                    (order.status === 'Cancelado Pelo Estabelecimento' && order.originalData.observacao_cliente?.includes('Cancelado por falta de pagamento'))
+                   ) && (
                       <button 
                           onClick={(e) => { e.stopPropagation(); handleOpenPix(order.originalData); }}
                           style={{

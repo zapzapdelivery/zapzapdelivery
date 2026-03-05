@@ -99,7 +99,7 @@ export default function CustomerDashboard() {
         .eq('cliente_id', uid)
         .order('criado_em', { ascending: false });
         
-      ordersData = retry.data;
+      ordersData = retry.data as any;
       error = retry.error;
     }
 
