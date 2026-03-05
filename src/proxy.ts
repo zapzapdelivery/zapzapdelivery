@@ -1,11 +1,11 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname
   const search = request.nextUrl.searchParams
   
-  // Skip middleware for static assets and internal Next.js paths EARLY
+  // Skip proxy for static assets and internal Next.js paths EARLY
   // This prevents unnecessary Supabase calls and potential HMR errors
   if (
     path.startsWith('/_next') || 
@@ -140,12 +140,12 @@ export async function middleware(request: NextRequest) {
 
     return response
   } catch (error) {
-    console.error('Middleware error:', error);
+    console.error('Proxy error:', error);
     return NextResponse.next();
   }
 }
 
-// Helper to fetch user role in middleware
+// Helper to fetch user role in proxy
 async function getUserRole(supabase: any, userId: string): Promise<string | null> {
   try {
     // 1. Try user_roles table

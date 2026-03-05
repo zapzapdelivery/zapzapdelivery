@@ -33,7 +33,6 @@ import styles from './carrinho.module.css';
 import { supabase } from '@/lib/supabase';
 import { useCart } from '@/context/CartContext';
 import Link from 'next/link';
-import { PixModal } from '@/components/PixModal/PixModal';
 
 interface DeliveryFeeConfig {
   tipo_taxa: 'fixo' | 'bairro' | 'distancia';
@@ -97,11 +96,6 @@ export default function CarrinhoPage() {
   const [userName, setUserName] = useState<string>('');
   const [mpReady, setMpReady] = useState(false);
   
-  // PIX Modal State
-  const [pixModalOpen, setPixModalOpen] = useState(false);
-  const [pixData, setPixData] = useState<any>(null);
-  const [pixLoading, setPixLoading] = useState(false);
-  const [pixError, setPixError] = useState<string | null>(null);
 
   // Initialize Mercado Pago
   useEffect(() => {
@@ -1766,14 +1760,6 @@ export default function CarrinhoPage() {
         <div style={{ height: '2rem' }}></div>
       )}
 
-      <PixModal 
-        isOpen={pixModalOpen} 
-        onClose={() => setPixModalOpen(false)} 
-        pixData={pixData} 
-        loading={pixLoading} 
-        error={pixError} 
-        onPaymentConfirmed={handlePixPaymentConfirmed}
-      />
     </div>
   );
 }
