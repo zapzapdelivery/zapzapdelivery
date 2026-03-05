@@ -51,7 +51,7 @@ function CustomerOrdersContent() {
         const data = await res.json();
         
         if (res.ok) {
-            setPixData(data);
+            setPixData({ ...data, orderId: orderData.id }); // Add orderId to pixData
         } else {
             setPixError(data.error || 'Erro ao carregar dados do PIX');
         }
@@ -61,6 +61,14 @@ function CustomerOrdersContent() {
     } finally {
         setPixLoading(false);
     }
+  };
+
+  const onPaymentConfirmed = () => {
+    if (userId) {
+      fetchOrders(userId); // Refresh orders list
+    }
+    // Don't close modal immediately so user sees success message
+    // setPixModalOpen(false); 
   };
 
   const fetchOrders = async (uid: string) => {
@@ -239,6 +247,7 @@ function CustomerOrdersContent() {
         pixData={pixData}
         loading={pixLoading}
         error={pixError}
+        onPaymentConfirmed={onPaymentConfirmed}
       />
       <CustomerSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       

@@ -116,7 +116,7 @@ export async function POST(request: Request) {
         }
     }
 
-  const paymentData: any = {
+    const paymentData: any = {
       ...formData,
       transaction_amount: Number(pedido.total_pedido),
       description: `Pedido #${pedido.numero_pedido} - ZapZap Delivery`,
@@ -126,6 +126,14 @@ export async function POST(request: Request) {
         first_name: payerFirstName,
       }
     };
+
+    // Configurar expiração do PIX para 15 minutos
+    if (formData.payment_method_id === 'pix') {
+      const expirationDate = new Date();
+      expirationDate.setMinutes(expirationDate.getMinutes() + 15);
+      paymentData.date_of_expiration = expirationDate.toISOString();
+      console.log(`[MP] PIX Expiration set to: ${paymentData.date_of_expiration}`);
+    }
 
     // Só adiciona notification_url se NÃO for localhost e se a URL for válida (https)
     if (!isLocalhost && appUrl.startsWith('https')) {

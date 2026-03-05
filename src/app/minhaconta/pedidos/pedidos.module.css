@@ -1,7 +1,7 @@
 .container {
   display: flex;
   min-height: 100vh;
-  background-color: #f8f9fa;
+  background-color: #e2e8f0; /* Darker background for contrast */
 }
 
 .mainContent {
@@ -20,14 +20,14 @@
 .title {
   font-size: 1.75rem;
   font-weight: 700;
-  color: #111827;
+  color: #0f172a; /* Darker text */
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
 .subtitle {
-  color: #6b7280;
+  color: #475569; /* Darker gray */
   font-size: 0.95rem;
 }
 
@@ -35,26 +35,29 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #6b7280;
+  color: #475569;
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 600;
   padding: 0.5rem 1rem;
   border-radius: 8px;
   background: white;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #cbd5e1; /* Stronger border */
   transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
 .backBtn:hover {
-  background: #f9fafb;
-  color: #111827;
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #94a3b8;
 }
 
 /* Table Styles */
 .tableContainer {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid #cbd5e1; /* Stronger border */
   overflow: hidden;
 }
 
@@ -66,20 +69,20 @@
 .table th {
   text-align: left;
   padding: 1rem 1.5rem;
-  background: #f9fafb;
-  color: #6b7280;
+  background: #f1f5f9; /* Darker header bg */
+  color: #475569;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .table td {
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid #e2e8f0;
   font-size: 0.875rem;
-  color: #374151;
+  color: #334155;
 }
 
 .orderId {
@@ -189,14 +192,23 @@
 
 .orderCard {
   background: white;
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 1.25rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid #cbd5e1;
+  border-left: 5px solid #3b82f6; /* Blue accent */
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
+  margin-bottom: 0.5rem;
+}
+
+.orderCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-color: #94a3b8;
 }
 
 .orderCard:active {
@@ -282,7 +294,7 @@
 @media (max-width: 768px) {
   .container {
     flex-direction: column;
-    background-color: #f9fafb;
+    background-color: #e2e8f0; /* Darker background on mobile too */
   }
 
   .mainContent {

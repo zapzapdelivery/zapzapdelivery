@@ -63,41 +63,77 @@ export async function GET(
     }
 
     // 3. Buscar Pagamento no Mercado Pago
-    const client = new MercadoPagoConfig({ accessToken });
+    const client = new MercadoPagoConfig({ accessToken: accessToken as string });
     const payment = new Payment(client);
 
     // Busca pagamentos associados a este pedido (external_reference)
     // Ordena pelo mais recente criado
     try {
         const searchResult = await payment.search({
-        options: {
-            external_reference: orderId,
-            sort: 'date_created',
-            criteria: 'desc',
-            limit: 1
-        }
+          options: {
+              external_reference: orderId,
+              sort: 'date_created',
+              criteria: 'desc',
+              limit: 1
+          }
         });
 
         if (!searchResult.results || searchResult.results.length === 0) {
-        return NextResponse.json({ error: 'Pagamento não encontrado no Mercado Pago' }, { status: 404 });
+          return NextResponse.json({ error: 'Pagamento não encontrado no Mercado Pago' }, { status: 404 });
         }
 
         const lastPayment: any = searchResult.results[0];
+
+        // Verificar expiração e cancelar pedido se necessário
+        if (lastPayment.status === 'pending' || lastPayment.status === 'in_process') {
+          const expirationDate = new Date(lastPayment.date_of_expiration);
+          const now = new Date();
+
+          if (now > expirationDate) {
+            // Cancelar pedido no Supabase se expirado
+            if (pedido.status_pedido !== 'Cancelado Pelo Sistema') {
+               await supabaseAdmin
+                .from('pedidos')
+                .update({ 
+                  status_pedido: 'Cancelado Pelo Sistema',
+                  motivo_cancelamento: 'Pagamento PIX expirado'
+                })
+                .eq('id', orderId);
+            }
+            
+            return NextResponse.json({
+              id: lastPayment.id,
+              status: 'cancelled', // Força status cancelado para o frontend
+              status_detail: 'pix_expired',
+              date_expiration: lastPayment.date_of_expiration,
+              qr_code: null, // Não retorna QR code se expirado
+              qr_code_base64: null
+            });
+          }
+        }
+        
+        // Se pagamento aprovado, atualizar status do pedido se ainda não estiver
+        if (lastPayment.status === 'approved' && pedido.status_pedido !== 'Pedido Confirmado' && pedido.status_pedido !== 'Cancelado Pelo Cliente' && pedido.status_pedido !== 'Cancelado Pelo Estabelecimento') {
+           await supabaseAdmin
+            .from('pedidos')
+            .update({ status_pedido: 'Pedido Confirmado' })
+            .eq('id', orderId);
+        }
 
         // Extrair dados do PIX
         const pointOfInteraction = lastPayment.point_of_interaction;
         const transactionData = pointOfInteraction?.transaction_data;
 
         if (!transactionData) {
-        return NextResponse.json({ 
-            error: 'Dados do PIX não disponíveis neste pagamento',
-            payment_status: lastPayment.status
-        }, { status: 404 });
+          return NextResponse.json({ 
+              error: 'Dados do PIX não disponíveis neste pagamento',
+              payment_status: lastPayment.status
+          }, { status: 404 });
         }
 
         return NextResponse.json({
-        id: lastPayment.id,
-        status: lastPayment.status,
+          id: lastPayment.id,
+          status: lastPayment.status,
         status_detail: lastPayment.status_detail,
         qr_code: transactionData.qr_code,
         qr_code_base64: transactionData.qr_code_base64,
