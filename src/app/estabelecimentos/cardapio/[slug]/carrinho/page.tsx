@@ -32,6 +32,7 @@ import {
 import styles from './carrinho.module.css';
 import { supabase } from '@/lib/supabase';
 import { useCart } from '@/context/CartContext';
+import { useToast } from '@/components/Toast/ToastProvider';
 import Link from 'next/link';
 
 interface DeliveryFeeConfig {
@@ -57,6 +58,7 @@ interface Estabelecimento {
 }
 
 export default function CarrinhoPage() {
+  const toast = useToast();
   const params = useParams();
   const router = useRouter();
   const slug = params.slug as string;
@@ -737,27 +739,27 @@ export default function CarrinhoPage() {
     if (currentStep === 2) {
       if (deliveryOption === 'DELIVERY') {
         if (deliveryError) {
-            showModal('error', 'Endereço Inválido', deliveryError);
+            toast.error(deliveryError);
             return;
         }
         if (!addressDetails.rua) {
-          showModal('warning', 'Endereço Incompleto', 'Por favor, informe o nome da rua.');
+          toast.error('Por favor, informe o nome da rua.');
           return;
         }
         if (!addressDetails.numero) {
-          showModal('warning', 'Número Obrigatório', 'Por favor, informe o número do endereço.');
+          toast.error('Por favor, informe o número do endereço.');
           return;
         }
         if (!addressDetails.cidade) {
-            showModal('warning', 'Cidade Obrigatória', 'Por favor, informe a cidade.');
+            toast.error('Por favor, informe a cidade.');
             return;
         }
         if (!addressDetails.uf) {
-            showModal('warning', 'UF Obrigatório', 'Por favor, informe o estado (UF).');
+            toast.error('Por favor, informe o estado (UF).');
             return;
         }
         if (estabelecimento?.taxa_entrega?.tipo_taxa === 'bairro' && !selectedNeighborhood) {
-           showModal('warning', 'Bairro Obrigatório', 'Por favor, selecione seu bairro.');
+           toast.error('Por favor, selecione seu bairro.');
            return;
         }
       }
