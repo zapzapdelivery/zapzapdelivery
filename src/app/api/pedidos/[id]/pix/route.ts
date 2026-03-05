@@ -27,7 +27,7 @@ export async function GET(
     // 1. Buscar pedido para pegar estabelecimento e validar
     const { data: pedido, error: pedidoError } = await supabaseAdmin
       .from('pedidos')
-      .select('estabelecimento_id, status_pedido, forma_pagamento')
+      .select('estabelecimento_id, status_pedido, forma_pagamento, observacao_cliente')
       .eq('id', orderId)
       .single();
 
@@ -84,25 +84,68 @@ export async function GET(
 
         const lastPayment: any = searchResult.results[0];
 
-        // [TESTE] Forçar expiração em 10 segundos baseada na data de criação
-        const paymentCreated = new Date(lastPayment.date_created);
-        const expirationDate = new Date(paymentCreated.getTime() + 10000); // 10 segundos
-        // const expirationDate = new Date(lastPayment.date_of_expiration);
+        // Usar a data de expiração real do MP (que definimos como 30 min na criação/reativação)
+        // Se não tiver, usa 30 minutos a partir da criação
+        let expirationDate: Date;
+        if (lastPayment.date_of_expiration) {
+            expirationDate = new Date(lastPayment.date_of_expiration);
+        } else {
+            const paymentCreated = new Date(lastPayment.date_created);
+            expirationDate = new Date(paymentCreated.getTime() + 30 * 60 * 1000); // 30 minutos fallback
+        }
 
         const now = new Date();
+        
+        // Debug
+        console.log('[PIX Debug]', {
+          orderId,
+          now: now.toISOString(),
+          expirationDate: expirationDate.toISOString(),
+          isExpired: now > expirationDate,
+          statusPedido: pedido.status_pedido,
+          paymentStatus: lastPayment.status
+        });
 
         // Verificar expiração e cancelar pedido se necessário
-        if (lastPayment.status === 'pending' || lastPayment.status === 'in_process') {
-          if (now > expirationDate) {
-            // Cancelar pedido no Supabase se expirado
-            if (pedido.status_pedido !== 'Cancelado Pelo Estabelecimento') {
-               await supabaseAdmin
+        const isNotApproved = lastPayment.status !== 'approved';
+        const isExpired = now > expirationDate;
+        const isCancelledOrRejected = lastPayment.status === 'cancelled' || lastPayment.status === 'rejected';
+
+        if (isNotApproved) {
+          if (isExpired || isCancelledOrRejected) {
+            // Cancelar pedido no Supabase se expirado ou cancelado no MP
+            const motivo = 'Cancelado por falta de pagamento.';
+            
+            // Verificar se precisa atualizar (para não fazer update repetido)
+            let needsUpdate = false;
+            let novaObs = pedido.observacao_cliente || '';
+
+            if (pedido.status_pedido !== 'Cancelado Pelo Estabelecimento' && pedido.status_pedido !== 'Cancelado Pelo Cliente') {
+                needsUpdate = true;
+            } else if (pedido.status_pedido === 'Cancelado Pelo Estabelecimento' && !novaObs.includes(motivo)) {
+                needsUpdate = true;
+            }
+
+            if (needsUpdate) {
+               console.log(`[PIX] Expirou/Cancelado. Atualizando pedido ${orderId}. Status MP: ${lastPayment.status}`);
+               
+               if (!novaObs.includes(motivo)) {
+                   novaObs = novaObs ? `${novaObs} | ${motivo}` : motivo;
+               }
+
+               const { error: updateError } = await supabaseAdmin
                 .from('pedidos')
                 .update({ 
                   status_pedido: 'Cancelado Pelo Estabelecimento',
-                  motivo_cancelamento: 'Cancelado por falta de pagamento.'
+                  observacao_cliente: novaObs
                 })
                 .eq('id', orderId);
+
+               if (updateError) {
+                   console.error('[PIX] Erro ao atualizar status para cancelado:', updateError);
+               } else {
+                   console.log('[PIX] Pedido atualizado com sucesso.');
+               }
             }
             
             return NextResponse.json({
@@ -117,7 +160,8 @@ export async function GET(
         }
         
         // Se pagamento aprovado, atualizar status do pedido se ainda não estiver
-        if (lastPayment.status === 'approved' && pedido.status_pedido !== 'Pedido Confirmado' && pedido.status_pedido !== 'Cancelado Pelo Cliente' && pedido.status_pedido !== 'Cancelado Pelo Estabelecimento') {
+        // Permitimos atualizar mesmo se estiver 'Cancelado Pelo Estabelecimento' (ex: expirou e pagou novamente)
+        if (lastPayment.status === 'approved' && pedido.status_pedido !== 'Pedido Confirmado' && pedido.status_pedido !== 'Cancelado Pelo Cliente') {
            await supabaseAdmin
             .from('pedidos')
             .update({ status_pedido: 'Pedido Confirmado' })
