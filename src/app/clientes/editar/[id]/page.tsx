@@ -656,7 +656,7 @@ export default function EditarClientePage() {
             </button>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
