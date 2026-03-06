@@ -137,7 +137,67 @@ export async function POST(request: Request) {
 
     const totalPedido = Math.max(0, subtotal + deliveryFee - discount);
 
-    // 3. Generate Order Number
+    // 3. Verify and Deduct Stock (Real-time update)
+    // We need to ensure stock is available and deduct it BEFORE creating the order
+    // to prevent overselling. If order creation fails, we must rollback.
+    const deductedItems: { produto_id: string; quantidade: number }[] = [];
+    
+    for (const item of orderItemsData) {
+      // Check if product has stock tracking
+      const { data: stockData, error: stockCheckError } = await supabaseAdmin
+        .from('estoque_produtos')
+        .select('estoque_atual')
+        .eq('produto_id', item.produto_id)
+        .single();
+        
+      if (stockCheckError && stockCheckError.code !== 'PGRST116') {
+        // If error is not "row not found", it's a real error
+        console.error(`Error checking stock for product ${item.produto_id}:`, stockCheckError);
+        // We continue, assuming no stock tracking or error will be caught later? 
+        // Safer to abort if we can't check stock.
+        throw new Error(`Erro ao verificar estoque do produto ${item.produto_id}`);
+      }
+
+      if (stockData) {
+        // Product has stock tracking
+        if (stockData.estoque_atual < item.quantidade) {
+          // Rollback previous deductions
+          for (const deducted of deductedItems) {
+             const { data: curr } = await supabaseAdmin.from('estoque_produtos').select('estoque_atual').eq('produto_id', deducted.produto_id).single();
+             if (curr) {
+                await supabaseAdmin.from('estoque_produtos').update({ estoque_atual: curr.estoque_atual + deducted.quantidade }).eq('produto_id', deducted.produto_id);
+             }
+          }
+          return NextResponse.json({ error: `Estoque insuficiente para o produto. Disponível: ${stockData.estoque_atual}, Solicitado: ${item.quantidade}` }, { status: 400 });
+        }
+
+        // Deduct stock
+        // Using optimistic locking
+        const { error: updateError, data: updatedData } = await supabaseAdmin
+          .from('estoque_produtos')
+          .update({ estoque_atual: stockData.estoque_atual - item.quantidade })
+          .eq('produto_id', item.produto_id)
+          .eq('estoque_atual', stockData.estoque_atual) // Optimistic locking
+          .select()
+          .single();
+          
+        if (updateError || !updatedData) {
+          // Concurrency issue or failed update
+          // Rollback
+          for (const deducted of deductedItems) {
+             const { data: curr } = await supabaseAdmin.from('estoque_produtos').select('estoque_atual').eq('produto_id', deducted.produto_id).single();
+             if (curr) {
+                await supabaseAdmin.from('estoque_produtos').update({ estoque_atual: curr.estoque_atual + deducted.quantidade }).eq('produto_id', deducted.produto_id);
+             }
+          }
+          return NextResponse.json({ error: `O estoque do produto mudou durante sua compra. Tente novamente.` }, { status: 409 });
+        }
+        
+        deductedItems.push({ produto_id: item.produto_id, quantidade: item.quantidade });
+      }
+    }
+
+    // 4. Generate Order Number
     const year = new Date().getFullYear();
     const randomDigits = Math.floor(100000 + Math.random() * 900000).toString();
     const numeroPedido = `${year}${randomDigits}`;
@@ -190,6 +250,52 @@ export async function POST(request: Request) {
       // Optional: Rollback order (delete it) if items fail
       await supabaseAdmin.from('pedidos').delete().eq('id', order.id);
       return NextResponse.json({ error: 'Erro ao adicionar itens ao pedido: ' + itemsError.message }, { status: 500 });
+    }
+
+    // 6. Register Stock Movement
+    // We record in BOTH tables: 
+    // - movimentacoes_estoque (for Admin UI)
+    // - estoque_movimentacoes (for internal tracking/idempotency)
+
+    const now = new Date().toISOString();
+    const motivo = `Pedido ${numeroPedido}`;
+
+    // A. Internal Tracking (estoque_movimentacoes)
+    const internalMovements = deductedItems.map(item => ({
+      estabelecimento_id,
+      pedido_id: order.id,
+      produto_id: item.produto_id,
+      quantidade: item.quantidade,
+      tipo_movimento: 'venda',
+      motivo,
+      criado_em: now
+    }));
+
+    const { error: internalError } = await supabaseAdmin
+      .from('estoque_movimentacoes')
+      .insert(internalMovements);
+    
+    if (internalError) {
+      console.error('Error registering internal stock movements:', internalError);
+      // Log but continue
+    }
+
+    // B. UI Display (movimentacoes_estoque)
+    const uiMovements = deductedItems.map(item => ({
+      estabelecimento_id,
+      produto_id: item.produto_id,
+      tipo_movimentacao: 'saida',
+      quantidade: item.quantidade,
+      motivo,
+      criado_em: now
+    }));
+
+    const { error: uiError } = await supabaseAdmin
+      .from('movimentacoes_estoque')
+      .insert(uiMovements);
+      
+    if (uiError) {
+      console.error('Error registering UI stock movements:', uiError);
     }
 
     return NextResponse.json({ success: true, order });

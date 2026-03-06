@@ -116,6 +116,21 @@ export async function GET(
             // Cancelar pedido no Supabase se expirado ou cancelado no MP
             const motivo = 'Cancelado por falta de pagamento.';
             
+            // Tentar processar retorno de estoque
+            try {
+                const { processStockReturn } = await import('@/services/stockService');
+                const reason = isExpired ? 'PIX Expirado' : `Pagamento ${lastPayment.status}`;
+                const stockResult = await processStockReturn(orderId, reason);
+                
+                if (!stockResult.success) {
+                     console.error(`[PIX] Falha ao retornar estoque para pedido ${orderId}: ${stockResult.error}`);
+                } else {
+                     console.log(`[PIX] Estoque retornado com sucesso para pedido ${orderId}`);
+                }
+            } catch (stockErr) {
+                console.error(`[PIX] Erro fatal ao chamar serviço de estoque (retorno):`, stockErr);
+            }
+            
             // Verificar se precisa atualizar (para não fazer update repetido)
             let needsUpdate = false;
             let novaObs = pedido.observacao_cliente || '';
@@ -166,6 +181,19 @@ export async function GET(
             .from('pedidos')
             .update({ status_pedido: 'Pedido Confirmado' })
             .eq('id', orderId);
+
+           // Tentar processar estoque ao confirmar via polling
+           try {
+             const { processStockDeduction } = await import('@/services/stockService');
+             const stockResult = await processStockDeduction(orderId);
+             if (!stockResult.success) {
+                 console.error(`[PIX Polling] Falha ao deduzir estoque para pedido ${orderId}: ${stockResult.error}`);
+             } else {
+                 console.log(`[PIX Polling] Estoque deduzido com sucesso para pedido ${orderId}`);
+             }
+           } catch (stockErr) {
+             console.error(`[PIX Polling] Erro fatal ao chamar serviço de estoque:`, stockErr);
+           }
         }
 
         // Extrair dados do PIX
@@ -187,6 +215,7 @@ export async function GET(
           qr_code_base64: transactionData.qr_code_base64,
           ticket_url: transactionData.ticket_url,
           date_expiration: expirationDate.toISOString(),
+          date_created: lastPayment.date_created,
           amount: lastPayment.transaction_amount
         });
 

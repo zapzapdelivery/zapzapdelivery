@@ -4,13 +4,11 @@ import React, { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
-  ArrowLeft, 
   Check, 
   X
 } from 'lucide-react';
 import { ImageUpload } from '@/components/Upload/ImageUpload';
 import { supabase } from '@/lib/supabase';
-import { Sidebar } from '@/components/Sidebar/Sidebar';
 import { AdminHeader } from '@/components/Header/AdminHeader';
 import { useToast } from '@/components/Toast/ToastProvider';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -48,7 +46,8 @@ export default function EditarProdutoPage() {
   const [permiteObservacao, setPermiteObservacao] = useState(true);
   const [status, setStatus] = useState(true); // true = ativo
   const [imagemUrl, setImagemUrl] = useState('');
-  const [categoriaId, setCategoriaId] = useState('');
+  // const [categoriaId, setCategoriaId] = useState(''); // Deprecated
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [estabelecimentoId, setEstabelecimentoId] = useState('');
   
   // Data States
@@ -126,7 +125,20 @@ export default function EditarProdutoPage() {
             setPermiteObservacao(prod.permite_observacao);
             setStatus(prod.status_produto === 'ativo');
             setImagemUrl(prod.imagem_produto_url || '');
-            setCategoriaId(prod.categoria_id || '');
+            // setCategoriaId(prod.categoria_id || ''); // Deprecated
+            
+            // Fetch categories (N:N)
+            const { data: prodCats } = await supabase
+                .from('produtos_categorias')
+                .select('categoria_id')
+                .eq('produto_id', id);
+
+            if (prodCats && prodCats.length > 0) {
+                setSelectedCategoryIds(prodCats.map((pc: any) => pc.categoria_id));
+            } else if (prod.categoria_id) {
+                // Fallback for legacy data
+                setSelectedCategoryIds([prod.categoria_id]);
+            }
           }
         }
 
@@ -175,8 +187,8 @@ export default function EditarProdutoPage() {
       warning('Por favor, informe um valor válido.');
       return;
     }
-    if (!categoriaId) {
-      warning('Por favor, selecione uma categoria.');
+    if (selectedCategoryIds.length === 0) {
+      warning('Por favor, selecione pelo menos uma categoria.');
       return;
     }
 
@@ -186,7 +198,7 @@ export default function EditarProdutoPage() {
       const valorNumerico = parseFloat(valor.replace(',', '.'));
       const payload = {
         estabelecimento_id: estabelecimentoId,
-        categoria_id: categoriaId,
+        categoria_id: selectedCategoryIds[0], // Primary for compatibility
         nome_produto: nome,
         descricao: descricao,
         valor_base: valorNumerico,
@@ -202,6 +214,15 @@ export default function EditarProdutoPage() {
         .eq('id', id);
       
       if (error) throw error;
+
+      // Update Categories N:N
+      await supabase.from('produtos_categorias').delete().eq('produto_id', id);
+      if (selectedCategoryIds.length > 0) {
+          const catRows = selectedCategoryIds.map(cid => ({ produto_id: id, categoria_id: cid }));
+          const { error: catErr } = await supabase.from('produtos_categorias').insert(catRows);
+          if (catErr) console.warn('Erro ao salvar categorias (tabela pode não existir):', catErr);
+      }
+
       await supabase.from('produtos_grupos_adicionais').delete().eq('produto_id', id);
       if (selectedGrupos.length > 0) {
         const rows = selectedGrupos.map((gid, idx) => ({
@@ -236,7 +257,6 @@ export default function EditarProdutoPage() {
   if (loading || loadingRole) {
     return (
         <div className={styles.container}>
-            <Sidebar />
             <div className={styles.content}>
                 <div style={{ display: 'flex', justifyContent: 'center', marginTop: '100px', color: '#6b7280' }}>
                     Carregando...
@@ -248,22 +268,44 @@ export default function EditarProdutoPage() {
 
   return (
     <div className={styles.container}>
-      <Sidebar />
       <main className={styles.content}>
         <AdminHeader />
         
-        <div className={styles.header}>
-          <Link href="/produtos" className={styles.backLink}>
-            <ArrowLeft size={16} />
-            Voltar para Produtos
-          </Link>
-          <h1 className={styles.title}>Editar Produto</h1>
-          <p className={styles.subtitle}>Atualize as informações do produto abaixo.</p>
-        </div>
+        <div className={styles.mainColumn}>
+          <div className={styles.header}>
+            <Link href="/produtos" className={styles.backLink}>
+              ← Voltar para Produtos
+            </Link>
+            <h1 className={styles.title}>Editar Produto</h1>
+            <p className={styles.subtitle}>Atualize as informações do produto abaixo.</p>
+          </div>
+            
+            {/* Status do Produto */}
+          <div className={styles.card}>
+            <div className={styles.switchContainer}>
+                  <span className={styles.switchTitle}>Status do Produto</span>
+                  <label className={styles.switch}>
+                      <input 
+                          type="checkbox" 
+                          checked={status}
+                          onChange={(e) => setStatus(e.target.checked)}
+                      />
+                      <span className={styles.slider}></span>
+                  </label>
+              </div>
+            </div>
 
-        <div className={styles.formGrid}>
-          {/* Left Column */}
-          <div className={styles.mainColumn}>
+            <div className={styles.card}>
+              <h2 className={styles.cardTitle}>Mídia</h2>
+              
+              <ImageUpload
+                bucket="products"
+                folder="produtos"
+                value={imagemUrl}
+                onChange={setImagemUrl}
+              />
+            </div>
+
             <div className={styles.card}>
               <h2 className={styles.cardTitle}>Informações do Produto</h2>
               
@@ -303,6 +345,34 @@ export default function EditarProdutoPage() {
                 </div>
               </div>
 
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Estabelecimento</label>
+                <div className={styles.select} style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed', color: '#6b7280' }}>
+                    {establishmentName || 'Carregando...'}
+                </div>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Categorias</label>
+                <div className={styles.categoriesGrid}>
+                  {categories.map(cat => (
+                    <label key={cat.id} className={styles.categoryItem}>
+                      <input
+                        type="checkbox"
+                        checked={selectedCategoryIds.includes(cat.id)}
+                        onChange={(e) => {
+                          const isChecked = e.target.checked;
+                          setSelectedCategoryIds(prev =>
+                            isChecked ? [...prev, cat.id] : prev.filter(id => id !== cat.id)
+                          );
+                        }}
+                      />
+                      <span className={styles.categoryLabel}>{cat.nome_categoria}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               <div className={styles.switchContainer}>
                 <div className={styles.switchLabel}>
                   <span className={styles.switchTitle}>Permite Observação</span>
@@ -319,76 +389,21 @@ export default function EditarProdutoPage() {
               </div>
 
             </div>
-          </div>
-
-          {/* Right Column */}
-          <div className={styles.sideColumn}>
             
-            {/* Status Card */}
-            <div className={styles.card}>
-                <div className={styles.switchContainer}>
-                    <span className={styles.switchTitle}>Status do Produto</span>
-                    <label className={styles.switch}>
-                        <input 
-                            type="checkbox" 
-                            checked={status}
-                            onChange={(e) => setStatus(e.target.checked)}
-                        />
-                        <span className={styles.slider}></span>
-                    </label>
-                </div>
-            </div>
-
-            {/* Media Card */}
-            <div className={styles.card}>
-              <h2 className={styles.cardTitle}>Mídia</h2>
-              
-              <ImageUpload
-                bucket="products"
-                folder="produtos"
-                value={imagemUrl}
-                onChange={setImagemUrl}
-              />
-            </div>
-
-            {/* Establishment & Category Card */}
-            <div className={styles.card}>
-              <h2 className={styles.cardTitle}>Configurações</h2>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Estabelecimento</label>
-                <div className={styles.select} style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed', color: '#6b7280' }}>
-                    {establishmentName || 'Carregando...'}
-                </div>
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Categoria</label>
-                <select 
-                    className={styles.select}
-                    value={categoriaId}
-                    onChange={(e) => setCategoriaId(e.target.value)}
-                >
-                  <option value="">Selecione uma categoria</option>
-                  {categories.map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.nome_categoria}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
             <div className={styles.card}>
               <h2 className={styles.cardTitle}>Adicionais (Grupos)</h2>
               <div className={styles.formGroup}>
-                {!categoriaId ? (
+                {!selectedCategoryIds.length ? (
                   <div
                     className={styles.select}
                     style={{ backgroundColor: '#f3f4f6', color: '#6b7280' }}
                   >
-                    Selecione uma categoria para ver os grupos
+                    Selecione pelo menos uma categoria para ver os grupos
                   </div>
                 ) : (
                   (() => {
                     const gruposFiltrados = grupos.filter(
-                      (g) => String(g.categoria_id) === String(categoriaId),
+                      (g) => g.categoria_id && selectedCategoryIds.includes(String(g.categoria_id)),
                     );
                     if (gruposFiltrados.length === 0) {
                       return (
@@ -483,29 +498,26 @@ export default function EditarProdutoPage() {
                   })()
                 )}
               </div>
-            </div>
+          </div>
 
+          <div className={styles.footer}>
+            <button 
+              className={`${styles.button} ${styles.cancelButton}`}
+              onClick={() => router.back()}
+            >
+              <X size={18} />
+              Cancelar
+            </button>
+            <button 
+              className={`${styles.button} ${styles.saveButton}`}
+              onClick={handleSave}
+              disabled={saving}
+            >
+              <Check size={18} />
+              {saving ? 'Salvando...' : 'Salvar Alterações'}
+            </button>
           </div>
         </div>
-
-        <div className={styles.footer}>
-          <button 
-            className={`${styles.button} ${styles.cancelButton}`}
-            onClick={() => router.back()}
-          >
-            <X size={18} />
-            Cancelar
-          </button>
-          <button 
-            className={`${styles.button} ${styles.saveButton}`}
-            onClick={handleSave}
-            disabled={saving}
-          >
-            <Check size={18} />
-            {saving ? 'Salvando...' : 'Salvar Alterações'}
-          </button>
-        </div>
-
       </main>
     </div>
   );

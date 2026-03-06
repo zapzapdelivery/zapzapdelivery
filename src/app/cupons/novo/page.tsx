@@ -228,6 +228,7 @@ function NovoCupomContent() {
     <div className={styles.container}>
       <Sidebar />
       <main className={styles.content}>
+        <AdminHeader />
         <div className={styles.header}>
           <Link href="/cupons" className={styles.backLink}>
             <ArrowLeft size={18} /> Voltar para Cupons
@@ -252,6 +253,40 @@ function NovoCupomContent() {
                   />
                   <span className={styles.slider}></span>
                 </label>
+              </div>
+            </div>
+
+            <div className={styles.card}>
+              <div className={styles.sectionTitle}>
+                <Link2 size={18} color="#f97316" />
+                Vínculo
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>ESTABELECIMENTO</label>
+
+                {role === 'estabelecimento' ? (
+                  <div className={styles.readonly}>
+                    {resolveEstablishmentLabel()}
+                  </div>
+                ) : (
+                  <select
+                    value={vinculoEstabelecimentoId}
+                    onChange={(e) => setVinculoEstabelecimentoId(e.target.value)}
+                    className={styles.select}
+                  >
+                    <option value="">
+                      {loadingEstablishments
+                        ? 'Carregando estabelecimentos...'
+                        : 'Selecione um estabelecimento...'}
+                    </option>
+                    {establishments.map((e) => (
+                      <option key={e.id} value={e.id}>
+                        {e.nome_estabelecimento}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             </div>
 
@@ -340,42 +375,6 @@ function NovoCupomContent() {
                     className={styles.input}
                   />
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.sideColumn}>
-            <div className={styles.card}>
-              <div className={styles.sectionTitle}>
-                <Link2 size={18} color="#f97316" />
-                Vínculo
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.label}>ESTABELECIMENTO</label>
-
-                {role === 'estabelecimento' ? (
-                  <div className={styles.readonly}>
-                    {resolveEstablishmentLabel()}
-                  </div>
-                ) : (
-                  <select
-                    value={vinculoEstabelecimentoId}
-                    onChange={(e) => setVinculoEstabelecimentoId(e.target.value)}
-                    className={styles.select}
-                  >
-                    <option value="">
-                      {loadingEstablishments
-                        ? 'Carregando estabelecimentos...'
-                        : 'Selecione um estabelecimento...'}
-                    </option>
-                    {establishments.map((e) => (
-                      <option key={e.id} value={e.id}>
-                        {e.nome_estabelecimento}
-                      </option>
-                    ))}
-                  </select>
-                )}
               </div>
             </div>
 

@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
-  ArrowLeft, 
   Check, 
   X, 
   User, 
@@ -14,7 +13,6 @@ import {
 } from 'lucide-react';
 import { ImageUpload } from '@/components/Upload/ImageUpload';
 import { supabase } from '@/lib/supabase';
-import { Sidebar } from '@/components/Sidebar/Sidebar';
 import { AdminHeader } from '@/components/Header/AdminHeader';
 import { useToast } from '@/components/Toast/ToastProvider';
 import { validateCPF, formatCPF, formatCEP, validateCEP, validateEmail } from '@/utils/validators';
@@ -384,21 +382,90 @@ export default function EditarClientePage() {
 
   return (
     <div className={styles.container}>
-      <Sidebar />
-      <div className={styles.content}>
+      <main className={styles.content}>
         <AdminHeader />
         
-        <div className={styles.header}>
-          <Link href="/clientes" className={styles.backLink}>
-            <ArrowLeft size={16} />
-            Voltar para Clientes
-          </Link>
-          <h1 className={styles.title}>Editar Cliente</h1>
-        </div>
+        <div className={styles.mainColumn}>
+          <div className={styles.header}>
+            <Link href="/clientes" className={styles.backLink}>
+              ← Voltar para Clientes
+            </Link>
+            <h1 className={styles.title}>Editar Cliente</h1>
+            <p className={styles.subtitle}>Atualize as informações do cliente abaixo.</p>
+          </div>
 
-        <div className={styles.formGrid}>
-          {/* Main Column */}
-          <div className={styles.mainColumn}>
+          {/* Status Card */}
+          <div className={styles.card}>
+              <h2 className={styles.cardTitle}>Status do Cliente</h2>
+              <div className={styles.switchContainer}>
+                <div className={styles.switchLabel}>
+                  <span className={styles.switchTitle}>Ativar ou inativar cliente</span>
+                </div>
+                <label className={styles.switch}>
+                  <input 
+                    type="checkbox" 
+                    checked={status}
+                    onChange={(e) => setStatus(e.target.checked)}
+                  />
+                  <span className={styles.slider}></span>
+                </label>
+              </div>
+            </div>
+
+            {/* Photo Card */}
+            <div className={styles.card}>
+              <h2 className={styles.cardTitle}>
+                <ImageIcon size={20} className={styles.cardIcon} />
+                Mídia
+              </h2>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                <ImageUpload
+                  value={imagemUrl}
+                  onChange={setImagemUrl}
+                  bucket="avatars"
+                  folder="clientes"
+                  className={styles.circularUpload}
+                  showUrlInput={false}
+                />
+              </div>
+              {!imagemUrl && (
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>URL da Imagem (Opcional)</label>
+                    <input 
+                      type="text" 
+                      className={styles.input} 
+                      placeholder="https://..."
+                      value={imagemUrl}
+                      onChange={(e) => setImagemUrl(e.target.value)}
+                    />
+                  </div>
+              )}
+            </div>
+
+            {/* Establishment Card */}
+            <div className={styles.card}>
+              <h2 className={styles.cardTitle}>
+                <Settings size={20} className={styles.cardIcon} />
+                Estabelecimento
+              </h2>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Vincular a</label>
+                <select 
+                  className={styles.select}
+                  value={estabelecimentoId}
+                  onChange={(e) => setEstabelecimentoId(e.target.value)}
+                  disabled={!isSuperAdmin}
+                >
+                  <option value="">Selecione...</option>
+                  {establishments.map(est => (
+                    <option key={est.id} value={est.id}>
+                      {est.nome_estabelecimento}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             {/* Identification Card */}
             <div className={styles.card}>
               <h2 className={styles.cardTitle}>
@@ -569,87 +636,24 @@ export default function EditarClientePage() {
                 />
               </div>
             </div>
-          </div>
 
-          {/* Sidebar Column */}
-          <div className={styles.sideColumn}>
-            {/* Status Card */}
-            <div className={styles.card}>
-              <h2 className={styles.cardTitle}>Status do Cliente</h2>
-              <div className={styles.switchContainer}>
-                <div className={styles.switchLabel}>
-                  <span className={styles.switchTitle}>Ativar ou inativar cliente</span>
-                </div>
-                <label className={styles.switch}>
-                  <input 
-                    type="checkbox" 
-                    checked={status}
-                    onChange={(e) => setStatus(e.target.checked)}
-                  />
-                  <span className={styles.slider}></span>
-                </label>
-              </div>
-            </div>
-
-            {/* Photo Card */}
-            <div className={styles.card}>
-              <h2 className={styles.cardTitle}>
-                <ImageIcon size={20} className={styles.cardIcon} />
-                Foto do Cliente
-              </h2>
-              <div className={styles.photoUploadContainer}>
-                <ImageUpload
-                  value={imagemUrl}
-                  onChange={setImagemUrl}
-                  bucket="avatars"
-                  folder="clientes"
-                />
-              </div>
-            </div>
-
-            {/* Establishment Card */}
-            <div className={styles.card}>
-              <h2 className={styles.cardTitle}>
-                <Settings size={20} className={styles.cardIcon} />
-                Estabelecimento
-              </h2>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Vincular a</label>
-                <select 
-                  className={styles.select}
-                  value={estabelecimentoId}
-                  onChange={(e) => setEstabelecimentoId(e.target.value)}
-                  disabled={!isSuperAdmin}
-                >
-                  <option value="">Selecione...</option>
-                  {establishments.map(est => (
-                    <option key={est.id} value={est.id}>
-                      {est.nome_estabelecimento}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className={styles.actions}>
-              <button 
-                className={styles.cancelButton}
-                onClick={() => router.push('/clientes')}
-                disabled={saving}
-              >
-                <X size={20} />
-                Cancelar
-              </button>
-              <button 
-                className={styles.saveButton}
-                onClick={handleSave}
-                disabled={saving}
-              >
-                <Check size={20} />
-                {saving ? 'Salvando...' : 'Salvar Alterações'}
-              </button>
-            </div>
+          <div className={styles.footer}>
+            <button 
+              className={`${styles.button} ${styles.cancelButton}`}
+              onClick={() => router.push('/clientes')}
+              disabled={saving}
+            >
+              <X size={20} />
+              Cancelar
+            </button>
+            <button 
+              className={`${styles.button} ${styles.saveButton}`}
+              onClick={handleSave}
+              disabled={saving}
+            >
+              <Check size={20} />
+              {saving ? 'Salvando...' : 'Salvar Alterações'}
+            </button>
           </div>
         </div>
       </div>

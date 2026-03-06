@@ -127,11 +127,11 @@ export async function POST(request: Request) {
       }
     };
 
-    // Configurar expiração do PIX para 24 horas (MOBILE/DESKTOP)
+    // Configurar expiração do PIX para 30 minutos (MOBILE/DESKTOP)
     // Aumentado para permitir reuso do QR Code em caso de falha/reativação
     if (formData.payment_method_id === 'pix') {
       const expirationDate = new Date();
-      expirationDate.setHours(expirationDate.getHours() + 24);
+      expirationDate.setMinutes(expirationDate.getMinutes() + 30);
       paymentData.date_of_expiration = expirationDate.toISOString();
       console.log(`[MP] PIX Expiration set to: ${paymentData.date_of_expiration}`);
     }

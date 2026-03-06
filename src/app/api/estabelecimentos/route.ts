@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { role, error: authError, status } = await getAuthContext(request);
+    const { role, error: authError, status, establishmentId } = await getAuthContext(request);
     
     if (authError) {
       return NextResponse.json({ error: authError }, { status: status || 401 });
@@ -21,7 +21,8 @@ export async function GET(request: Request) {
     // Para simplificar e manter a segurança, vamos permitir que estabelecimentos vejam apenas seus dados
     // mas a rota de listagem geralmente é para admin. 
     // Vamos restringir a superadmin e parceiro por enquanto.
-    if (role === 'estabelecimento') {
+    if (role === 'estabelecimento' && !establishmentId) {
+      // Se for estabelecimento mas não tiver ID (?), nega
       return NextResponse.json({ error: 'Acesso negado para este tipo de usuário' }, { status: 403 });
     }
     
@@ -31,17 +32,29 @@ export async function GET(request: Request) {
     let data: any[] | null = null;
     let error: any = null;
     try {
-      const r1 = await supabaseAdmin
+      let query = supabaseAdmin
         .from('estabelecimentos')
         .select('*')
         .order('created_at', { ascending: false });
+
+      if (role === 'estabelecimento' && establishmentId) {
+        query = query.eq('id', establishmentId);
+      }
+
+      const r1 = await query;
       data = r1.data ?? null;
       error = r1.error ?? null;
       if (error && String(error.message || '').toLowerCase().includes('column')) {
-        const r2 = await supabaseAdmin
+        let query2 = supabaseAdmin
           .from('estabelecimentos')
           .select('*')
           .order('criado_em', { ascending: false });
+
+        if (role === 'estabelecimento' && establishmentId) {
+          query2 = query2.eq('id', establishmentId);
+        }
+
+        const r2 = await query2;
         data = r2.data ?? null;
         error = r2.error ?? null;
       }

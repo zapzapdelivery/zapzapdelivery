@@ -101,6 +101,25 @@ export async function POST(request: Request) {
                         novoStatus = OrderStatus.CONFIRMADO;
                     }
 
+                    // Tentar processar estoque se estiver confirmando agora
+                    if (novoStatus === OrderStatus.CONFIRMADO && statusAtual !== OrderStatus.CONFIRMADO) {
+                        try {
+                            // Import dinâmico para evitar dependências circulares ou problemas de init
+                            const { processStockDeduction } = await import('@/services/stockService');
+                            const stockResult = await processStockDeduction(pedidoId);
+                            
+                            if (!stockResult.success) {
+                                console.error(`[Webhook MP] Falha ao deduzir estoque para pedido ${pedidoId}: ${stockResult.error}`);
+                                // Opcional: Adicionar erro na observação para visibilidade
+                                // novaObservacao += ` | ALERTA: Erro ao baixar estoque: ${stockResult.error}`;
+                            } else {
+                                console.log(`[Webhook MP] Estoque deduzido com sucesso para pedido ${pedidoId}`);
+                            }
+                        } catch (stockErr) {
+                            console.error(`[Webhook MP] Erro fatal ao chamar serviço de estoque:`, stockErr);
+                        }
+                    }
+
                     // Atualizar Observação
                     let novaObservacao = pedido.observacao_cliente || '';
                     if (novaObservacao.includes('(Pagamento Online - Pendente)')) {
@@ -125,7 +144,30 @@ export async function POST(request: Request) {
                     }
 
                 } else if (paymentInfo.status === 'rejected' || paymentInfo.status === 'cancelled') {
-                    // Se rejeitado, apenas atualiza observação para informar
+                    // Se rejeitado/cancelado, restaurar estoque se necessário
+                    try {
+                        const { processStockReturn } = await import('@/services/stockService');
+                        
+                        // Determinar motivo correto
+                        let reason = `Pagamento ${paymentInfo.status}`;
+                        // Verifica se foi expirado (status_detail costuma ser 'expired' ou similar em caso de cancelamento por timeout)
+                        if (paymentInfo.status_detail === 'expired' || paymentInfo.status === 'cancelled') {
+                             // Se cancelado, assumimos expirado se não houver outro detalhe claro, ou se for PIX
+                             reason = 'PIX Expirado';
+                        }
+                        
+                        const stockResult = await processStockReturn(pedidoId, reason);
+                        
+                        if (!stockResult.success) {
+                             console.error(`[Webhook MP] Falha ao retornar estoque para pedido ${pedidoId}: ${stockResult.error}`);
+                        } else {
+                             console.log(`[Webhook MP] Estoque retornado com sucesso para pedido ${pedidoId}`);
+                        }
+                    } catch (stockErr) {
+                        console.error(`[Webhook MP] Erro fatal ao chamar serviço de estoque (retorno):`, stockErr);
+                    }
+
+                    // Atualizar observação
                     let novaObservacao = pedido.observacao_cliente || '';
                      if (novaObservacao.includes('(Pagamento Online - Pendente)')) {
                          novaObservacao = novaObservacao.replace('(Pagamento Online - Pendente)', '(Pagamento Online - FALHOU)');
@@ -133,10 +175,19 @@ export async function POST(request: Request) {
                          novaObservacao += ` (Pagamento Online - ${paymentInfo.status?.toUpperCase()})`;
                      }
                      
-                     if (novaObservacao !== pedido.observacao_cliente) {
+                     // Se cancelado, atualizar status do pedido também
+                     let novoStatus = pedido.status_pedido;
+                     if (paymentInfo.status === 'cancelled') {
+                         novoStatus = OrderStatus.CANCELADO_ESTABELECIMENTO; // Ou Cancelado Pelo Cliente? Melhor estabelecimento/sistema
+                     }
+
+                     if (novoStatus !== pedido.status_pedido || novaObservacao !== pedido.observacao_cliente) {
                         await supabaseAdmin
                             .from('pedidos')
-                            .update({ observacao_cliente: novaObservacao.trim() })
+                            .update({ 
+                                status_pedido: novoStatus,
+                                observacao_cliente: novaObservacao.trim() 
+                            })
                             .eq('id', pedidoId);
                             
                         console.log(`[Webhook MP] Pedido ${pedidoId} atualizado (Pagamento Falhou/Cancelado)`);

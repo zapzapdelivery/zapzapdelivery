@@ -75,47 +75,68 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Itens do pedido inválidos' }, { status: 400 });
     }
 
-    const { data: stockRows, error: stockError } = await supabaseAdmin
-      .from('estoque_produtos')
-      .select('id, produto_id, estoque_atual')
-      .eq('estabelecimento_id', estabelecimento_id)
-      .in('produto_id', productIds);
-
-    if (stockError) {
-      return NextResponse.json({ error: stockError.message || 'Erro ao consultar estoque' }, { status: 400 });
-    }
-
-    const stockMap = new Map<string, any>(
-      (stockRows || []).map((row: any) => [String(row.produto_id), row])
-    );
-
-    const insufficients: { produto_id: string; required: number; available: number }[] = [];
-
+    // 3. Deduct Stock (Optimistic Locking)
+    const deductedItems: { produto_id: string; quantidade: number }[] = [];
+    
+    // Process each product sequentially to avoid deadlocks
     for (const pid of productIds) {
       const required = aggregatedByProduct[pid] || 0;
-      const row = stockMap.get(pid);
-      const available = row ? Number(row.estoque_atual) || 0 : 0;
-      if (!row || available < required) {
-        insufficients.push({ produto_id: pid, required, available });
+      
+      // Get fresh stock data
+      const { data: stockData, error: stockCheckError } = await supabaseAdmin
+        .from('estoque_produtos')
+        .select('id, estoque_atual')
+        .eq('estabelecimento_id', estabelecimento_id)
+        .eq('produto_id', pid)
+        .single();
+        
+      if (stockCheckError) {
+         if (stockCheckError.code === 'PGRST116') {
+             // Product not found in stock table, skip deduction (assume unlimited or not tracked)
+             continue;
+         }
+         throw new Error(`Erro ao verificar estoque do produto ${pid}`);
       }
-    }
 
-    if (insufficients.length > 0) {
-      const idsWithIssue = insufficients.map(i => i.produto_id);
-      const { data: products } = await supabaseAdmin
-        .from('produtos')
-        .select('id, nome_produto')
-        .in('id', idsWithIssue);
+      if (stockData) {
+        if (stockData.estoque_atual < required) {
+           // Rollback previous deductions
+           for (const deducted of deductedItems) {
+             // Best effort rollback
+             const { data: curr } = await supabaseAdmin.from('estoque_produtos').select('estoque_atual').eq('produto_id', deducted.produto_id).single();
+             if (curr) {
+                await supabaseAdmin.from('estoque_produtos').update({ estoque_atual: curr.estoque_atual + deducted.quantidade }).eq('produto_id', deducted.produto_id);
+             }
+           }
+           
+           // Fetch product name for error message
+           const { data: prod } = await supabaseAdmin.from('produtos').select('nome_produto').eq('id', pid).single();
+           const name = prod?.nome_produto || 'Produto desconhecido';
+           return NextResponse.json({ error: `Estoque insuficiente para "${name}". Disponível: ${stockData.estoque_atual}, Solicitado: ${required}` }, { status: 400 });
+        }
 
-      const nameMap = new Map<string, string>(
-        (products || []).map((p: any) => [String(p.id), String(p.nome_produto || '')])
-      );
-
-      const first = insufficients[0];
-      const name = nameMap.get(first.produto_id) || first.produto_id;
-      const message = `Estoque insuficiente para o produto "${name}". Solicitado: ${first.required}, disponível: ${first.available}.`;
-
-      return NextResponse.json({ error: message }, { status: 400 });
+        // Deduct
+        const { error: updateError, data: updatedData } = await supabaseAdmin
+          .from('estoque_produtos')
+          .update({ estoque_atual: stockData.estoque_atual - required })
+          .eq('produto_id', pid)
+          .eq('estoque_atual', stockData.estoque_atual) // Optimistic lock
+          .select()
+          .single();
+          
+        if (updateError || !updatedData) {
+           // Concurrency issue
+           for (const deducted of deductedItems) {
+             const { data: curr } = await supabaseAdmin.from('estoque_produtos').select('estoque_atual').eq('produto_id', deducted.produto_id).single();
+             if (curr) {
+                await supabaseAdmin.from('estoque_produtos').update({ estoque_atual: curr.estoque_atual + deducted.quantidade }).eq('produto_id', deducted.produto_id);
+             }
+           }
+           return NextResponse.json({ error: `O estoque mudou durante a operação. Tente novamente.` }, { status: 409 });
+        }
+        
+        deductedItems.push({ produto_id: pid, quantidade: required });
+      }
     }
 
     const orderPayload = {
@@ -140,6 +161,13 @@ export async function POST(request: Request) {
       .single();
 
     if (orderError || !orderData) {
+      // Rollback stock
+      for (const deducted of deductedItems) {
+          const { data: curr } = await supabaseAdmin.from('estoque_produtos').select('estoque_atual').eq('produto_id', deducted.produto_id).single();
+          if (curr) {
+            await supabaseAdmin.from('estoque_produtos').update({ estoque_atual: curr.estoque_atual + deducted.quantidade }).eq('produto_id', deducted.produto_id);
+          }
+      }
       return NextResponse.json({ error: orderError?.message || 'Erro ao criar pedido' }, { status: 400 });
     }
 
@@ -160,11 +188,57 @@ export async function POST(request: Request) {
     if (itemsError) {
       // Rollback best-effort
       await supabaseAdmin.from('pedidos').delete().eq('id', orderData.id);
+      
+      // Rollback stock
+      for (const deducted of deductedItems) {
+          const { data: curr } = await supabaseAdmin.from('estoque_produtos').select('estoque_atual').eq('produto_id', deducted.produto_id).single();
+          if (curr) {
+            await supabaseAdmin.from('estoque_produtos').update({ estoque_atual: curr.estoque_atual + deducted.quantidade }).eq('produto_id', deducted.produto_id);
+          }
+      }
       return NextResponse.json({ error: itemsError.message || 'Erro ao inserir itens' }, { status: 400 });
     }
 
-    // A atualização de estoque agora é feita automaticamente via Trigger no banco de dados (handle_new_order_item_stock)
-    // Mantemos apenas a validação inicial de estoque (linhas 55-86) para garantir que o pedido não seja criado se não houver estoque.
+    // 6. Register Stock Movement
+    const now = new Date().toISOString();
+    const motivo = `Pedido PDV ${numero_pedido}`;
+
+    // A. Internal Tracking (estoque_movimentacoes)
+    const internalMovements = deductedItems.map(item => ({
+      estabelecimento_id,
+      pedido_id: orderData.id,
+      produto_id: item.produto_id,
+      quantidade: item.quantidade,
+      tipo_movimento: 'venda',
+      motivo,
+      criado_em: now
+    }));
+
+    const { error: internalError } = await supabaseAdmin
+      .from('estoque_movimentacoes')
+      .insert(internalMovements);
+    
+    if (internalError) {
+      console.error('Error registering internal stock movements:', internalError);
+    }
+
+    // B. UI Display (movimentacoes_estoque)
+    const uiMovements = deductedItems.map(item => ({
+      estabelecimento_id,
+      produto_id: item.produto_id,
+      tipo_movimentacao: 'saida',
+      quantidade: item.quantidade,
+      motivo,
+      criado_em: now
+    }));
+
+    const { error: uiError } = await supabaseAdmin
+      .from('movimentacoes_estoque')
+      .insert(uiMovements);
+      
+    if (uiError) {
+      console.error('Error registering UI stock movements:', uiError);
+    }
 
     return NextResponse.json({ ok: true, pedido: orderData });
   } catch (e: any) {

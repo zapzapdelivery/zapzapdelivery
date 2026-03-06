@@ -3,19 +3,17 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Sidebar } from '@/components/Sidebar/Sidebar';
 import { supabase } from '@/lib/supabase';
-import { MobileHeader } from '@/components/Mobile/Header/MobileHeader';
-import { ArrowLeft, Mail, Phone, Check, Fingerprint, Eye, EyeOff, Lock } from 'lucide-react';
+import { Check, Eye, EyeOff } from 'lucide-react';
 import styles from './novo-usuario.module.css';
 import { useToast } from '@/components/Toast/ToastProvider';
 import { useEstablishment } from '@/hooks/useEstablishment';
 import { useUserRole } from '@/hooks/useUserRole';
 import { ImageUpload } from '@/components/Upload/ImageUpload';
+import { AdminHeader } from '@/components/Header/AdminHeader';
 
 export default function NovoUsuarioPage() {
   const router = useRouter();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const { success, error: showError } = useToast();
   const { establishmentId: currentEstabId } = useEstablishment();
@@ -219,52 +217,28 @@ export default function NovoUsuarioPage() {
 
   return (
     <div className={styles.container}>
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <AdminHeader onMenuClick={toggleSidebar} />
       
-      <div className={styles.mobileOnly}>
-        <MobileHeader 
-          onMenuClick={() => setIsSidebarOpen(true)} 
-          title="Novo Usuário"
-          subtitle="Cadastre um novo membro"
-          showGreeting={false}
-        />
-      </div>
-
-      <main className={styles.mainContent}>
-        <div className={styles.desktopOnly}>
-          <Link href="/usuarios" className={styles.backLink}>
-            <ArrowLeft size={16} />
-            Voltar para Usuários
-          </Link>
-          <h1 className={styles.pageTitle}>Novo Usuário</h1>
-        </div>
-
-        <div className={styles.mobileOnly} style={{ marginBottom: '1rem', marginTop: '-0.5rem' }}>
-          <Link href="/usuarios" className={styles.backLink} style={{ marginBottom: '0' }}>
-            <ArrowLeft size={16} />
-            Voltar
-          </Link>
-        </div>
+      <div className={styles.mainColumn}>
+        <Link href="/usuarios" className={styles.backLink}>
+          ← Voltar para Usuários
+        </Link>
+        <h1 className={styles.pageTitle}>Novo Usuário</h1>
 
         <div className={styles.formGrid}>
-          {/* Left Column - Personal Info */}
-          <div className={styles.leftColumn}>
-            <h2 className={styles.sectionTitle}>Informações Pessoais</h2>
-            <span className={styles.sectionSubtitle}>
-              Preencha os dados básicos de identificação.
-            </span>
-
+          {/* Card 1: Informações Pessoais */}
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Informações Pessoais</h2>
+            
             <div className={styles.formGroup}>
               <label className={styles.label}>Avatar do Usuário</label>
-              <div style={{ marginBottom: '1rem' }}>
-                <ImageUpload
-                  bucket="avatars"
-                  folder="usuarios"
-                  value={formData.avatar_url}
-                  onChange={(url) => setFormData(prev => ({ ...prev, avatar_url: url }))}
-                  helpText="Recomendado: 400x400px, máx 2MB"
-                />
-              </div>
+              <ImageUpload
+                bucket="avatars"
+                folder="usuarios"
+                value={formData.avatar_url}
+                onChange={(url) => setFormData(prev => ({ ...prev, avatar_url: url }))}
+                helpText="Recomendado: 400x400px, máx 2MB"
+              />
             </div>
 
             <div className={styles.formGroup}>
@@ -281,99 +255,111 @@ export default function NovoUsuarioPage() {
 
             <div className={styles.formGroup}>
               <label className={styles.label}>E-mail Corporativo</label>
-              <div className={styles.inputWrapper}>
-                <Mail className={styles.inputIcon} size={20} />
-                <input 
-                  type="email" 
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className={`${styles.input} ${styles.inputWithIcon}`}
-                  placeholder="usuario@zapzap.com"
-                />
-              </div>
+              <input 
+                type="email" 
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                className={styles.input}
+                placeholder="usuario@zapzap.com"
+              />
             </div>
 
             <div className={styles.formGroup}>
               <label className={styles.label}>Telefone / WhatsApp</label>
-              <div className={styles.inputWrapper}>
-                <Phone className={styles.inputIcon} size={20} />
+              <input 
+                type="tel" 
+                name="phone"
+                value={formData.phone}
+                onChange={handlePhoneChange}
+                className={styles.input}
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+          </div>
+
+          {/* Card 2: Segurança */}
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Segurança</h2>
+            
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Senha</label>
+              <div style={{ position: 'relative' }}>
                 <input 
-                  type="tel" 
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handlePhoneChange}
-                  className={`${styles.input} ${styles.inputWithIcon}`}
-                  placeholder="(00) 00000-0000"
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className={styles.input}
+                  placeholder="Mínimo 8 caracteres"
+                  style={{ paddingRight: '2.5rem' }}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '0.75rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: '#9ca3af',
+                    cursor: 'pointer',
+                    padding: 0,
+                    display: 'flex'
+                  }}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
               </div>
+              <span style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem', display: 'block' }}>
+                Requisitos: Mínimo 8 caracteres, com maiúscula, minúscula, número e símbolo.
+              </span>
             </div>
 
-            <div style={{ marginTop: '2rem' }}>
-              <h2 className={styles.sectionTitle}>Dados de Login</h2>
-              <span className={styles.sectionSubtitle}>
-                Defina a senha de acesso (opcional).
-              </span>
-
-              <div className={styles.formGroup} style={{ marginTop: '1rem' }}>
-                <label className={styles.label}>Senha</label>
-                <div className={styles.inputWrapper}>
-                  <Lock className={styles.inputIcon} size={20} />
-                  <input 
-                    type={showPassword ? 'text' : 'password'}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    className={`${styles.input} ${styles.inputWithIcon}`}
-                    placeholder="Mínimo 8 caracteres"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className={styles.eyeIcon}
-                    aria-label={showPassword ? 'Ocultar senha' : 'Exibir senha'}
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-                <span style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem', display: 'block' }}>
-                  Requisitos: Mínimo 8 caracteres, com maiúscula, minúscula, número e símbolo.
-                </span>
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Confirmar Senha</label>
-                <div className={styles.inputWrapper}>
-                  <Lock className={styles.inputIcon} size={20} />
-                  <input 
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    className={`${styles.input} ${styles.inputWithIcon}`}
-                    placeholder="Repita a senha"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className={styles.eyeIcon}
-                    aria-label={showConfirmPassword ? 'Ocultar senha' : 'Exibir senha'}
-                    tabIndex={-1}
-                  >
-                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Confirmar Senha</label>
+              <div style={{ position: 'relative' }}>
+                <input 
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  className={styles.input}
+                  placeholder="Repita a senha"
+                  style={{ paddingRight: '2.5rem' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '0.75rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: '#9ca3af',
+                    cursor: 'pointer',
+                    padding: 0,
+                    display: 'flex'
+                  }}
+                >
+                  {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
               </div>
             </div>
           </div>
 
-          {/* Right Column - Settings */}
-          <div className={styles.rightColumn}>
-            <div className={styles.toggleCard}>
-              <div>
-                <span className={styles.toggleLabel}>Status do Usuário</span>
-                <span className={styles.toggleSubLabel}>Habilitar acesso ao sistema</span>
+          {/* Card 3: Configurações de Acesso */}
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Configurações de Acesso</h2>
+
+            <div className={styles.switchContainer} style={{ marginBottom: '1.5rem' }}>
+              <div className={styles.switchLabel}>
+                <span className={styles.switchTitle}>Status do Usuário</span>
+                <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Habilitar acesso ao sistema</span>
               </div>
               <label className={styles.switch}>
                 <input 
@@ -384,8 +370,6 @@ export default function NovoUsuarioPage() {
                 <span className={styles.slider}></span>
               </label>
             </div>
-
-            <h2 className={styles.sectionTitle}>Configurações de Acesso</h2>
 
             <div className={styles.formGroup}>
               <label className={styles.label}>Perfil de Acesso</label>
@@ -442,18 +426,18 @@ export default function NovoUsuarioPage() {
         </div>
 
         <div className={styles.footer}>
-          <button 
-            className={styles.btnCancel}
-            onClick={() => router.push('/usuarios')}
+          <Link 
+            href="/usuarios"
+            className={styles.cancelButton}
           >
             Cancelar
-          </button>
-          <button className={styles.btnSave} onClick={handleSubmit} disabled={saving}>
+          </Link>
+          <button className={styles.saveButton} onClick={handleSubmit} disabled={saving}>
             <Check size={20} />
             {saving ? 'Salvando...' : 'Salvar Usuário'}
           </button>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

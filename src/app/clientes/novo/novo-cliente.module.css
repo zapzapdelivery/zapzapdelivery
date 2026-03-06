@@ -31,36 +31,34 @@
 }
 
 .content {
-  padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
+  padding: 1.5rem;
+  width: 100%;
 }
 
 /* Header */
 .header {
-  margin-bottom: 2rem;
+  /* margin-bottom removed, handled by gap in mainColumn */
 }
 
 .backLink {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
   color: #6b7280;
-  text-decoration: none;
   font-size: 0.875rem;
-  margin-bottom: 1rem;
-  transition: color 0.2s;
+  margin-bottom: 0.5rem;
+  text-decoration: none;
 }
 
 .backLink:hover {
-  color: #374151;
+  color: #111827;
 }
 
 .title {
-  font-size: 1.875rem;
-  font-weight: 700;
+  font-size: 2.25rem;
+  font-weight: 800;
   color: #111827;
-  margin: 0 0 0.5rem 0;
+  margin: 0;
+  line-height: 1.2;
 }
 
 .subtitle {
@@ -71,46 +69,20 @@
 
 /* Form Layout */
 .formGrid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 2rem;
-}
-
-@media (max-width: 1024px) {
-  .formGrid {
-    grid-template-columns: 1fr;
-  }
-  
-  .sideColumn {
-    order: -1; /* Move sidebar to top on mobile/tablet if desired, or keep at bottom */
-  }
-}
-
-@media (max-width: 640px) {
-  .row {
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .col {
-    width: 100%;
-  }
-  
-  .content {
-    padding: 1rem;
-  }
+  display: block;
 }
 
 .mainColumn {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 2rem;
 }
 
 .sideColumn {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  display: none;
 }
 
 /* Card Styles */
@@ -352,6 +324,10 @@ input:checked + .slider:before {
   margin-top: 2rem;
   padding-top: 1rem;
   border-top: 1px solid #e5e7eb;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
 }
 
 .button {
@@ -404,11 +380,12 @@ input:checked + .slider:before {
 @media (max-width: 768px) {
     .content {
         padding: 1rem;
+        padding-bottom: 80px; /* Bottom nav space */
     }
 
     .formGrid {
         display: flex;
-        flex-direction: column-reverse;
+        flex-direction: column;
         gap: 1rem;
     }
 
@@ -423,12 +400,23 @@ input:checked + .slider:before {
 
     .footer {
         flex-direction: row;
-        gap: 0.5rem;
+        gap: 1rem;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        padding: 1rem;
+        border-top: 1px solid #e5e7eb;
+        z-index: 50;
+        margin-top: 0;
     }
 
     .button {
         flex: 1;
         justify-content: center;
         padding: 0.75rem;
+        width: auto;
+        font-size: 0.875rem;
     }
 }

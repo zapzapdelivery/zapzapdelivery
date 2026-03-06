@@ -47,6 +47,7 @@ interface Produto {
   valor_base: number;
   imagem_produto_url?: string;
   permite_observacao?: boolean;
+  estoque_atual?: number;
 }
 
 interface Estabelecimento {
@@ -482,7 +483,7 @@ export default function CardapioPage() {
 
       <main className={styles.main}>
         {/* Hero Section */}
-        <section className={styles.hero}>
+        {/* <section className={styles.hero}>
           <div className={styles.heroContent}>
             <span className={styles.heroBadge}>{estabelecimento.nome_estabelecimento.toUpperCase()}</span>
             <h1>O sabor que você ama, entregue <span className={styles.italicGreen}>num Zap.</span></h1>
@@ -500,7 +501,7 @@ export default function CardapioPage() {
               alt={estabelecimento.nome_estabelecimento} 
             />
           </div>
-        </section>
+        </section> */}
 
         {/* Products Sections */}
         {categorias.map(categoria => {
@@ -531,16 +532,20 @@ export default function CardapioPage() {
                       <div className={styles.productFooter}>
                         <span className={styles.price}>R$ {product.valor_base.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                         <div className={styles.actionButtons}>
-                          <button 
-                            className={styles.viewButton}
-                            onClick={() => {
-                              openProductModal(product);
-                            }}
-                            title="Adicionar"
-                          >
-                            <ShoppingCart size={18} />
-                            <span>Adicionar</span>
-                          </button>
+                          {(product.estoque_atual !== undefined && product.estoque_atual <= 0) ? (
+                            <span className={styles.outOfStock}>Esgotado</span>
+                          ) : (
+                            <button 
+                              className={styles.viewButton}
+                              onClick={() => {
+                                openProductModal(product);
+                              }}
+                              title="Adicionar"
+                            >
+                              <ShoppingCart size={18} />
+                              <span>Adicionar</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -834,12 +839,261 @@ export default function CardapioPage() {
               </div>
               
               <div className={styles.modalInfo}>
-                <div className={styles.modalHeader}>
-                  <h2>{selectedProduct.nome_produto}</h2>
-                  <span className={styles.modalPrice}>
-                    {(() => {
+                <div className={styles.modalScrollableContent}>
+                  <div className={styles.modalHeader}>
+                    <h2 className={styles.modalTitle}>{selectedProduct.nome_produto}</h2>
+                    <span className={styles.modalPrice}>
+                      {(() => {
+                        let extra = 0;
+                        const groups = (selectedProduct as any).grupos_adicionais || [];
+                        const idx = new Map<string, number>();
+                        groups.forEach((g: any) =>
+                          (g.adicionais || []).forEach((a: any) =>
+                            idx.set(String(a.id), Number(a.preco) || 0)
+                          )
+                        );
+                        Object.values(selectedByGroup).forEach((ids) =>
+                          ids.forEach((id) => {
+                            extra += idx.get(String(id)) || 0;
+                          })
+                        );
+                        const price = Number(selectedProduct.valor_base) + extra;
+                        return `R$ ${price.toLocaleString('pt-BR', {
+                          minimumFractionDigits: 2,
+                        })}`;
+                      })()}
+                    </span>
+                  </div>
+                  
+                  <p className={styles.modalDescription}>
+                    {selectedProduct.descricao || 'Sem descrição disponível.'}
+                  </p>
+
+                  <div className={styles.additionalItems}>
+                    {Array.isArray((selectedProduct as any).grupos_adicionais) &&
+                      (selectedProduct as any).grupos_adicionais.length > 0 && (
+                        <>
+                          {(selectedProduct as any).grupos_adicionais.map((grupo: any) => {
+                            const current = selectedByGroup[grupo.grupo_id] || [];
+                            const max = Number(grupo.max_opcoes_resolvido) || 1;
+                            const min = Number(grupo.min_opcoes) || 0;
+                            const isUnico = String(grupo.tipo_selecao) === 'unico';
+                            const totalSelecionado = current.length;
+
+                            const countOf = (aid: string) =>
+                              current.filter((id) => id === aid).length;
+
+                            const handleToggle = (aid: string) => {
+                              setSelectedByGroup((prev) => {
+                                const arr = prev[grupo.grupo_id]
+                                  ? [...prev[grupo.grupo_id]]
+                                  : [];
+                                if (isUnico) {
+                                  return { ...prev, [grupo.grupo_id]: [aid] };
+                                }
+                                const next = arr.filter((id) => id !== aid);
+                                if (next.length === arr.length) {
+                                  if (arr.length >= max) return prev;
+                                  next.push(aid);
+                                }
+                                return { ...prev, [grupo.grupo_id]: next };
+                              });
+                            };
+
+                            const handleIncrement = (aid: string) => {
+                              setSelectedByGroup((prev) => {
+                                const arr = prev[grupo.grupo_id]
+                                  ? [...prev[grupo.grupo_id]]
+                                  : [];
+                                if (arr.length >= max) return prev;
+                                arr.push(aid);
+                                return { ...prev, [grupo.grupo_id]: arr };
+                              });
+                            };
+
+                            const handleDecrement = (aid: string) => {
+                              setSelectedByGroup((prev) => {
+                                const arr = prev[grupo.grupo_id]
+                                  ? [...prev[grupo.grupo_id]]
+                                  : [];
+                                const idx = arr.indexOf(aid);
+                                if (idx < 0) return prev;
+                                arr.splice(idx, 1);
+                                return { ...prev, [grupo.grupo_id]: arr };
+                              });
+                            };
+
+                            return (
+                              <div key={grupo.grupo_id} style={{ marginBottom: '2rem' }}>
+                                <div className={styles.sectionTitle}>
+                                  {grupo.nome}
+                                  <span style={{ fontWeight: 'normal', color: '#9ca3af', marginLeft: 'auto', fontSize: '0.8rem' }}>
+                                    {grupo.obrigatorio ? 'Obrigatório • ' : ''}
+                                    {isUnico ? 'Escolha 1' : `Escolha até ${max}`}
+                                  </span>
+                                </div>
+                                
+                                {grupo.adicionais.map((a: any) => {
+                                  const preco = Number(a.preco) || 0;
+                                  const isFree = preco <= 0;
+                                  const count = countOf(String(a.id));
+                                  const checked = isUnico
+                                    ? current[0] === a.id
+                                    : isFree
+                                    ? current.includes(a.id)
+                                    : count > 0;
+                                    
+                                  return (
+                                    <div 
+                                      key={a.id} 
+                                      className={styles.itemRow} 
+                                      onClick={() => (isFree || !checked) && handleToggle(String(a.id))}
+                                      style={{ cursor: 'pointer' }}
+                                    >
+                                      <div className={styles.itemInfo}>
+                                        <span className={styles.itemName}>{a.nome}</span>
+                                        <span className={styles.itemPrice}>
+                                          {preco > 0
+                                            ? `+ R$ ${preco.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                                            : null}
+                                        </span>
+                                      </div>
+                                      
+                                      {isUnico ? (
+                                        <input
+                                          type="radio"
+                                          name={`grupo-${grupo.grupo_id}`}
+                                          checked={checked}
+                                          onChange={() => handleToggle(String(a.id))}
+                                          style={{ width: '20px', height: '20px', accentColor: '#22c55e' }}
+                                          onClick={(e) => e.stopPropagation()}
+                                        />
+                                      ) : isFree ? (
+                                        <div
+                                          style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.5rem',
+                                            cursor: 'pointer',
+                                            padding: '0.25rem 0.5rem',
+                                            borderRadius: '0.375rem',
+                                            backgroundColor: checked ? '#dcfce7' : 'transparent',
+                                            border: checked ? '1px solid #22c55e' : '1px solid transparent',
+                                            transition: 'all 0.2s',
+                                          }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleToggle(String(a.id));
+                                          }}
+                                        >
+                                          {checked && <Check size={14} color="#16a34a" strokeWidth={3} />}
+                                          <span
+                                            style={{
+                                              color: checked ? '#16a34a' : '#6b7280',
+                                              fontWeight: checked ? '700' : '500',
+                                              fontSize: '0.875rem',
+                                              textTransform: 'uppercase',
+                                            }}
+                                          >
+                                            Grátis
+                                          </span>
+                                        </div>
+                                      ) : (
+                                        <div className={styles.itemQuantityControl} onClick={e => e.stopPropagation()}>
+                                          <button 
+                                            className={styles.btnQty}
+                                            onClick={() => checked ? handleDecrement(String(a.id)) : null}
+                                            disabled={!checked || count === 0}
+                                          >
+                                            <Minus size={14} />
+                                          </button>
+                                          <span className={styles.qtyValue}>{count}</span>
+                                          <button 
+                                            className={styles.btnQty}
+                                            onClick={() => handleIncrement(String(a.id))}
+                                            disabled={totalSelecionado >= max && count === 0}
+                                          >
+                                            <Plus size={14} />
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                                {grupo.obrigatorio &&
+                                  totalSelecionado < Math.max(1, min) && (
+                                    <div className={styles.optionError}>
+                                      Seleção obrigatória
+                                    </div>
+                                  )}
+                              </div>
+                            );
+                          })}
+                        </>
+                      )}
+                  </div>
+
+                  {selectedProduct.permite_observacao && (
+                    <div className={styles.observationContainer}>
+                      <div className={styles.observationHeader}>
+                        <MessageSquare size={16} />
+                        <span>Alguma observação?</span>
+                      </div>
+                      <textarea
+                        className={styles.observationInput}
+                        placeholder="Ex: tirar cebola, ponto da carne, maionese à parte..."
+                        value={observation}
+                        onChange={(e) => setObservation(e.target.value)}
+                        maxLength={240}
+                      />
+                      <div style={{ textAlign: 'right', fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
+                        {observation.length}/240
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div className={styles.sectionTitle}>Quantidade</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '1rem', justifyContent: 'center' }}>
+                      <button
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        disabled={quantity <= 1}
+                        className={styles.btnQty}
+                        style={{ width: '48px', height: '48px' }}
+                      >
+                        <Minus size={20} />
+                      </button>
+                      <span style={{ fontSize: '1.5rem', fontWeight: '700', minWidth: '3rem', textAlign: 'center' }}>{quantity}</span>
+                      <button 
+                        onClick={() => {
+                          const max = selectedProduct.estoque_atual ?? 999;
+                          setQuantity(Math.min(max, quantity + 1));
+                        }}
+                        className={styles.btnQty}
+                        style={{ width: '48px', height: '48px' }}
+                      >
+                        <Plus size={20} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className={styles.modalFooter}>
+                  <button
+                    className={styles.btnClose}
+                    onClick={closeProductModal}
+                  >
+                    FECHAR
+                  </button>
+
+                  <button
+                    className={styles.btnAdd}
+                    onClick={() => handleAddToCart(selectedProduct, quantity)}
+                  >
+                    ADICIONAR + {(() => {
                       let extra = 0;
-                      const groups = (selectedProduct as any).grupos_adicionais || [];
+                      const groups =
+                        (selectedProduct as any).grupos_adicionais || [];
                       const idx = new Map<string, number>();
                       groups.forEach((g: any) =>
                         (g.adicionais || []).forEach((a: any) =>
@@ -851,221 +1105,13 @@ export default function CardapioPage() {
                           extra += idx.get(String(id)) || 0;
                         })
                       );
-                      const price = Number(selectedProduct.valor_base) + extra;
-                      return `R$ ${price.toLocaleString('pt-BR', {
+                      const unitPrice = Number(selectedProduct.valor_base) + extra;
+                      const total = unitPrice * quantity;
+                      return `R$ ${total.toLocaleString('pt-BR', {
                         minimumFractionDigits: 2,
                       })}`;
                     })()}
-                  </span>
-                </div>
-                
-                <p className={styles.modalDescription}>
-                  {selectedProduct.descricao || 'Sem descrição disponível.'}
-                </p>
-
-                {Array.isArray((selectedProduct as any).grupos_adicionais) &&
-                  (selectedProduct as any).grupos_adicionais.length > 0 && (
-                    <div className={styles.optionGroups}>
-                      {(selectedProduct as any).grupos_adicionais.map((grupo: any) => {
-                        const current = selectedByGroup[grupo.grupo_id] || [];
-                        const max = Number(grupo.max_opcoes_resolvido) || 1;
-                        const min = Number(grupo.min_opcoes) || 0;
-                        const isUnico = String(grupo.tipo_selecao) === 'unico';
-                        const totalSelecionado = current.length;
-
-                        const countOf = (aid: string) =>
-                          current.filter((id) => id === aid).length;
-
-                        const handleToggle = (aid: string) => {
-                          setSelectedByGroup((prev) => {
-                            const arr = prev[grupo.grupo_id]
-                              ? [...prev[grupo.grupo_id]]
-                              : [];
-                            if (isUnico) {
-                              return { ...prev, [grupo.grupo_id]: [aid] };
-                            }
-                            const next = arr.filter((id) => id !== aid);
-                            if (next.length === arr.length) {
-                              if (arr.length >= max) return prev;
-                              next.push(aid);
-                            }
-                            return { ...prev, [grupo.grupo_id]: next };
-                          });
-                        };
-
-                        const handleIncrement = (aid: string) => {
-                          setSelectedByGroup((prev) => {
-                            const arr = prev[grupo.grupo_id]
-                              ? [...prev[grupo.grupo_id]]
-                              : [];
-                            if (arr.length >= max) return prev;
-                            arr.push(aid);
-                            return { ...prev, [grupo.grupo_id]: arr };
-                          });
-                        };
-
-                        const handleDecrement = (aid: string) => {
-                          setSelectedByGroup((prev) => {
-                            const arr = prev[grupo.grupo_id]
-                              ? [...prev[grupo.grupo_id]]
-                              : [];
-                            const idx = arr.indexOf(aid);
-                            if (idx < 0) return prev;
-                            arr.splice(idx, 1);
-                            return { ...prev, [grupo.grupo_id]: arr };
-                          });
-                        };
-
-                        return (
-                          <div key={grupo.grupo_id} className={styles.optionGroup}>
-                            <div className={styles.optionHeader}>
-                              <span className={styles.optionTitle}>{grupo.nome}</span>
-                              <span className={styles.optionRule}>
-                                {grupo.obrigatorio ? 'Obrigatório • ' : ''}
-                                {isUnico ? 'Escolha 1' : `Escolha até ${max}`}
-                              </span>
-                            </div>
-                            <div className={styles.optionList}>
-                              {grupo.adicionais.map((a: any) => {
-                                const preco = Number(a.preco) || 0;
-                                const isFree = preco <= 0;
-                                const count = countOf(String(a.id));
-                                const checked = isUnico
-                                  ? current[0] === a.id
-                                  : isFree
-                                  ? current.includes(a.id)
-                                  : count > 0;
-                                return (
-                                  <label key={a.id} className={styles.optionItem}>
-                                    <input
-                                      type={isUnico ? 'radio' : 'checkbox'}
-                                      name={`grupo-${grupo.grupo_id}`}
-                                      checked={checked}
-                                      onChange={() => handleToggle(String(a.id))}
-                                    />
-                                    <div className={styles.optionMain}>
-                                      <span className={styles.optionName}>{a.nome}</span>
-                                      {!isUnico && preco > 0 && (
-                                        <div className={styles.optionQuantity}>
-                                          <button
-                                            type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleDecrement(String(a.id));
-                                            }}
-                                            disabled={count === 0}
-                                          >
-                                            <Minus size={16} />
-                                          </button>
-                                          <span>{count}</span>
-                                          <button
-                                            type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleIncrement(String(a.id));
-                                            }}
-                                            disabled={totalSelecionado >= max}
-                                          >
-                                            <Plus size={16} />
-                                          </button>
-                                        </div>
-                                      )}
-                                    </div>
-                                    <span className={styles.optionPrice}>
-                                      {preco > 0
-                                        ? `+ R$ ${preco.toLocaleString('pt-BR', {
-                                            minimumFractionDigits: 2,
-                                          })}`
-                                        : 'Grátis'}
-                                    </span>
-                                  </label>
-                                );
-                              })}
-                            </div>
-                            {grupo.obrigatorio &&
-                              totalSelecionado < Math.max(1, min) && (
-                                <div className={styles.optionError}>
-                                  Seleção obrigatória
-                                </div>
-                              )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                {selectedProduct.permite_observacao && (
-                  <div className={styles.observationBlock}>
-                    <span className={styles.observationLabel}>Observação</span>
-                    <textarea
-                      className={styles.observationTextarea}
-                      placeholder="Ex: tirar cebola, ponto da carne, bebidas sem gelo..."
-                      value={observation}
-                      onChange={(e) => setObservation(e.target.value)}
-                      maxLength={240}
-                    />
-                    <span className={styles.observationHint}>
-                      Máx. 240 caracteres
-                    </span>
-                  </div>
-                )}
-                
-                <div className={styles.modalActions}>
-                  <div className={styles.quantityBlock}>
-                    <span className={styles.quantityLabel}>Escolha a quantidade</span>
-                    <div className={styles.quantitySelector}>
-                      <button
-                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                        disabled={quantity <= 1}
-                      >
-                        <Minus size={20} />
-                      </button>
-                      <span>{quantity}</span>
-                      <button onClick={() => setQuantity(quantity + 1)}>
-                        <Plus size={20} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className={styles.modalButtonsRow}>
-                    <button
-                      className={styles.closeActionButton}
-                      onClick={closeProductModal}
-                    >
-                      <X size={18} />
-                      <span>Fechar</span>
-                    </button>
-
-                    <button
-                      className={styles.addToCartButton}
-                      onClick={() => handleAddToCart(selectedProduct, quantity)}
-                    >
-                      <ShoppingCart size={20} />
-                      <span>
-                        {(() => {
-                          let extra = 0;
-                          const groups =
-                            (selectedProduct as any).grupos_adicionais || [];
-                          const idx = new Map<string, number>();
-                          groups.forEach((g: any) =>
-                            (g.adicionais || []).forEach((a: any) =>
-                              idx.set(String(a.id), Number(a.preco) || 0)
-                            )
-                          );
-                          Object.values(selectedByGroup).forEach((ids) =>
-                            ids.forEach((id) => {
-                              extra += idx.get(String(id)) || 0;
-                            })
-                          );
-                          const unit = Number(selectedProduct.valor_base) + extra;
-                          const total = unit * quantity;
-                          return `Adicionar • R$ ${total.toLocaleString('pt-BR', {
-                            minimumFractionDigits: 2,
-                          })}`;
-                        })()}
-                      </span>
-                    </button>
-                  </div>
+                  </button>
                 </div>
               </div>
             </div>

@@ -4,62 +4,43 @@
   /* padding-left removed - handled by AdminLayout */
 }
 
-.mainContent {
+.content {
   padding: 2rem;
   max-width: 1200px;
   margin: 0 auto;
 }
 
-.backLink {
+.mainColumn {
   display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* Header styles handled by mainColumn gap */
+
+
+.backLink {
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  color: #4b5563;
-  text-decoration: none;
+  color: #6b7280;
   font-size: 0.875rem;
-  margin-bottom: 1.5rem;
-  transition: color 0.2s;
+  margin-bottom: 0.5rem;
+  text-decoration: none;
 }
 
 .backLink:hover {
   color: #111827;
 }
 
-.titleSection {
-  margin-bottom: 2rem;
-}
-
 .title {
-  font-size: 2rem;
-  font-weight: 700;
+  font-size: 2.25rem;
+  font-weight: 800;
   color: #111827;
-  margin-bottom: 0.5rem;
-}
-
-.subtitle {
-  color: #6b7280;
-  font-size: 1rem;
-}
-
-.formGrid {
-  display: grid;
-  grid-template-columns: 1fr 350px;
-  gap: 2rem;
-  align-items: start;
-}
-
-.leftColumn {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
-
-.rightColumn {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  position: sticky;
-  top: 2rem;
+  margin: 0;
+  line-height: 1.2;
 }
 
 .card {
@@ -208,6 +189,43 @@
   color: #111827;
 }
 
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .mainContent {
+    padding: 1rem;
+    padding-bottom: 80px; /* Space for fixed footer */
+  }
+
+  .inputRow, .inputRowThree, .inputRowUF {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .title {
+    font-size: 1.5rem;
+  }
+
+  /* Fixed Footer for Mobile */
+  .footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    padding: 1rem;
+    border-top: 1px solid #e5e7eb;
+    z-index: 50;
+    display: flex;
+    gap: 1rem;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+  }
+
+  .footer button {
+    flex: 1;
+    margin: 0 !important;
+  }
+}
+
 .statusInfo p {
   font-size: 0.75rem;
   color: #6b7280;
@@ -302,6 +320,10 @@
   display: flex;
   gap: 1rem;
   margin-top: 2rem;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
 }
 
 .btnCancel {
@@ -352,13 +374,48 @@
   .container {
     padding-left: 0;
   }
-  
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .mainContent {
+    margin-left: 0;
+    padding: 1rem;
+    padding-bottom: 80px; /* Bottom nav space */
+  }
+
   .formGrid {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .titleSection {
+    margin-bottom: 1.5rem;
+  }
+
+  .title {
+    font-size: 1.5rem;
   }
   
-  .rightColumn {
-    position: static;
+  .footerActions {
+    flex-direction: row;
+    gap: 1rem;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    padding: 1rem;
+    border-top: 1px solid #e5e7eb;
+    z-index: 50;
+    margin-top: 0;
+  }
+  
+  .btnCancel,
+  .btnSave {
+    flex: 1;
+    width: auto;
+    font-size: 0.875rem;
   }
 }
 

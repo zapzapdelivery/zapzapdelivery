@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
   ArrowLeft, 
@@ -16,14 +16,14 @@ import { useEstablishment } from '@/hooks/useEstablishment';
 import { useUserRole } from '@/hooks/useUserRole';
 import { logAction } from '@/lib/logger';
 import { ImageUpload } from '@/components/Upload/ImageUpload';
-import styles from './novo-categoria.module.css';
+import styles from '../../novo/novo-categoria.module.css';
 
-function NovaCategoriaContent() {
+export default function EditarCategoriaPage() {
   const router = useRouter();
+  const params = useParams();
+  const id = params.id as string;
   const { role, loading: loadingRole } = useUserRole();
-  const searchParams = useSearchParams();
-  const id = searchParams.get('id');
-  const isEditing = !!id;
+  const isEditing = true;
 
   useEffect(() => {
     if (!loadingRole && role === 'atendente') {
@@ -57,7 +57,6 @@ function NovaCategoriaContent() {
       try {
         setLoading(true);
 
-        // If editing, fetch category details
         if (id) {
           const { data: cat, error: catError } = await supabase
             .from('categorias')
@@ -79,14 +78,15 @@ function NovaCategoriaContent() {
 
       } catch (err) {
         console.error('Error fetching data:', err);
-        toastError('Erro ao carregar dados iniciais.');
+        toastError('Erro ao carregar dados da categoria.');
+        router.push('/categorias');
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [id, toastError, hookEstabId, loadingEstab]);
+  }, [id, toastError, hookEstabId, loadingEstab, router]);
 
   const handleSave = async () => {
     // Validation
@@ -112,42 +112,22 @@ function NovaCategoriaContent() {
         ordem_exibicao: ordemExibicao, 
       };
 
-      if (isEditing) {
-        const { error } = await supabase
-          .from('categorias')
-          .update(payload)
-          .eq('id', id)
-          .eq('estabelecimento_id', hookEstabId); // Enforce ownership
-        
-        if (error) throw error;
-        
-        await logAction({
-          action: 'UPDATE',
-          entity: 'categorias',
-          entity_id: id,
-          details: payload
-        });
+      const { error } = await supabase
+        .from('categorias')
+        .update(payload)
+        .eq('id', id)
+        .eq('estabelecimento_id', hookEstabId); // Enforce ownership
+      
+      if (error) throw error;
+      
+      await logAction({
+        action: 'UPDATE',
+        entity: 'categorias',
+        entity_id: id,
+        details: payload
+      });
 
-        success('Categoria atualizada com sucesso!');
-      } else {
-        const { data: newCat, error } = await supabase
-          .from('categorias')
-          .insert(payload)
-          .select()
-          .single();
-        
-        if (error) throw error;
-
-        await logAction({
-          action: 'CREATE',
-          entity: 'categorias',
-          entity_id: newCat?.id,
-          details: payload
-        });
-
-        success('Categoria criada com sucesso!');
-      }
-
+      success('Categoria atualizada com sucesso!');
       router.push('/categorias');
 
     } catch (err: any) {
@@ -182,9 +162,10 @@ function NovaCategoriaContent() {
             <Link href="/categorias" className={styles.backLink}>
               ← Voltar para Categorias
             </Link>
-            <h1 className={styles.title}>{isEditing ? 'Editar Categoria' : 'Nova Categoria'}</h1>
+            <h1 className={styles.title}>Editar Categoria</h1>
           </div>
 
+          {/* Status Card */}
           <div className={styles.card}>
               <div className={styles.switchContainer}>
                 <div className={styles.switchLabel}>
@@ -304,13 +285,5 @@ function NovaCategoriaContent() {
         </div>
       </main>
     </div>
-  );
-}
-
-export default function NovaCategoriaPage() {
-  return (
-    <Suspense fallback={<div>Carregando...</div>}>
-      <NovaCategoriaContent />
-    </Suspense>
   );
 }

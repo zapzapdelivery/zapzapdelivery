@@ -417,18 +417,75 @@ export default function EditarEntregadorPage({ params }: { params: Promise<{ id:
       <Sidebar />
       
       <main className={styles.mainContent}>
-        <Link href="/entregadores" className={styles.backLink}>
-          <ArrowLeft size={16} />
-          Voltar para Entregadores
-        </Link>
+        <AdminHeader />
+        
+        <div className={styles.mainColumn}>
+          <Link href="/entregadores" className={styles.backLink}>
+            <ArrowLeft size={16} />
+            Voltar para Entregadores
+          </Link>
 
-        <div className={styles.titleSection}>
-          <h1 className={styles.title}>Editar Entregador</h1>
-          <p className={styles.subtitle}>Atualize as informações do profissional</p>
-        </div>
+          <div className={styles.titleSection}>
+            <h1 className={styles.title}>Editar Entregador</h1>
+            <p className={styles.subtitle}>Atualize as informações do profissional</p>
+          </div>
 
-        <form onSubmit={handleSave} className={styles.formGrid}>
-          <div className={styles.leftColumn}>
+          <form onSubmit={handleSave}>
+            {/* Status */}
+            <div className={`${styles.card} ${styles.statusCard}`}>
+              <div className={styles.statusInfo}>
+                <h3>Status do Entregador</h3>
+                <p>Habilitar acesso ao sistema</p>
+              </div>
+              <label className={styles.toggle}>
+                <input 
+                  type="checkbox" 
+                  checked={isActive}
+                  onChange={(e) => setIsActive(e.target.checked)}
+                />
+                <span className={styles.slider}></span>
+              </label>
+            </div>
+
+            {/* Foto de Perfil */}
+            <div className={styles.card}>
+              <div className={styles.cardHeader}>
+                <ImageIcon size={20} className={styles.iconImage} />
+                <h2>Foto de Perfil</h2>
+              </div>
+              <ImageUpload
+                bucket="avatars"
+                folder="entregadores"
+                value={formData.avatar_url}
+                onChange={(url) => setFormData(prev => ({ ...prev, avatar_url: url }))}
+                label="Foto do Entregador"
+                helpText="JPG, PNG até 2MB"
+              />
+            </div>
+
+            {/* Estabelecimento Base */}
+            <div className={styles.card}>
+              <div className={styles.cardHeader}>
+                <Store size={20} className={styles.iconStore} />
+                <h2>Estabelecimento Base</h2>
+              </div>
+              <div className={styles.inputGroup}>
+                <select 
+                  name="estabelecimento_id"
+                  value={formData.estabelecimento_id}
+                  onChange={handleInputChange}
+                  className={styles.select}
+                  disabled={role === 'estabelecimento' && !!establishmentId}
+                  required
+                >
+                  <option value="">Selecione a loja...</option>
+                  {Array.isArray(estabelecimentos) && estabelecimentos.map(est => (
+                    <option key={est.id} value={est.id}>{est.nome_estabelecimento}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             {/* Informações Pessoais */}
             <div className={styles.card}>
               <div className={styles.cardHeader}>
@@ -699,63 +756,6 @@ export default function EditarEntregadorPage({ params }: { params: Promise<{ id:
                 </div>
               </div>
             </div>
-          </div>
-
-          <div className={styles.rightColumn}>
-            {/* Status */}
-            <div className={`${styles.card} ${styles.statusCard}`}>
-              <div className={styles.statusInfo}>
-                <h3>Status do Entregador</h3>
-                <p>Habilitar acesso ao sistema</p>
-              </div>
-              <label className={styles.toggle}>
-                <input 
-                  type="checkbox" 
-                  checked={isActive}
-                  onChange={(e) => setIsActive(e.target.checked)}
-                />
-                <span className={styles.slider}></span>
-              </label>
-            </div>
-
-            {/* Estabelecimento Base */}
-            <div className={styles.card}>
-              <div className={styles.cardHeader}>
-                <Store size={20} className={styles.iconStore} />
-                <h2>Estabelecimento Base</h2>
-              </div>
-              <div className={styles.inputGroup}>
-                <select 
-                  name="estabelecimento_id"
-                  value={formData.estabelecimento_id}
-                  onChange={handleInputChange}
-                  className={styles.select}
-                  disabled={role === 'estabelecimento' && !!establishmentId}
-                  required
-                >
-                  <option value="">Selecione a loja...</option>
-                  {Array.isArray(estabelecimentos) && estabelecimentos.map(est => (
-                    <option key={est.id} value={est.id}>{est.nome_estabelecimento}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Foto de Perfil */}
-            <div className={styles.card}>
-              <div className={styles.cardHeader}>
-                <ImageIcon size={20} className={styles.iconImage} />
-                <h2>Foto de Perfil</h2>
-              </div>
-              <ImageUpload
-                bucket="avatars"
-                folder="entregadores"
-                value={formData.avatar_url}
-                onChange={(url) => setFormData(prev => ({ ...prev, avatar_url: url }))}
-                label="Foto do Entregador"
-                helpText="JPG, PNG até 2MB"
-              />
-            </div>
 
             {/* Ações */}
             <div className={styles.footerActions}>
@@ -775,8 +775,8 @@ export default function EditarEntregadorPage({ params }: { params: Promise<{ id:
                 Salvar Alterações
               </button>
             </div>
-          </div>
-        </form>
+          </form>
+        </div>
       </main>
     </div>
   );
