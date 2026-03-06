@@ -19,6 +19,7 @@ import {
   Mail
 } from 'lucide-react';
 import { Sidebar } from '@/components/Sidebar/Sidebar';
+import { AdminHeader } from '@/components/Header/AdminHeader';
 import { useToast } from '@/components/Toast/ToastProvider';
 import { supabase } from '@/lib/supabase';
 import { useUserRole } from '@/hooks/useUserRole';
