@@ -368,16 +368,15 @@ export default function EditarClientePage() {
   };
 
   if (loading) {
-      return (
-        <div className={styles.container}>
-            <Sidebar />
-            <div className={styles.content}>
-                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '100px', color: '#6b7280' }}>
-                    Carregando dados...
-                </div>
-            </div>
-        </div>
-      );
+    return (
+      <div className={styles.container}>
+          <div className={styles.content}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '100px', color: '#6b7280' }}>
+                  Carregando dados...
+              </div>
+          </div>
+      </div>
+    );
   }
 
   return (
