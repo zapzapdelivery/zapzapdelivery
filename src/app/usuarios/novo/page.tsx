@@ -217,7 +217,7 @@ export default function NovoUsuarioPage() {
 
   return (
     <div className={styles.container}>
-      <AdminHeader onMenuClick={toggleSidebar} />
+      <AdminHeader />
       
       <div className={styles.mainColumn}>
         <Link href="/usuarios" className={styles.backLink}>
