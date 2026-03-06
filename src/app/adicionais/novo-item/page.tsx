@@ -3,7 +3,7 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft, Check, Store } from 'lucide-react';
 import { Sidebar } from '@/components/Sidebar/Sidebar';
 import { AdminHeader } from '@/components/Header/AdminHeader';
 import { useToast } from '@/components/Toast/ToastProvider';
