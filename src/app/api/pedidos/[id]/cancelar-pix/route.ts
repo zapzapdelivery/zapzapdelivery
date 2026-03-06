@@ -36,7 +36,7 @@ export async function POST(
     }
 
     // Se a forma de pagamento não for PIX (opcional, mas bom validar)
-    if (pedido.forma_pagamento && !pedido.forma_pagamento.includes('PIX')) {
+    if (pedido.forma_pagamento && !pedido.forma_pagamento.toLowerCase().includes('pix')) {
         return NextResponse.json({ error: 'Pedido não é via PIX' }, { status: 400 });
     }
 
@@ -44,6 +44,20 @@ export async function POST(
     const novaObservacao = pedido.observacao_cliente 
       ? `${pedido.observacao_cliente} | Cancelado por falta de pagamento`
       : `Cancelado por falta de pagamento`;
+
+    // Retornar estoque antes de cancelar
+    try {
+        const { processStockReturn } = await import('@/services/stockService');
+        const stockResult = await processStockReturn(id, 'PIX Expirado (Frontend)');
+        
+        if (!stockResult.success) {
+             console.error(`[Cancelar PIX] Falha ao retornar estoque para pedido ${id}: ${stockResult.error}`);
+        } else {
+             console.log(`[Cancelar PIX] Estoque retornado com sucesso para pedido ${id}`);
+        }
+    } catch (stockErr) {
+        console.error(`[Cancelar PIX] Erro fatal ao chamar serviço de estoque (retorno):`, stockErr);
+    }
 
     const { error: updateError } = await supabaseAdmin
       .from('pedidos')

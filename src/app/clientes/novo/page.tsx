@@ -1,11 +1,9 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
-  ArrowLeft, 
   Check, 
   X, 
   User, 
@@ -18,8 +16,6 @@ import {
 } from 'lucide-react';
 import { ImageUpload } from '@/components/Upload/ImageUpload';
 import { supabase } from '@/lib/supabase';
-import { Sidebar } from '@/components/Sidebar/Sidebar';
-import { MobileHeader } from '@/components/Mobile/Header/MobileHeader';
 import { AdminHeader } from '@/components/Header/AdminHeader';
 import { useToast } from '@/components/Toast/ToastProvider';
 import { usePrompt } from '@/hooks/usePrompt';
@@ -360,44 +356,65 @@ export default function NovoClientePage() {
         onConfirm={confirmNavigation}
       />
 
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      
-      <div className={styles.mobileOnly}>
-        <MobileHeader 
-          onMenuClick={() => setIsSidebarOpen(true)} 
-          title="Novo Cliente"
-          subtitle="Cadastre um novo cliente"
-          showGreeting={false}
-        />
-      </div>
-
       <div className={styles.content}>
-        <div className={styles.desktopOnly}>
-          <AdminHeader />
-          
-          <div className={styles.header}>
-            <div className={styles.headerInfo}>
-              <Link href="/clientes" className={styles.backButton}>
-                <ArrowLeft size={20} />
+        <AdminHeader />
+
+        {/* Main Column */}
+        <div className={styles.mainColumn}>
+            <div className={styles.header}>
+              <Link href="/clientes" className={styles.backLink}>
+                ← Voltar para Clientes
               </Link>
-              <div>
-                <h1 className={styles.title}>Novo Cliente</h1>
-                <p className={styles.subtitle}>Cadastre um novo cliente no sistema</p>
+              <h1 className={styles.title}>Novo Cliente</h1>
+              <p className={styles.subtitle}>Cadastre um novo cliente no sistema</p>
+            </div>
+
+            {/* Status Card */}
+            <div className={styles.card}>
+              <h2 className={styles.cardTitle}>Status do Cliente</h2>
+              <div className={styles.switchContainer}>
+                <div className={styles.switchLabel}>
+                  <span className={styles.switchTitle}>Ativar ou inativar cliente</span>
+                </div>
+                <label className={styles.switch}>
+                  <input 
+                    type="checkbox" 
+                    checked={status}
+                    onChange={(e) => setStatus(e.target.checked)}
+                  />
+                  <span className={styles.slider}></span>
+                </label>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div className={styles.mobileOnly} style={{ marginBottom: '1rem', marginTop: '-0.5rem' }}>
-          <Link href="/clientes" className={styles.backButton} style={{ marginBottom: '0' }}>
-            <ArrowLeft size={20} />
-            <span>Voltar</span>
-          </Link>
-        </div>
+            {/* Media Card */}
+            <div className={styles.card}>
+              <h2 className={styles.cardTitle}>
+                <ImageIcon size={20} className={styles.cardIcon} />
+                Mídia
+              </h2>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                <ImageUpload 
+                    value={imagemUrl} 
+                    onChange={setImagemUrl} 
+                    bucket="avatars"
+                    folder="clientes"
+                    showUrlInput={false}
+                    className={styles.circularUpload}
+                />
+              </div>
+              <div className={styles.formGroup} style={{ display: imagemUrl ? 'none' : 'block' }}>
+                <label className={styles.label}>URL da Imagem</label>
+                <input 
+                  type="text" 
+                  className={styles.input} 
+                  placeholder="https://..."
+                  value={imagemUrl}
+                  onChange={(e) => setImagemUrl(e.target.value)}
+                />
+              </div>
+            </div>
 
-        <div className={styles.formGrid}>
-          {/* Main Column */}
-          <div className={styles.mainColumn}>
             {/* Identification Card */}
             <div className={styles.card}>
               <h2 className={styles.cardTitle}>
@@ -655,55 +672,6 @@ export default function NovoClientePage() {
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Sidebar Column */}
-          <div className={styles.sideColumn}>
-            {/* Status Card */}
-            <div className={styles.card}>
-              <h2 className={styles.cardTitle}>Status do Cliente</h2>
-              <div className={styles.switchContainer}>
-                <div className={styles.switchLabel}>
-                  <span className={styles.switchTitle}>Ativar ou inativar cliente</span>
-                </div>
-                <label className={styles.switch}>
-                  <input 
-                    type="checkbox" 
-                    checked={status}
-                    onChange={(e) => setStatus(e.target.checked)}
-                  />
-                  <span className={styles.slider}></span>
-                </label>
-              </div>
-            </div>
-
-            {/* Media Card */}
-            <div className={styles.card}>
-              <h2 className={styles.cardTitle}>
-                <ImageIcon size={20} className={styles.cardIcon} />
-                Mídia
-              </h2>
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-                <ImageUpload 
-                    value={imagemUrl} 
-                    onChange={setImagemUrl} 
-                    bucket="avatars"
-                    folder="clientes"
-                    showUrlInput={false}
-                    className={styles.circularUpload}
-                />
-              </div>
-              <div className={styles.formGroup} style={{ display: imagemUrl ? 'none' : 'block' }}>
-                <label className={styles.label}>URL da Imagem</label>
-                <input 
-                  type="text" 
-                  className={styles.input} 
-                  placeholder="https://..."
-                  value={imagemUrl}
-                  onChange={(e) => setImagemUrl(e.target.value)}
-                />
-              </div>
-            </div>
 
             {/* Configurações Card */}
             <div className={styles.card}>
@@ -738,26 +706,25 @@ export default function NovoClientePage() {
                 {errors.estabelecimentoId && <div className={styles.errorText}>{errors.estabelecimentoId}</div>}
               </div>
             </div>
-          </div>
-        </div>
 
-        <div className={styles.footer}>
-          <button 
-            className={`${styles.button} ${styles.cancelButton}`}
-            onClick={() => router.push('/clientes')}
-          >
-            <X size={18} />
-            Cancelar
-          </button>
-          <button 
-            className={`${styles.button} ${styles.saveButton}`}
-            onClick={handleSubmit}
-            disabled={saving}
-          >
-            <Check size={18} />
-            {saving ? 'Salvando...' : 'Salvar Cliente'}
-          </button>
-        </div>
+            <div className={styles.footer}>
+              <button 
+                className={`${styles.button} ${styles.cancelButton}`}
+                onClick={() => router.push('/clientes')}
+              >
+                <X size={18} />
+                Cancelar
+              </button>
+              <button 
+                className={`${styles.button} ${styles.saveButton}`}
+                onClick={handleSubmit}
+                disabled={saving}
+              >
+                <Check size={18} />
+                {saving ? 'Salvando...' : 'Salvar Cliente'}
+              </button>
+            </div>
+          </div>
       </div>
     </div>
   );

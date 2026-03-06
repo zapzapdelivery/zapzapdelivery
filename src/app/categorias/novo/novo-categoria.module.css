@@ -1,29 +1,23 @@
 .container {
-  display: flex;
   min-height: 100vh;
   background-color: #f3f4f6;
 }
 
 .content {
-  flex: 1;
-  padding: 2rem;
-  margin-left: 250px; /* Sidebar width */
-  transition: margin-left 0.3s ease;
+  padding: 1.5rem;
+  width: 100%;
 }
 
-.header {
-  margin-bottom: 2rem;
-}
+/* Header styles handled by mainColumn gap */
+
 
 .backLink {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
   color: #6b7280;
   font-size: 0.875rem;
   margin-bottom: 0.5rem;
   text-decoration: none;
-  transition: color 0.2s;
 }
 
 .backLink:hover {
@@ -31,29 +25,28 @@
 }
 
 .title {
-  font-size: 1.875rem;
-  font-weight: 700;
+  font-size: 2.25rem;
+  font-weight: 800;
   color: #111827;
   margin: 0;
+  line-height: 1.2;
 }
 
 .formGrid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 1.5rem;
-  align-items: start;
+  display: block;
 }
 
 .mainColumn {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 2rem; /* Added to align with AdminHeader padding */
 }
 
 .sideColumn {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  display: none;
 }
 
 .card {
@@ -97,6 +90,8 @@
   color: #ef4444;
   margin-left: 0.25rem;
 }
+
+
 
 .input {
   width: 100%;
@@ -310,6 +305,10 @@ input:checked + .slider:before {
   margin-top: 2rem;
   padding-top: 1.5rem;
   border-top: 1px solid #e5e7eb;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
 }
 
 .cancelButton {
@@ -350,18 +349,7 @@ input:checked + .slider:before {
   background-color: #059669;
 }
 
-.saveButton:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
 /* Mobile Responsiveness */
-@media (max-width: 1024px) {
-  .formGrid {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 768px) {
   .content {
     margin-left: 0;
@@ -372,14 +360,6 @@ input:checked + .slider:before {
   .formGrid {
     display: flex;
     flex-direction: column;
-  }
-
-  .mainColumn {
-    order: 2;
-  }
-
-  .sideColumn {
-    order: 1;
   }
 
   .header {
@@ -404,11 +384,17 @@ input:checked + .slider:before {
     margin-top: 0;
   }
   
-  .cancelButton, .saveButton {
+  .footer .cancelButton,
+  .footer .saveButton {
     flex: 1;
     width: auto;
     font-size: 0.875rem;
   }
+}
+
+.saveButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 /* New Styles for Mobile-like Layout */

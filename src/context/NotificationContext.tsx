@@ -26,84 +26,82 @@ interface NotificationContextType {
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
-// Simple notification sound (beep)
-const NOTIFICATION_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3';
-
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const { establishmentId } = useUserRole();
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    // Initialize audio
-    const audio = new Audio(NOTIFICATION_SOUND);
-    audio.load();
-    audioRef.current = audio;
-
-    // Unlock audio context for mobile browsers (iOS/Android)
-    // Mobile browsers require a user interaction before playing audio
-    const unlockAudio = () => {
-      if (audioRef.current) {
-        // Mute, play, pause, then unmute to unlock without noise
-        const originalVolume = audioRef.current.volume;
-        audioRef.current.volume = 0;
-        
-        audioRef.current.play().then(() => {
-          audioRef.current?.pause();
-          audioRef.current!.currentTime = 0;
-          audioRef.current!.volume = originalVolume;
-          console.log('Audio context unlocked');
-        }).catch((e) => {
-          console.log('Audio unlock attempt failed:', e);
-        });
+    // Initialize AudioContext on user interaction
+    const initAudio = () => {
+      if (!audioContextRef.current) {
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContext) {
+          const ctx = new AudioContext();
+          audioContextRef.current = ctx;
+        }
       }
-      // Remove listeners once executed
-      document.removeEventListener('click', unlockAudio);
-      document.removeEventListener('touchstart', unlockAudio);
-      document.removeEventListener('keydown', unlockAudio);
+      
+      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume().catch(e => console.error('AudioContext resume failed:', e));
+      }
     };
 
-    document.addEventListener('click', unlockAudio);
-    document.addEventListener('touchstart', unlockAudio);
-    document.addEventListener('keydown', unlockAudio);
+    document.addEventListener('click', initAudio);
+    document.addEventListener('touchstart', initAudio);
+    document.addEventListener('keydown', initAudio);
 
     return () => {
-      document.removeEventListener('click', unlockAudio);
-      document.removeEventListener('touchstart', unlockAudio);
-      document.removeEventListener('keydown', unlockAudio);
+      document.removeEventListener('click', initAudio);
+      document.removeEventListener('touchstart', initAudio);
+      document.removeEventListener('keydown', initAudio);
+      
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(() => {});
+      }
     };
   }, []);
 
   const playNotificationSound = (repeats = 1) => {
-    if (!audioRef.current) return;
-    
-    const audio = audioRef.current;
-    
-    // Reset previous state
-    audio.pause();
-    audio.currentTime = 0;
-    audio.onended = null;
+    try {
+        if (!audioContextRef.current) {
+            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+            if (AudioContext) audioContextRef.current = new AudioContext();
+        }
 
-    let playedCount = 0;
+        const ctx = audioContextRef.current;
+        if (!ctx) return;
+        
+        if (ctx.state === 'suspended') {
+             ctx.resume().catch(() => {});
+        }
 
-    const play = () => {
-        audio.play().catch(e => console.error('Error playing sound:', e));
-        playedCount++;
-    };
-
-    if (repeats > 1) {
-        audio.onended = () => {
-            if (playedCount < repeats) {
-                audio.currentTime = 0;
-                play();
-            } else {
-                audio.onended = null;
-            }
+        const playBeep = (startTime: number) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, startTime); // A5
+            osc.frequency.exponentialRampToValueAtTime(440, startTime + 0.1);
+            
+            gain.gain.setValueAtTime(0.1, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.1);
+            
+            osc.start(startTime);
+            osc.stop(startTime + 0.15);
         };
-    }
 
-    play();
+        const now = ctx.currentTime;
+        for (let i = 0; i < repeats; i++) {
+            playBeep(now + i * 0.4);
+        }
+    } catch (e) {
+        console.error('Error playing notification sound:', e);
+    }
   };
 
   const addNotification = (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {

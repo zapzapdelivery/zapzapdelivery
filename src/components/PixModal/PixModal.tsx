@@ -169,7 +169,15 @@ export function PixModal({ isOpen, onClose, pixData, loading, error, onPaymentCo
 
     const interval = setInterval(() => {
       const now = new Date().getTime();
-      const expiration = new Date(currentPixData.date_expiration).getTime();
+      // const expiration = new Date(currentPixData.date_expiration).getTime();
+      
+      // TESTE: Expirar em 30s a partir da criação (Front-end only)
+      // Usamos date_created + 30s para teste rápido de expiração
+      const createdTime = currentPixData.date_created 
+        ? new Date(currentPixData.date_created).getTime() 
+        : new Date().getTime(); // Fallback para agora se não tiver data de criação (evita NaN)
+        
+      const expiration = createdTime + 30000; 
       
       const distance = expiration - now;
 

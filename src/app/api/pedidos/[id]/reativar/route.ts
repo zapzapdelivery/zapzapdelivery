@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
+import { processStockDeduction } from '@/services/stockService';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,6 +78,14 @@ export async function POST(
           ? `${pedido.observacao_cliente} | Reexibido em: ${new Date().toISOString()}`
           : `Reexibido em: ${new Date().toISOString()}`;
 
+        // Tentar deduzir estoque novamente antes de reativar
+        // Usamos force: true para garantir que a baixa ocorra mesmo se houver resquícios anteriores
+        const stockResult = await processStockDeduction(id, { force: true });
+        if (!stockResult.success) {
+             console.warn(`[Reativar] Falha ao deduzir estoque para pedido ${id}: ${stockResult.error}`);
+             return NextResponse.json({ error: stockResult.error || 'Estoque insuficiente para reativar o pedido.' }, { status: 400 });
+        }
+
         const { error: updateError } = await supabaseAdmin
           .from('pedidos')
           .update({
@@ -90,9 +99,54 @@ export async function POST(
           return NextResponse.json({ error: 'Erro ao atualizar status do pedido' }, { status: 500 });
         }
 
-        console.log(`[Reativar] Pedido ${id} restaurado para 'Pedindo'. Reutilizando pagamento ${lastPayment.id}`);
+        console.log(`[Reativar] Pedido ${id} restaurado para 'Pedindo'. Verificando validade do pagamento ${lastPayment.id}`);
 
-        // Retornar dados do pagamento existente
+        // Verificar se o pagamento anterior expirou ou foi cancelado
+        const expirationDate = lastPayment.date_of_expiration ? new Date(lastPayment.date_of_expiration) : null;
+        const isExpired = expirationDate && new Date() > expirationDate;
+        const isCancelled = lastPayment.status === 'cancelled' || lastPayment.status === 'rejected';
+
+        if (isExpired || isCancelled) {
+            console.log(`[Reativar] Pagamento anterior ${lastPayment.id} expirado/cancelado. Criando novo pagamento...`);
+            
+            // Criar novo pagamento com 30 minutos de validade
+            const newExpirationDate = new Date();
+            newExpirationDate.setMinutes(newExpirationDate.getMinutes() + 30);
+
+            const paymentData = {
+                transaction_amount: Number(pedido.total_pedido),
+                description: `Reativação Pedido #${pedido.numero_pedido} - ZapZap Delivery`,
+                payment_method_id: 'pix',
+                payer: {
+                    email: lastPayment.payer?.email || 'cliente@email.com',
+                    first_name: lastPayment.payer?.first_name || 'Cliente'
+                },
+                external_reference: pedido.id,
+                date_of_expiration: newExpirationDate.toISOString(),
+                notification_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/pagamentos/mercado-pago/webhook?estabelecimento_id=${pedido.estabelecimento_id}`
+            };
+
+            const newPayment = await payment.create({ body: paymentData });
+            
+            const pointOfInteraction = newPayment.point_of_interaction;
+            const transactionData = pointOfInteraction?.transaction_data;
+
+            return NextResponse.json({
+                success: true,
+                id: newPayment.id,
+                status: newPayment.status,
+                status_detail: newPayment.status_detail,
+                qr_code: transactionData?.qr_code,
+                qr_code_base64: transactionData?.qr_code_base64,
+                ticket_url: transactionData?.ticket_url,
+                date_expiration: newPayment.date_of_expiration,
+                date_created: newPayment.date_created,
+                amount: newPayment.transaction_amount,
+                is_new_payment: true
+            });
+        }
+
+        // Retornar dados do pagamento existente (se ainda válido)
         const pointOfInteraction = lastPayment.point_of_interaction;
         const transactionData = pointOfInteraction?.transaction_data;
 
@@ -105,7 +159,9 @@ export async function POST(
             qr_code_base64: transactionData?.qr_code_base64,
             ticket_url: transactionData?.ticket_url,
             date_expiration: lastPayment.date_of_expiration,
-            amount: lastPayment.transaction_amount
+            date_created: lastPayment.date_created, // Mantém data original se não criou novo
+            amount: lastPayment.transaction_amount,
+            is_new_payment: false
         });
 
     } catch (mpError) {

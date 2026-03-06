@@ -97,7 +97,50 @@ export default function CarrinhoPage() {
   const [validatingCoupon, setValidatingCoupon] = useState(false);
   const [userName, setUserName] = useState<string>('');
   const [mpReady, setMpReady] = useState(false);
+  const [stockMap, setStockMap] = useState<Record<string, number>>({});
   
+  // Real-time Stock Updates
+  const fetchStock = React.useCallback(async () => {
+    if (!estabelecimento) return;
+    try {
+      const res = await fetch(`/api/estabelecimentos/cardapio/${slug}/produtos`);
+      if (res.ok) {
+        const products = await res.json();
+        const newStock: Record<string, number> = {};
+        products.forEach((p: any) => {
+          if (p.estoque_atual !== undefined) {
+            newStock[p.id] = p.estoque_atual;
+          }
+        });
+        setStockMap(newStock);
+      }
+    } catch (error) {
+      console.error('Error fetching stock:', error);
+    }
+  }, [estabelecimento, slug]);
+
+  useEffect(() => {
+    if (!estabelecimento) return;
+
+    fetchStock();
+
+    const channel = supabase
+      .channel('cart-stock-updates')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'estoque_produtos', filter: `estabelecimento_id=eq.${estabelecimento.id}` },
+        () => {
+          console.log('Stock update received via realtime');
+          fetchStock();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [estabelecimento, fetchStock]);
+
 
   // Initialize Mercado Pago
   useEffect(() => {
@@ -460,6 +503,34 @@ export default function CarrinhoPage() {
     setModalConfig(prev => ({ ...prev, isOpen: false }));
   };
 
+  // Validate Cart against Stock (Real-time)
+  useEffect(() => {
+    if (Object.keys(stockMap).length === 0 || items.length === 0) return;
+
+    let changed = false;
+    const messages: string[] = [];
+
+    items.forEach(item => {
+      const available = stockMap[item.id];
+      // If available is undefined, it means we don't have stock info (maybe not tracked or error), ignore
+      if (available === undefined) return;
+
+      if (available <= 0) {
+        removeItem(item.id);
+        messages.push(`"${item.nome_produto}" esgotou e foi removido.`);
+        changed = true;
+      } else if (item.quantidade > available) {
+        updateQuantity(item.id, available);
+        messages.push(`Quantidade de "${item.nome_produto}" ajustada para ${available} (limite de estoque).`);
+        changed = true;
+      }
+    });
+
+    if (changed && messages.length > 0) {
+      showModal('warning', 'Atualização de Estoque', messages.join('\n'));
+    }
+  }, [stockMap, items]); // Re-run when stock changes or items change
+
   // Verificar se veio de um redirecionamento de login para finalizar o pedido
   useEffect(() => {
     const checkRedirect = async () => {
@@ -702,6 +773,7 @@ export default function CarrinhoPage() {
     } catch (error: any) {
       console.error('Erro ao finalizar pedido:', error);
       showModal('error', 'Erro ao realizar pedido', error.message || 'Erro desconhecido');
+      fetchStock();
     } finally {
       setIsFinalizing(false);
     }
@@ -1107,7 +1179,12 @@ export default function CarrinhoPage() {
                             <Minus size={14} />
                           </button>
                           <span className={styles.qtyValue}>{item.quantidade}</span>
-                          <button onClick={() => updateQuantity(item.id, item.quantidade + 1)} className={styles.qtyBtnPlus}>
+                          <button 
+                            onClick={() => updateQuantity(item.id, item.quantidade + 1)} 
+                            className={styles.qtyBtnPlus}
+                            disabled={item.quantidade >= (stockMap[item.id] ?? 999)}
+                            style={{ opacity: item.quantidade >= (stockMap[item.id] ?? 999) ? 0.5 : 1, cursor: item.quantidade >= (stockMap[item.id] ?? 999) ? 'not-allowed' : 'pointer' }}
+                          >
                             <Plus size={14} />
                           </button>
                         </div>

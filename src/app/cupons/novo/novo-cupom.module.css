@@ -13,6 +13,9 @@
 
 .header {
   margin-bottom: 2rem;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .backLink {
@@ -44,21 +47,20 @@
 }
 
 .formGrid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 2rem;
+  display: block;
 }
 
 .mainColumn {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .sideColumn {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  display: none;
 }
 
 .card {
@@ -265,6 +267,10 @@ input:checked + .slider:before {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
 }
 
 .btnCancel {

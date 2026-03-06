@@ -193,6 +193,54 @@ function NovoItemContent() {
 
         <div className={styles.formGrid}>
           <div className={styles.mainColumn}>
+            {/* Status Card - Moved to top */}
+            <div className={styles.card}>
+              <div className={styles.switchContainer}>
+                <div className={styles.switchLabel}>
+                  <span className={styles.switchTitle}>Ativo</span>
+                  <span className={styles.switchDescription}>Controla se este adicional aparece no cardápio</span>
+                </div>
+                <label className={`${styles.switch} ${styles.greenToggle}`}>
+                  <input
+                    type="checkbox"
+                    checked={ativo}
+                    onChange={(e) => setAtivo(e.target.checked)}
+                  />
+                  <span className={styles.slider}></span>
+                </label>
+              </div>
+            </div>
+
+            {/* Estoque Card - Moved to top */}
+            <div className={styles.card}>
+              <div className={styles.switchContainer}>
+                <div className={styles.switchLabel}>
+                  <span className={styles.switchTitle}>Controlar estoque</span>
+                  <span className={styles.switchDescription}>Ative se este adicional tiver quantidade limitada</span>
+                </div>
+                <label className={`${styles.switch} ${styles.greenToggle}`}>
+                  <input
+                    type="checkbox"
+                    checked={controlaEstoque}
+                    onChange={(e) => setControlaEstoque(e.target.checked)}
+                  />
+                  <span className={styles.slider}></span>
+                </label>
+              </div>
+
+              <div className={styles.formGroup} style={{ marginTop: '1rem' }}>
+                <label className={styles.label}>Estoque atual</label>
+                <input
+                  type="number"
+                  className={styles.input}
+                  value={estoqueAtual}
+                  onChange={(e) => setEstoqueAtual(parseInt(e.target.value) || 0)}
+                  min={0}
+                  disabled={!controlaEstoque}
+                />
+              </div>
+            </div>
+
             <div className={styles.card}>
               <h2 className={styles.cardTitle}>Informações do Adicional</h2>
               <p className={styles.cardSubtitle}>Defina o nome, preço e grupo deste adicional.</p>
@@ -260,60 +308,14 @@ function NovoItemContent() {
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className={styles.sideColumn}>
-            <div className={styles.card}>
-              <div className={styles.switchContainer}>
-                <div className={styles.switchLabel}>
-                  <span className={styles.switchTitle}>Ativo</span>
-                  <span className={styles.switchDescription}>Controla se este adicional aparece no cardápio</span>
-                </div>
-                <label className={styles.switch}>
-                  <input
-                    type="checkbox"
-                    checked={ativo}
-                    onChange={(e) => setAtivo(e.target.checked)}
-                  />
-                  <span className={styles.slider}></span>
-                </label>
-              </div>
-            </div>
-
-            <div className={styles.card}>
-              <div className={styles.switchContainer}>
-                <div className={styles.switchLabel}>
-                  <span className={styles.switchTitle}>Controlar estoque</span>
-                  <span className={styles.switchDescription}>Ative se este adicional tiver quantidade limitada</span>
-                </div>
-                <label className={styles.switch}>
-                  <input
-                    type="checkbox"
-                    checked={controlaEstoque}
-                    onChange={(e) => setControlaEstoque(e.target.checked)}
-                  />
-                  <span className={styles.slider}></span>
-                </label>
-              </div>
-
-              <div className={styles.formGroup} style={{ marginTop: '1rem' }}>
-                <label className={styles.label}>Estoque atual</label>
-                <input
-                  type="number"
-                  className={styles.input}
-                  value={estoqueAtual}
-                  onChange={(e) => setEstoqueAtual(parseInt(e.target.value) || 0)}
-                  min={0}
-                  disabled={!controlaEstoque}
-                />
-              </div>
-            </div>
-
+            {/* Configurações Card - Moved from side */}
             <div className={styles.card}>
               <h2 className={styles.cardTitle}>Configurações</h2>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Estabelecimento</label>
                 <div className={styles.readOnlyField}>
+                  <Store size={18} className={styles.fieldIcon} />
                   <span>{establishmentName || 'Carregando...'}</span>
                 </div>
               </div>

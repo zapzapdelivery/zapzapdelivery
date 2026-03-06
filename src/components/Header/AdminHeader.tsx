@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { Bell, Moon, Menu, ExternalLink, ChevronDown, Check, ShoppingBag, AlertCircle, DollarSign, X } from 'lucide-react';
+import { Bell, Moon, Menu, ExternalLink, ChevronDown, Check, ShoppingBag, AlertCircle, DollarSign, X, Volume2 } from 'lucide-react';
 import styles from './Header.module.css';
 import { supabase } from '@/lib/supabase';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -19,7 +19,7 @@ export function AdminHeader({ title, subtitle, onMenuClick }: AdminHeaderProps) 
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [showNotifications, setShowNotifications] = React.useState(false);
   
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotification();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, playNotificationSound } = useNotification();
   const router = useRouter();
 
   const { role, establishmentName } = useUserRole();
@@ -220,6 +220,16 @@ export function AdminHeader({ title, subtitle, onMenuClick }: AdminHeaderProps) 
           </button>
         )}
         
+        {/* Test Sound */}
+        <button
+          className={styles.iconButton}
+          onClick={() => playNotificationSound(1)}
+          title="Testar Som"
+          aria-label="Testar Som"
+        >
+          <Volume2 size={20} />
+        </button>
+
         {/* Notifications */}
         <div className={styles.notificationContainer} ref={notificationRef}>
           <button 

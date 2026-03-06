@@ -48,11 +48,76 @@ export default function StockMovementsPage() {
   const [movementToDelete, setMovementToDelete] = useState<StockMovement | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  const [estabId, setEstabId] = useState<string | null>(null);
+
+  const fetchStock = async (id: string) => {
+    try {
+      // setLoading(true); // Don't set loading on background updates to avoid flickering
+      const { data: { session } } = await supabase.auth.getSession();
+      // Add timestamp to prevent caching
+      const res = await fetch(`/api/estoque/movimentacoes?t=${new Date().getTime()}`, {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+        cache: 'no-store'
+      });
+      if (!res.ok) {
+        throw new Error('Falha ao buscar movimentações');
+      }
+      const movementsRows = await res.json();
+
+      const buildReason = (type: MovementType, motivo?: string | null): string => {
+        if (motivo && motivo.trim()) {
+          return motivo.trim();
+        }
+        if (type === 'venda') {
+          return 'Venda de produto';
+        }
+        if (type === 'saida') return 'Saída de estoque';
+        if (type === 'entrada') return 'Entrada de estoque';
+        return 'Ajuste de estoque';
+      };
+
+      const mapped: StockMovement[] = (movementsRows || []).map((row: any) => {
+        const createdAt = row.criado_em as string | null;
+        let date = '';
+        let time = '';
+        if (createdAt) {
+          const d = new Date(createdAt);
+          if (!Number.isNaN(d.getTime())) {
+            date = d.toLocaleDateString('pt-BR');
+            time = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          }
+        }
+
+        return {
+          id: String(row.id),
+          productName: String(row.nome_produto || 'Produto'),
+          productCode: String(row.produto_id),
+          productImage: row.imagem_produto_url || null,
+          type:
+            ((row.tipo_movimentacao || row.tipo_movimento) as MovementType) ||
+            'ajuste',
+          quantity: Number(row.quantidade) || 0,
+          minStock: 0,
+          reason: buildReason(
+            (row.tipo_movimentacao || row.tipo_movimento) as MovementType,
+            row.motivo as string | null
+          ),
+          date,
+          time
+        };
+      });
+
+      setMovements(mapped);
+    } catch (err) {
+      console.error('Erro ao carregar estoque:', err);
+      // toastError('Erro ao carregar estoque.'); // Avoid spamming toasts on background updates
+    }
+  };
+
   useEffect(() => {
-    const fetchStock = async () => {
+    const init = async () => {
       try {
         setLoading(true);
-
         const { data: auth } = await supabase.auth.getUser();
         const user = auth.user;
 
@@ -67,93 +132,79 @@ export default function StockMovementsPage() {
           .eq('auth_user_id', user.id)
           .maybeSingle();
 
-        const estabId = profile?.estabelecimento_id as string | null;
+        const id = profile?.estabelecimento_id as string | null;
 
-        if (!estabId) {
+        if (!id) {
           toastError('Estabelecimento não encontrado para este usuário.');
           return;
         }
 
-        const { data: { session } } = await supabase.auth.getSession();
-        const res = await fetch('/api/estoque/movimentacoes', {
-          headers: { Authorization: `Bearer ${session?.access_token}` }
-        });
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData?.error || 'Falha ao buscar movimentações');
-        }
-        const movementsRows = await res.json();
-
-        const buildReason = (type: MovementType, motivo?: string | null): string => {
-          if (motivo && motivo.trim()) {
-            return motivo.trim();
-          }
-          if (type === 'venda') {
-            return 'Venda de produto';
-          }
-          if (type === 'saida') return 'Saída de estoque';
-          if (type === 'entrada') return 'Entrada de estoque';
-          return 'Ajuste de estoque';
-        };
-
-        const mapped: StockMovement[] = (movementsRows || []).map((row: any) => {
-          const createdAt = row.criado_em as string | null;
-          let date = '';
-          let time = '';
-          if (createdAt) {
-            const d = new Date(createdAt);
-            if (!Number.isNaN(d.getTime())) {
-              date = d.toLocaleDateString('pt-BR');
-              time = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-            }
-          }
-
-          return {
-            id: String(row.id),
-            productName: String(row.nome_produto || 'Produto'),
-            productCode: String(row.produto_id),
-            productImage: row.imagem_produto_url || null,
-            type:
-              ((row.tipo_movimentacao || row.tipo_movimento) as MovementType) ||
-              'ajuste',
-            quantity: Number(row.quantidade) || 0,
-            minStock: 0,
-            reason: buildReason(
-              (row.tipo_movimentacao || row.tipo_movimento) as MovementType,
-              row.motivo as string | null
-            ),
-            date,
-            time
-          };
-        });
-
-        setMovements(mapped);
-        
-        const channel = supabase
-          .channel('realtime-estoque-movimentos')
-          .on(
-            'postgres_changes',
-            {
-              event: 'INSERT',
-              schema: 'public',
-              table: 'movimentacoes_estoque',
-              filter: `estabelecimento_id=eq.${estabId}`
-            },
-            () => {
-              fetchStock();
-            }
-          )
-          .subscribe();
-      } catch (err) {
-        console.error('Erro ao carregar estoque:', err);
-        toastError('Erro ao carregar estoque.');
+        setEstabId(id);
+        await fetchStock(id);
+      } catch (error) {
+        console.error(error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStock();
+    init();
   }, [router, toastError]);
+
+  // Realtime subscription
+  useEffect(() => {
+    if (!estabId) return;
+
+    console.log('Setting up realtime subscription for estabId:', estabId);
+
+    const channel = supabase
+      .channel(`realtime-estoque-movimentos-${estabId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'movimentacoes_estoque',
+          filter: `estabelecimento_id=eq.${estabId}`
+        },
+        (payload) => {
+          console.log('Realtime update received (movimentacoes):', payload);
+          fetchStock(estabId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'estoque_produtos',
+          filter: `estabelecimento_id=eq.${estabId}`
+        },
+        (payload) => {
+          console.log('Realtime update received (estoque_produtos):', payload);
+          fetchStock(estabId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'pedidos',
+          filter: `estabelecimento_id=eq.${estabId}`
+        },
+        (payload) => {
+          console.log('Realtime update received (pedidos):', payload);
+          fetchStock(estabId);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('Cleaning up realtime subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [estabId]);
 
   const filteredMovements = useMemo(() => {
     let rows = [...movements];

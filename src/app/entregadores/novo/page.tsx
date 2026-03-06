@@ -18,7 +18,7 @@ import {
   EyeOff,
   Mail
 } from 'lucide-react';
-import { Sidebar } from '@/components/Sidebar/Sidebar';
+import { AdminHeader } from '@/components/Header/AdminHeader';
 import { useToast } from '@/components/Toast/ToastProvider';
 import { supabase } from '@/lib/supabase';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -341,21 +341,74 @@ export default function NovoEntregadorPage() {
 
   return (
     <div className={styles.container}>
-      <Sidebar />
-      
-      <main className={styles.mainContent}>
-        <Link href="/entregadores" className={styles.backLink}>
-          <ArrowLeft size={16} />
-          Voltar para Entregadores
-        </Link>
+      <main className={styles.content}>
+        <AdminHeader />
+        
+        <div className={styles.mainColumn}>
+          <div className={styles.header}>
+            <Link href="/entregadores" className={styles.backLink}>
+              <ArrowLeft size={16} />
+              Voltar para Entregadores
+            </Link>
+            <h1 className={styles.title}>Novo Entregador</h1>
+          </div>
 
-        <div className={styles.titleSection}>
-          <h1 className={styles.title}>Novo Entregador</h1>
-          <p className={styles.subtitle}>Preencha as informações para cadastrar um novo profissional</p>
-        </div>
+          <form onSubmit={handleSave}>
+            {/* Status */}
+            <div className={`${styles.card} ${styles.statusCard}`}>
+              <div className={styles.statusInfo}>
+                <h3>Status do Entregador</h3>
+                <p>Habilitar acesso ao sistema</p>
+              </div>
+              <label className={styles.toggle}>
+                <input 
+                  type="checkbox" 
+                  checked={isActive}
+                  onChange={(e) => setIsActive(e.target.checked)}
+                />
+                <span className={styles.slider}></span>
+              </label>
+            </div>
 
-        <form onSubmit={handleSave} className={styles.formGrid}>
-          <div className={styles.leftColumn}>
+            {/* Foto de Perfil */}
+            <div className={styles.card}>
+              <div className={styles.cardHeader}>
+                <ImageIcon size={20} className={styles.iconImage} />
+                <h2>Foto de Perfil</h2>
+              </div>
+              <ImageUpload
+                bucket="avatars"
+                folder="entregadores"
+                value={formData.avatar_url}
+                onChange={(url) => setFormData(prev => ({ ...prev, avatar_url: url }))}
+                label="Foto do Entregador"
+                helpText="JPG, PNG até 2MB"
+              />
+            </div>
+
+            {/* Estabelecimento Base */}
+            <div className={styles.card}>
+              <div className={styles.cardHeader}>
+                <Store size={20} className={styles.iconStore} />
+                <h2>Estabelecimento Base</h2>
+              </div>
+              <div className={styles.inputGroup}>
+                <select 
+                  name="estabelecimento_id"
+                  value={formData.estabelecimento_id}
+                  onChange={handleInputChange}
+                  className={styles.select}
+                  disabled={role === 'estabelecimento' && !!establishmentId}
+                  required
+                >
+                  <option value="">Selecione a loja...</option>
+                  {Array.isArray(estabelecimentos) && estabelecimentos.map(est => (
+                    <option key={est.id} value={est.id}>{est.nome_estabelecimento}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             {/* Informações Pessoais */}
             <div className={styles.card}>
               <div className={styles.cardHeader}>
@@ -554,15 +607,15 @@ export default function NovoEntregadorPage() {
               </div>
             </div>
 
-            {/* Login Session */}
+            {/* Acesso ao Sistema */}
             <div className={styles.card}>
               <div className={styles.cardHeader}>
                 <Lock size={20} className={styles.iconLock} />
-                <h2>Sessão de Login</h2>
+                <h2>Acesso ao Sistema</h2>
               </div>
               
               <div className={styles.inputGroup}>
-                <label className={styles.label}>E-mail de Login</label>
+                <label className={styles.label}>E-mail de Acesso</label>
                 <div className={styles.inputWithIcon}>
                   <Mail size={18} className={styles.inputIcon} />
                   <input 
@@ -570,142 +623,96 @@ export default function NovoEntregadorPage() {
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    placeholder="exemplo@email.com"
+                    placeholder="email@exemplo.com" 
                     className={`${styles.input} ${styles.inputPaddingLeft} ${errors.email ? styles.inputError : ''}`}
                     required
                   />
                 </div>
-                {errors.email && <span className={styles.errorText}>{errors.email}</span>}
+                {errors.email && (
+                  <span className={styles.errorText}>
+                    <AlertCircle size={14} />
+                    {errors.email}
+                  </span>
+                )}
               </div>
 
               <div className={styles.inputRow}>
                 <div className={styles.inputGroup}>
                   <label className={styles.label}>Senha</label>
-                  <div className={styles.inputWithIcon}>
-                    <Lock size={18} className={styles.inputIcon} />
+                  <div className={styles.passwordInputWrapper}>
                     <input 
-                      type={showPassword ? "text" : "password"} 
+                      type={showPassword ? "text" : "password"}
                       name="senha"
                       value={formData.senha}
                       onChange={handleInputChange}
-                      placeholder="Mínimo 8 caracteres"
-                      className={`${styles.input} ${styles.inputPaddingLeft} ${styles.inputPaddingRight} ${errors.password ? styles.inputError : ''}`}
+                      placeholder="Mínimo 8 caracteres" 
+                      className={`${styles.input} ${errors.password ? styles.inputError : ''}`}
                       required
                     />
                     <button 
                       type="button"
-                      className={styles.iconButton}
+                      className={styles.passwordToggle}
                       onClick={() => setShowPassword(!showPassword)}
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
-                  {errors.password && <span className={styles.errorText}>{errors.password}</span>}
+                  {errors.password && (
+                    <span className={styles.errorText}>
+                      <AlertCircle size={14} />
+                      {errors.password}
+                    </span>
+                  )}
                 </div>
-
                 <div className={styles.inputGroup}>
                   <label className={styles.label}>Confirmar Senha</label>
-                  <div className={styles.inputWithIcon}>
-                    <Lock size={18} className={styles.inputIcon} />
+                  <div className={styles.passwordInputWrapper}>
                     <input 
-                      type={showConfirmPassword ? "text" : "password"} 
+                      type={showConfirmPassword ? "text" : "password"}
                       name="confirmarSenha"
                       value={formData.confirmarSenha}
                       onChange={handleInputChange}
-                      placeholder="Repita a senha"
-                      className={`${styles.input} ${styles.inputPaddingLeft} ${styles.inputPaddingRight} ${errors.confirmPassword ? styles.inputError : ''}`}
+                      placeholder="Repita a senha" 
+                      className={`${styles.input} ${errors.confirmPassword ? styles.inputError : ''}`}
                       required
                     />
                     <button 
                       type="button"
-                      className={styles.iconButton}
+                      className={styles.passwordToggle}
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     >
                       {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
-                  {errors.confirmPassword && <span className={styles.errorText}>{errors.confirmPassword}</span>}
+                  {errors.confirmPassword && (
+                    <span className={styles.errorText}>
+                      <AlertCircle size={14} />
+                      {errors.confirmPassword}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className={styles.rightColumn}>
-            {/* Status */}
-            <div className={`${styles.card} ${styles.statusCard}`}>
-              <div className={styles.statusInfo}>
-                <h3>Status do Entregador</h3>
-                <p>Habilitar acesso ao sistema</p>
-              </div>
-              <label className={styles.toggle}>
-                <input 
-                  type="checkbox" 
-                  checked={isActive}
-                  onChange={(e) => setIsActive(e.target.checked)}
-                />
-                <span className={styles.slider}></span>
-              </label>
-            </div>
-
-            {/* Estabelecimento Base */}
-            <div className={styles.card}>
-              <div className={styles.cardHeader}>
-                <Store size={20} className={styles.iconStore} />
-                <h2>Estabelecimento Base</h2>
-              </div>
-              <div className={styles.inputGroup}>
-                <select 
-                  name="estabelecimento_id"
-                  value={formData.estabelecimento_id}
-                  onChange={handleInputChange}
-                  className={styles.select}
-                  disabled={role === 'estabelecimento' && !!establishmentId}
-                  required
-                >
-                  <option value="">Selecione a loja...</option>
-                  {Array.isArray(estabelecimentos) && estabelecimentos.map(est => (
-                    <option key={est.id} value={est.id}>{est.nome_estabelecimento}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Foto de Perfil */}
-            <div className={styles.card}>
-              <div className={styles.cardHeader}>
-                <ImageIcon size={20} className={styles.iconImage} />
-                <h2>Foto de Perfil</h2>
-              </div>
-              <ImageUpload
-                bucket="avatars"
-                folder="entregadores"
-                value={formData.avatar_url}
-                onChange={(url) => setFormData(prev => ({ ...prev, avatar_url: url }))}
-                label="Foto do Entregador"
-                helpText="JPG, PNG até 2MB"
-              />
-            </div>
-
-            {/* Ações */}
             <div className={styles.footerActions}>
               <button 
                 type="button" 
-                onClick={() => router.push('/entregadores')}
                 className={styles.btnCancel}
+                onClick={() => router.push('/entregadores')}
               >
                 Cancelar
               </button>
               <button 
                 type="submit" 
-                disabled={loading || !!errors.cpf || !!errors.cep || !!errors.email || !!errors.password || !!errors.confirmPassword}
                 className={styles.btnSave}
+                disabled={loading}
               >
-                {loading ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
+                {loading ? <Loader2 className="animate-spin" /> : <Check size={18} />}
                 Salvar Entregador
               </button>
             </div>
-          </div>
-        </form>
+          </form>
+        </div>
       </main>
     </div>
   );

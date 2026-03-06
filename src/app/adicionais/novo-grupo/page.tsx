@@ -3,7 +3,7 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft, Check, Store } from 'lucide-react';
 import { Sidebar } from '@/components/Sidebar/Sidebar';
 import { AdminHeader } from '@/components/Header/AdminHeader';
 import { useToast } from '@/components/Toast/ToastProvider';
@@ -199,6 +199,24 @@ function NovoGrupoContent() {
 
         <div className={styles.formGrid}>
           <div className={styles.mainColumn}>
+            {/* Status Card - Moved to top */}
+            <div className={styles.card}>
+              <div className={styles.switchContainer}>
+                <div className={styles.switchLabel}>
+                  <span className={styles.switchTitle}>Obrigatório</span>
+                  <span className={styles.switchDescription}>O cliente precisa escolher neste grupo</span>
+                </div>
+                <label className={`${styles.switch} ${styles.greenToggle}`}>
+                  <input
+                    type="checkbox"
+                    checked={obrigatorio}
+                    onChange={(e) => setObrigatorio(e.target.checked)}
+                  />
+                  <span className={styles.slider}></span>
+                </label>
+              </div>
+            </div>
+
             <div className={styles.card}>
               <h2 className={styles.cardTitle}>Informações do Grupo</h2>
               <p className={styles.cardSubtitle}>Defina como este grupo de adicionais será exibido.</p>
@@ -271,31 +289,14 @@ function NovoGrupoContent() {
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className={styles.sideColumn}>
-            <div className={styles.card}>
-              <div className={styles.switchContainer}>
-                <div className={styles.switchLabel}>
-                  <span className={styles.switchTitle}>Obrigatório</span>
-                  <span className={styles.switchDescription}>O cliente precisa escolher neste grupo</span>
-                </div>
-                <label className={styles.switch}>
-                  <input
-                    type="checkbox"
-                    checked={obrigatorio}
-                    onChange={(e) => setObrigatorio(e.target.checked)}
-                  />
-                  <span className={styles.slider}></span>
-                </label>
-              </div>
-            </div>
-
+            {/* Configurações Card - Moved from side */}
             <div className={styles.card}>
               <h2 className={styles.cardTitle}>Configurações</h2>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Estabelecimento</label>
                 <div className={styles.readOnlyField}>
+                  <Store size={18} className={styles.fieldIcon} />
                   <span>{establishmentName || 'Carregando...'}</span>
                 </div>
               </div>
