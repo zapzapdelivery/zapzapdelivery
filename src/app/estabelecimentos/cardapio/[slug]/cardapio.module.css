@@ -983,6 +983,10 @@
     gap: 2rem;
     text-align: center;
   }
+
+  .footerTop .logo {
+    justify-content: center;
+  }
   
   /* Modal responsive defaults */
   .modalContent {
@@ -1049,6 +1053,28 @@
     width: 100%;
     box-sizing: border-box;
     overflow-x: auto;
+  }
+
+  /* Newsletter Mobile */
+  .newsletter {
+    padding: 2rem 1.5rem;
+  }
+
+  .newsletterContent h2 {
+    font-size: 1.5rem;
+  }
+
+  .newsletterForm {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .newsletterForm input {
+    width: 100%;
+  }
+
+  .newsletterForm button {
+    width: 100%;
   }
 }
 
