@@ -5,6 +5,11 @@ import { supabaseAdmin } from '@/lib/supabase';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  if (!supabaseAdmin) {
+    console.error('Supabase Admin client not initialized. Check SUPABASE_SERVICE_ROLE_KEY environment variable.');
+    return NextResponse.json({ error: 'Internal server configuration error' }, { status: 500 });
+  }
+
   try {
     const { data, error } = await supabaseAdmin
       .from('estabelecimentos')

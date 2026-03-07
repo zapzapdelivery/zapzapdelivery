@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { MarketplaceHeader } from '@/components/Header/MarketplaceHeader';
 import { MarketplaceFooter } from '@/components/Footer/MarketplaceFooter';
 import { EstablishmentCard } from '@/components/Marketplace/EstablishmentCard';
+import { LocationModal } from '@/components/Marketplace/LocationModal';
 import { marketplaceService } from '@/services/marketplaceService';
 import { Establishment, Category } from '@/types/marketplace';
 import { ArrowLeft } from 'lucide-react';
@@ -18,6 +19,7 @@ export default function CategoryPage() {
   const [establishments, setEstablishments] = useState<Establishment[]>([]);
   const [categoryName, setCategoryName] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
 
   // Helper function to create slug (same as in CategorySection)
   const createSlug = (name: string) => {
@@ -74,7 +76,19 @@ export default function CategoryPage() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans">
-      <MarketplaceHeader />
+      <MarketplaceHeader onOpenLocationModal={() => setIsLocationModalOpen(true)} />
+      
+      <LocationModal 
+        isOpen={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
+        onLocationSelect={(city, uf) => {
+          localStorage.setItem('user_city', city);
+          localStorage.setItem('user_uf', uf);
+          setIsLocationModalOpen(false);
+          // Reload page to apply filter
+          window.location.reload();
+        }}
+      />
       
       <main className="flex-grow container mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-6">
