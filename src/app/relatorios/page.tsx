@@ -6,7 +6,6 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { Sidebar } from '../../components/Sidebar/Sidebar';
 import { AdminHeader } from '../../components/Header/AdminHeader';
 import { UnderConstruction } from '../../components/UnderConstruction/UnderConstruction';
-import styles from '../page.module.css';
 
 export default function RelatoriosPage() {
   const router = useRouter();
@@ -23,9 +22,9 @@ export default function RelatoriosPage() {
   }
 
   return (
-    <div className={styles.container}>
+    <div className="min-h-screen bg-gray-100 transition-all duration-300">
       <Sidebar />
-      <main className={styles.content}>
+      <main className="p-4 md:p-6 w-full">
         <AdminHeader />
         <UnderConstruction 
           title="Relatórios e Análises" 
