@@ -1,19 +1,15 @@
 /* Global & Layout */
 .container {
   min-height: 100vh;
-  width: 100%;
-  max-width: 100vw;
   background-color: #f9fafb;
   font-family: 'Inter', sans-serif;
   padding-bottom: 80px; /* Space for mobile cart if needed */
-  overflow-x: hidden; /* Prevent horizontal scrolling */
 }
 
 .main {
   max-width: 1280px;
   margin: 0 auto;
   padding: 0 1rem;
-  overflow-x: hidden;
 }
 
 .section {
@@ -28,21 +24,16 @@
   z-index: 50;
   background-color: white;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  width: 100%;
-  max-width: 100vw;
-  overflow-x: hidden;
 }
 
 .headerContent {
   max-width: 1280px;
-  width: 100%;
   margin: 0 auto;
   padding: 1rem 2rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 2rem;
-  box-sizing: border-box;
 }
 
 .logo {
@@ -991,64 +982,6 @@
     max-width: 95%;
     border-radius: 1rem;
     margin: 0 auto;
-  }
-}
-
-/* Mobile Header Fixes - Overflow and Layout */
-@media (max-width: 768px) {
-  .headerContent {
-    padding: 0.75rem 1rem;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .logo {
-    font-size: 1.25rem;
-    margin-right: 0;
-    flex: 0 1 auto;
-  }
-
-  .searchBar {
-    order: 3;
-    width: 100%;
-    max-width: 100%;
-    flex: 1 1 100%;
-    margin-top: 0.5rem;
-    box-sizing: border-box;
-    padding: 0; /* Remove padding if any on wrapper */
-  }
-  
-  .searchBar input {
-    width: 100%;
-    box-sizing: border-box; /* Ensure padding is included in width */
-  }
-
-  .headerActions {
-    margin-left: 0;
-    gap: 0.5rem;
-    flex: 0 0 auto;
-  }
-
-  .accountButton {
-    padding: 0;
-    width: 40px;
-    height: 40px;
-    justify-content: center;
-    border-radius: 50%;
-  }
-
-  .accountButton span {
-    display: none;
-  }
-  
-  .categoriesNav {
-    padding: 0 0.5rem;
-    width: 100%;
-    box-sizing: border-box;
-    overflow-x: auto;
   }
 }
 

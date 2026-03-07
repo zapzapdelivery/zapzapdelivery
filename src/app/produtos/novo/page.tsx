@@ -99,7 +99,7 @@ function NovoProdutoContent() {
 
         setEstabelecimentoId(estabId);
 
-        // Fetch Establishment Details from API to bypass RLS
+        // Buscar o nome do estabelecimento para o breadcrumb e validação
         const { data: { session } } = await supabase.auth.getSession();
         const response = await fetch(`/api/estabelecimentos/${estabId}`, {
             headers: { Authorization: `Bearer ${session?.access_token}` }

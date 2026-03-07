@@ -12,6 +12,7 @@ export function useEstablishment() {
     let mounted = true;
 
     async function fetchEstablishment() {
+      const establishmentSlug = window.location.pathname.split('/estabelecimentos/cardapio/')[1]?.split('/')[0];
       try {
         setLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
