@@ -11,8 +11,6 @@ import { marketplaceService } from '@/services/marketplaceService';
 import { Category } from '@/types/marketplace';
 import { MarketplaceHeader } from '@/components/Header/MarketplaceHeader';
 
-import { FreeDeliveryBanner } from '@/components/Marketplace/FreeDeliveryBanner';
-
 function MarketplaceContent() {
   const searchParams = useSearchParams();
   const selectedCategory = searchParams.get('category');
@@ -78,12 +76,20 @@ export default function MarketplaceHome() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white flex flex-col font-sans overflow-x-hidden">
+    <>
+      <MarketplaceHeader onOpenLocationModal={() => setIsLocationModalOpen(true)} />
+      
       <LocationModal 
         isOpen={isLocationModalOpen} 
         onClose={() => setIsLocationModalOpen(false)}
+        onLocationSelected={(uf, city) => {
+          localStorage.setItem('user_city', city);
+          localStorage.setItem('user_uf', uf);
+          setIsLocationModalOpen(false);
+          // Reload page to apply filter
+          window.location.reload();
+        }}
       />
-      <MarketplaceHeader onOpenLocationModal={() => setIsLocationModalOpen(true)} />
       
       <main className="flex-grow container mx-auto space-y-4 pb-16 px-4 sm:px-6 lg:px-8">
         <Suspense fallback={<div className="py-12 text-center text-gray-500">Carregando...</div>}>
@@ -92,6 +98,6 @@ export default function MarketplaceHome() {
       </main>
 
       <MarketplaceFooter />
-    </div>
+    </>
   );
 }
