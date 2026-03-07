@@ -81,7 +81,7 @@ export default function CategoryPage() {
       <LocationModal 
         isOpen={isLocationModalOpen}
         onClose={() => setIsLocationModalOpen(false)}
-        onLocationSelect={(city, uf) => {
+        onLocationSelected={(uf, city) => {
           localStorage.setItem('user_city', city);
           localStorage.setItem('user_uf', uf);
           setIsLocationModalOpen(false);
