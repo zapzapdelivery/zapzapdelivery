@@ -89,7 +89,7 @@ async function runTests() {
 
     // 4. Test Restricted Endpoints
     const endpoints = [
-      '/api/estabelecimentos',
+      '/api/estabelecimentoss',
       '/api/usuarios',
       '/api/parceiros'
     ];

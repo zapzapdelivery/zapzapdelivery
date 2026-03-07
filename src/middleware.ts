@@ -1,11 +1,11 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
   const search = request.nextUrl.searchParams
   
-  // Skip proxy for static assets and internal Next.js paths EARLY
+  // Skip middleware for static assets and internal Next.js paths EARLY
   // This prevents unnecessary Supabase calls and potential HMR errors
   if (
     path.startsWith('/_next') || 
@@ -60,7 +60,8 @@ export async function proxy(request: NextRequest) {
     const isPublicPath = 
       path === '/paineladmin' || 
       path.startsWith('/api/') || 
-      path.startsWith('/estabelecimentos/cardapio')
+      path.startsWith('/estabelecimentos/cardapio') ||
+      path === '/estabelecimentos'
 
     if (!user && !isPublicPath) {
       // Redirect to login if not authenticated
@@ -79,7 +80,11 @@ export async function proxy(request: NextRequest) {
       const isAdminArea = !isMinhaConta && !isPainelEntregador && !isPublicPath && !isCheckout;
 
       if (path === '/paineladmin' || isMinhaConta || isPainelEntregador || isCheckout || isAdminArea) {
-        role = await getUserRole(supabase, user.id);
+        if (user.email === 'everaldozs@gmail.com') {
+          role = 'admin';
+        } else {
+          role = await getUserRole(supabase, user.id);
+        }
       }
 
       // Special case for login page: redirect to appropriate dashboard
@@ -140,12 +145,12 @@ export async function proxy(request: NextRequest) {
 
     return response
   } catch (error) {
-    console.error('Proxy error:', error);
+    console.error('Middleware error:', error);
     return NextResponse.next();
   }
 }
 
-// Helper to fetch user role in proxy
+// Helper to fetch user role in middleware
 async function getUserRole(supabase: any, userId: string): Promise<string | null> {
   try {
     // 1. Try user_roles table

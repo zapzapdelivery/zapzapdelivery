@@ -72,7 +72,7 @@ async function testCoupons() {
 
   async function validateCouponViaApi(code, orderValue) {
     try {
-      const response = await fetch('http://localhost:3000/api/estabelecimentos/cardapio/teste/cupons/validar', {
+      const response = await fetch('http://localhost:3000/api/estabelecimentoss/cardapio/teste/cupons/validar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

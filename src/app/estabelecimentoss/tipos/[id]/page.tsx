@@ -1,18 +1,19 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { Sidebar } from '@/components/Sidebar/Sidebar';
-import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Settings2, Info, FileText } from 'lucide-react';
-import styles from './novo-tipo-estabelecimento.module.css';
+import { ArrowLeft, Info, Settings2, FileText } from 'lucide-react';
+import styles from '../novo/novo-tipo-estabelecimento.module.css';
 import { useToast } from '@/components/Toast/ToastProvider';
-import { useUserRole } from '@/hooks/useUserRole';
 
-export default function NovoTipoEstabelecimentoPage() {
+export default function EditarTipoEstabelecimentoPage() {
   const router = useRouter();
+  const params = useParams();
+  const id = String(params?.id || '');
   const { success, error: showError } = useToast();
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     nome: '',
@@ -20,15 +21,31 @@ export default function NovoTipoEstabelecimentoPage() {
     descricao: ''
   });
 
-  const { role, loading: loadingRole } = useUserRole();
-
   useEffect(() => {
-    if (!loadingRole && (role === 'atendente' || role === 'estabelecimento')) {
-      router.push('/');
-    }
-  }, [role, loadingRole, router]);
-
-  if (loadingRole) return null;
+    const controller = new AbortController();
+    const load = async () => {
+      if (!id) {
+        showError('ID inválido');
+        setLoading(false);
+        return;
+      }
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/estabelecimentos/tipos/${id}`, { signal: controller.signal });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || 'Falha ao carregar tipo');
+        setFormData(prev => ({ ...prev, nome: data?.nome || '' }));
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          showError(err?.message || 'Erro ao carregar tipo');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+    return () => controller.abort();
+  }, [id, showError]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -39,10 +56,6 @@ export default function NovoTipoEstabelecimentoPage() {
     setFormData(prev => ({ ...prev, ativo: !prev.ativo }));
   };
 
-  const handleBack = () => {
-    router.push('/estabelecimentos/tipos');
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.nome.trim()) {
@@ -51,23 +64,32 @@ export default function NovoTipoEstabelecimentoPage() {
     }
     setSaving(true);
     try {
-      const res = await fetch('/api/estabelecimentos/tipos', {
-        method: 'POST',
+      const res = await fetch(`/api/estabelecimentos/tipos/${id}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome: formData.nome })
       });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || 'Erro ao criar tipo de estabelecimento');
-      }
-      success('Tipo criado com sucesso!');
+      if (!res.ok) throw new Error(data?.error || 'Erro ao atualizar tipo');
+      success('Tipo atualizado com sucesso!');
       router.push('/estabelecimentos/tipos');
     } catch (err: any) {
-      showError(err?.message || 'Erro ao salvar tipo');
+      showError(err?.message || 'Erro ao salvar alterações');
     } finally {
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className={styles.container}>
+        <Sidebar />
+        <main className={styles.mainContent}>
+          <p>Carregando...</p>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
@@ -78,7 +100,7 @@ export default function NovoTipoEstabelecimentoPage() {
             <ArrowLeft size={18} />
             Voltar para Tipos de Estabelecimentos
           </Link>
-          <h1 className={styles.title}>Novo Tipo de Estabelecimento</h1>
+          <h1 className={styles.title}>Editar Tipo de Estabelecimento</h1>
           <form onSubmit={handleSubmit} className={styles.formContainer}>
             <div className={styles.gridContainer}>
               <div className={styles.column}>
@@ -149,7 +171,7 @@ export default function NovoTipoEstabelecimentoPage() {
                 Cancelar
               </button>
               <button type="submit" className={styles.btnSave} disabled={saving}>
-                {saving ? 'Salvando...' : 'Salvar Tipo'}
+                {saving ? 'Salvando...' : 'Salvar Alterações'}
               </button>
             </div>
           </form>
@@ -161,7 +183,7 @@ export default function NovoTipoEstabelecimentoPage() {
               <ArrowLeft size={18} />
               Voltar para Tipos de Estabelecimentos
             </Link>
-            <h1 className={styles.mobileTitle}>Novo Tipo de Estabelecimento</h1>
+            <h1 className={styles.mobileTitle}>Editar Tipo de Estabelecimento</h1>
             <div className={styles.mobileStatusCard}>
               <div className={styles.mobileStatusText}>
                 <span className={styles.statusLabel}>Ativo</span>
@@ -203,7 +225,7 @@ export default function NovoTipoEstabelecimentoPage() {
                 Cancelar
               </button>
               <button type="submit" className={styles.btnSave} disabled={saving}>
-                {saving ? 'Salvando...' : 'Salvar Tipo'}
+                {saving ? 'Salvando...' : 'Salvar Alterações'}
               </button>
             </div>
           </form>
