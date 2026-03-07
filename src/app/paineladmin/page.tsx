@@ -66,7 +66,7 @@ function LoginContent() {
         }
         
         // Default redirection for admin/establishment
-        router.push('/');
+        router.push('/dashboard');
       }
     } catch (err: any) {
       const msg = err.message || '';

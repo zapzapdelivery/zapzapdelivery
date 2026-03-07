@@ -13,7 +13,7 @@ function SidebarContent({ children }: { children: ReactNode }) {
   // Only show sidebar on admin pages
   // Exclude login, public pages, customer pages, delivery app
   const isAuthPage = pathname === '/paineladmin' || pathname === '/login';
-  const isPublicPage = pathname.startsWith('/estabelecimentos/cardapio');
+  const isPublicPage = pathname.startsWith('/estabelecimentos/cardapio') || pathname === '/' || pathname === '/estabelecimentos' || pathname.startsWith('/categoria/');
   const isCustomerPage = pathname.startsWith('/minhaconta');
   const isDeliveryPage = pathname.startsWith('/painelentregador');
   const isCheckoutPage = pathname.startsWith('/checkout');

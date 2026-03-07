@@ -61,7 +61,9 @@ export async function middleware(request: NextRequest) {
       path === '/paineladmin' || 
       path.startsWith('/api/') || 
       path.startsWith('/estabelecimentos/cardapio') ||
-      path === '/estabelecimentos'
+      path === '/estabelecimentos' ||
+      path === '/' ||
+      path.startsWith('/categoria/')
 
     if (!user && !isPublicPath) {
       // Redirect to login if not authenticated
@@ -92,7 +94,7 @@ export async function middleware(request: NextRequest) {
         const url = request.nextUrl.clone()
         if (role === 'cliente') url.pathname = '/minhaconta'
         else if (role === 'entregador') url.pathname = '/painelentregador'
-        else url.pathname = '/'
+        else url.pathname = '/dashboard'
         return NextResponse.redirect(url)
       }
 

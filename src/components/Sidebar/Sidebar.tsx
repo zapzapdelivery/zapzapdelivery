@@ -37,9 +37,9 @@ interface MenuItem {
 }
 
 const menuItems: MenuItem[] = [
-  { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
+  { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
   { icon: ClipboardList, label: 'Pedidos', href: '/pedidos' },
-  { icon: Store, label: 'Estabelecimentos', href: '/estabelecimentos' },
+  { icon: Store, label: 'Estabelecimentos', href: '/gerenciar/estabelecimentos' },
   { icon: Package, label: 'Produtos', href: '/produtos' },
   { icon: Shapes, label: 'Categorias', href: '/categorias' },
   { icon: Warehouse, label: 'Estoque', href: '/estoque/movimentacoes' },
