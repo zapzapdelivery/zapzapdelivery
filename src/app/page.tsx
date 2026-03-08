@@ -77,7 +77,9 @@ export default function MarketplaceHome() {
 
   return (
     <>
-      <MarketplaceHeader onOpenLocationModal={() => setIsLocationModalOpen(true)} />
+      <Suspense fallback={<div className="h-16 bg-white shadow-sm" />}>
+        <MarketplaceHeader onOpenLocationModal={() => setIsLocationModalOpen(true)} />
+      </Suspense>
       
       <LocationModal 
         isOpen={isLocationModalOpen} 
