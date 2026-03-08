@@ -2,11 +2,15 @@
 
 import React, { Suspense } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { MapPin, Search, ChevronDown } from 'lucide-react';
 import { CategoryPills } from '../Marketplace/CategoryPills';
 
 export function MarketplaceHeader({ onOpenLocationModal }: { onOpenLocationModal: () => void }) {
   const [location, setLocation] = React.useState('SELECIONE A LOCALIZAÇÃO');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [searchTerm, setSearchTerm] = React.useState(searchParams.get('q') || '');
 
   React.useEffect(() => {
     // Load location from localStorage
@@ -16,6 +20,19 @@ export function MarketplaceHeader({ onOpenLocationModal }: { onOpenLocationModal
       setLocation(`${city} - ${uf}`.toUpperCase());
     }
   }, []);
+
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+    const params = new URLSearchParams(searchParams.toString());
+    if (term) {
+      params.set('q', term);
+    } else {
+      params.delete('q');
+    }
+    // Use replace to update URL without adding to history stack, keeping user on same page context
+    // This allows the page component to read the 'q' param and filter results
+    router.replace(`?${params.toString()}`, { scroll: false });
+  };
 
   return (
     <>
@@ -42,11 +59,16 @@ export function MarketplaceHeader({ onOpenLocationModal }: { onOpenLocationModal
               <ChevronDown size={14} className="text-green-500 shrink-0" />
             </div>
 
-            {/* Center: Search Icon */}
-            <div className="flex justify-center flex-1 mx-2 sm:mx-4">
-              <button className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors">
-                <Search size={20} />
-              </button>
+            {/* Center: Search Input */}
+            <div className="flex justify-center flex-1 mx-2 sm:mx-4 relative">
+              <input 
+                type="text" 
+                placeholder="Buscar..." 
+                className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-green-500 transition-all placeholder-gray-500"
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
+              />
+              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             </div>
 
             {/* Right: CTA */}

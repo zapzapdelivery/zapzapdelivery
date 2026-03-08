@@ -16,8 +16,10 @@ import {
   List as ListIcon,
   LayoutGrid,
   Eye,
-  Store
+  Store,
+  GripVertical
 } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import styles from './categorias.module.css';
 import { useToast } from '@/components/Toast/ToastProvider';
 import { DeleteConfirmationModal } from '@/components/Modal/DeleteConfirmationModal';
@@ -63,6 +65,9 @@ export default function CategoriasPage() {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [viewData, setViewData] = useState<Categoria | null>(null);
 
+  // Increase page size to allow better reordering experience
+  const pageSize = 50;
+
   const CATEGORY_LABELS = {
     nome_categoria: 'Nome',
     descricao: 'Descrição',
@@ -75,8 +80,49 @@ export default function CategoriasPage() {
     setViewData(category);
     setViewModalOpen(true);
   };
-  
-  const pageSize = 5;
+
+  const isDragEnabled = !searchTerm && statusFilter === 'todos';
+
+  const handleOnDragEnd = async (result: any) => {
+    if (!result.destination) return;
+
+    const sourceIndex = result.source.index;
+    const destinationIndex = result.destination.index;
+
+    if (sourceIndex === destinationIndex) return;
+
+    // Adjust indices for pagination
+    const start = (page - 1) * pageSize;
+    const realSourceIndex = start + sourceIndex;
+    const realDestinationIndex = start + destinationIndex;
+
+    // Create a new array with the reordered items
+    const reorderedCategorias = Array.from(categorias);
+    const [reorderedItem] = reorderedCategorias.splice(realSourceIndex, 1);
+    reorderedCategorias.splice(realDestinationIndex, 0, reorderedItem);
+
+    // Update local state immediately for UI responsiveness
+    setCategorias(reorderedCategorias);
+
+    // Persist to Backend
+    try {
+      const updates = reorderedCategorias.map((cat, index) => ({
+        ...cat,
+        ordem_exibicao: index
+      }));
+
+      const { error } = await supabase
+        .from('categorias')
+        .upsert(updates);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Erro ao atualizar ordem:', error);
+      toastError('Erro ao salvar a nova ordem');
+      // Revert local state logic could be added here if strict consistency is required
+      fetchCategorias(establishmentId); // Reload from server to reset order
+    }
+  };
 
   const fetchCategorias = async (estabId: string | null) => {
     try {
@@ -218,7 +264,7 @@ export default function CategoriasPage() {
         
         <div className={styles.pageHeader}>
           <div>
-            <Link href="/" className={styles.backLink}>← Voltar para Dashboard</Link>
+            <Link href="/dashboard" className={styles.backLink}>← Voltar para Dashboard</Link>
             <h1 className={styles.title}>Categorias</h1>
             <p className={styles.subtitle}>Gerencie as categorias dos seus produtos</p>
           </div>
@@ -290,83 +336,111 @@ export default function CategoriasPage() {
           </div>
         </div>
 
-        {loading ? (
-          <div className={styles.loading}>Carregando categorias...</div>
-        ) : filteredCategorias.length === 0 ? (
-          <div className={styles.emptyState}>
-            <h3>Nenhuma categoria encontrada</h3>
-            <p>{searchTerm ? 'Tente buscar com outros termos' : 'Comece criando sua primeira categoria'}</p>
-          </div>
-        ) : view === 'list' ? (
-          /* List View (Table) */
-          <div className={styles.tableContainer}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Imagem</th>
-                  <th>Nome da Categoria</th>
-                  <th>Estabelecimento</th>
-                  <th>Status</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedCategorias.map((categoria) => (
-                  <tr key={categoria.id}>
-                    <td className={styles.imageCell}>
-                      <div className={styles.categoryImage}>
-                        {categoria.imagem_categoria_url ? (
-                          <img src={categoria.imagem_categoria_url} alt={categoria.nome_categoria} />
-                        ) : (
-                          <Store className={styles.placeholderImage} size={24} />
-                        )}
-                      </div>
-                    </td>
-                    <td className={styles.nameCell}>
-                      <div className={styles.categoryName}>{categoria.nome_categoria}</div>
-                      <div className={styles.categoryId}>ID: {formatId(categoria.id)}</div>
-                    </td>
-                    <td>
-                      <div className={styles.establishmentCell}>
-                        <Store size={16} />
-                        <span>{establishmentName || 'Estabelecimento'}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`${styles.statusBadge} ${categoria.status_categoria === 'ativo' ? styles.activeBadge : styles.inactiveBadge}`}>
-                        <span className={styles.dot}></span>
-                        {categoria.status_categoria === 'ativo' ? 'Ativa' : 'Inativa'}
-                      </span>
-                    </td>
-                    <td>
-                      <div className={styles.actionsCell}>
-                        <button className={`${styles.actionButton} ${styles.viewButton}`} title="Visualizar" onClick={() => handleView(categoria)}>
-                          <Eye size={18} />
-                        </button>
-                        <Link 
-                          href={`/categorias/novo?id=${categoria.id}`} 
-                          className={`${styles.actionButton} ${styles.editButton}`} 
-                          title="Editar"
+        <DragDropContext onDragEnd={handleOnDragEnd}>
+          {loading ? (
+            <div className={styles.loading}>Carregando categorias...</div>
+          ) : filteredCategorias.length === 0 ? (
+            <div className={styles.emptyState}>
+              <h3>Nenhuma categoria encontrada</h3>
+              <p>{searchTerm ? 'Tente buscar com outros termos' : 'Comece criando sua primeira categoria'}</p>
+            </div>
+          ) : view === 'list' ? (
+            /* List View (Table) */
+            <div className={styles.tableContainer}>
+              <Droppable droppableId="categorias-list" isDropDisabled={!isDragEnabled}>
+                {(provided) => (
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th style={{ width: '40px' }}></th>
+                        <th>Imagem</th>
+                        <th>Nome da Categoria</th>
+                        <th>Estabelecimento</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody ref={provided.innerRef} {...provided.droppableProps}>
+                      {paginatedCategorias.map((categoria, index) => (
+                        <Draggable 
+                          key={categoria.id} 
+                          draggableId={categoria.id} 
+                          index={index}
+                          isDragDisabled={!isDragEnabled}
                         >
-                          <Edit size={18} />
-                        </Link>
-                        {role !== 'atendente' && !loadingRole && (
-                          <button 
-                            onClick={() => handleDelete(categoria.id)} 
-                            className={`${styles.actionButton} ${styles.deleteButton}`} 
-                            title="Excluir"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
+                          {(provided, snapshot) => (
+                            <tr 
+                              ref={provided.innerRef} 
+                              {...provided.draggableProps}
+                              style={{
+                                ...provided.draggableProps.style,
+                                background: snapshot.isDragging ? '#f3f4f6' : 'transparent',
+                                display: snapshot.isDragging ? 'table' : undefined // Fix for table row collapse during drag
+                              }}
+                            >
+                              <td style={{ width: '40px' }}>
+                                <div {...provided.dragHandleProps} style={{ cursor: isDragEnabled ? 'grab' : 'default', opacity: isDragEnabled ? 1 : 0.3 }}>
+                                  <GripVertical size={20} color="#9ca3af" />
+                                </div>
+                              </td>
+                              <td className={styles.imageCell}>
+                                <div className={styles.categoryImage}>
+                                  {categoria.imagem_categoria_url ? (
+                                    <img src={categoria.imagem_categoria_url} alt={categoria.nome_categoria} />
+                                  ) : (
+                                    <Store className={styles.placeholderImage} size={24} />
+                                  )}
+                                </div>
+                              </td>
+                              <td className={styles.nameCell}>
+                                <div className={styles.categoryName}>{categoria.nome_categoria}</div>
+                              </td>
+                              <td>
+                                <div className={styles.establishmentCell}>
+                                  <Store size={16} />
+                                  <span>{establishmentName || 'Estabelecimento'}</span>
+                                </div>
+                              </td>
+                              <td>
+                                <span className={`${styles.statusBadge} ${categoria.status_categoria === 'ativo' ? styles.activeBadge : styles.inactiveBadge}`}>
+                                  <span className={styles.dot}></span>
+                                  {categoria.status_categoria === 'ativo' ? 'Ativa' : 'Inativa'}
+                                </span>
+                              </td>
+                              <td>
+                                <div className={styles.actionsCell}>
+                                  <button className={`${styles.actionButton} ${styles.viewButton}`} title="Visualizar" onClick={() => handleView(categoria)}>
+                                    <Eye size={18} />
+                                  </button>
+                                  <Link 
+                                    href={`/categorias/novo?id=${categoria.id}`} 
+                                    className={`${styles.actionButton} ${styles.editButton}`} 
+                                    title="Editar"
+                                  >
+                                    <Edit size={18} />
+                                  </Link>
+                                  {role !== 'atendente' && !loadingRole && (
+                                    <button 
+                                      onClick={() => handleDelete(categoria.id)} 
+                                      className={`${styles.actionButton} ${styles.deleteButton}`} 
+                                      title="Excluir"
+                                    >
+                                      <Trash2 size={18} />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </tbody>
+                  </table>
+                )}
+              </Droppable>
+            </div>
+          ) : (
           /* Grid View */
           <div className={styles.grid}>
             {paginatedCategorias.map((categoria) => (
@@ -392,7 +466,6 @@ export default function CategoriasPage() {
                     )}
                   </div>
                 </div>
-                <div className={styles.categoryId}>ID: {formatId(categoria.id)}</div>
                 <div className="mt-4 flex justify-between items-center">
                   <span className={`${styles.statusBadge} ${categoria.status_categoria === 'ativo' ? styles.activeBadge : styles.inactiveBadge}`}>
                     <span className={styles.dot}></span>
@@ -412,52 +485,91 @@ export default function CategoriasPage() {
         {/* Mobile List View */}
         {!loading && filteredCategorias.length > 0 && (
           <div className={styles.mobileList}>
-            {paginatedCategorias.map((categoria) => (
-              <div key={categoria.id} className={styles.mobileCard}>
-                <div className={styles.mobileCardHeader}>
-                  <div className={styles.mobileCardInfo}>
-                    <div className={styles.categoryImage}>
-                      {categoria.imagem_categoria_url ? (
-                        <img src={categoria.imagem_categoria_url} alt={categoria.nome_categoria} />
-                      ) : (
-                        <Store className={styles.placeholderImage} size={24} />
-                      )}
-                    </div>
-                    <div className={styles.mobileCardContent}>
-                      <div className={styles.categoryName}>{categoria.nome_categoria}</div>
-                      <div className={styles.categoryId}>ID: {formatId(categoria.id)}</div>
-                      <div className={styles.establishmentCell} style={{ marginTop: '0.25rem', fontSize: '0.75rem' }}>
-                        <Store size={14} />
-                        <span>{establishmentName || 'Estabelecimento'}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <span className={`${styles.statusBadge} ${categoria.status_categoria === 'ativo' ? styles.activeBadge : styles.inactiveBadge}`}>
-                    {categoria.status_categoria === 'ativo' ? 'Ativa' : 'Inativa'}
-                  </span>
-                </div>
-                
-                <div className={styles.mobileCardActions}>
-                  <button className={styles.mobileActionButton} title="Visualizar" onClick={() => handleView(categoria)}>
-                    <Eye size={20} />
-                  </button>
-                  <Link href={`/categorias/novo?id=${categoria.id}`} className={styles.mobileActionButton} title="Editar">
-                    <Edit size={20} />
-                  </Link>
-                  {role !== 'atendente' && !loadingRole && (
-                    <button 
-                      onClick={() => handleDelete(categoria.id)}
-                      className={styles.mobileActionButton} 
-                      title="Excluir"
+            <Droppable droppableId="categorias-mobile-list" isDropDisabled={!isDragEnabled}>
+              {(provided) => (
+                <div ref={provided.innerRef} {...provided.droppableProps}>
+                  {paginatedCategorias.map((categoria, index) => (
+                    <Draggable 
+                      key={categoria.id} 
+                      draggableId={`mobile-${categoria.id}`} 
+                      index={index}
+                      isDragDisabled={!isDragEnabled}
                     >
-                      <Trash2 size={20} />
-                    </button>
-                  )}
+                      {(provided, snapshot) => (
+                        <div 
+                          ref={provided.innerRef} 
+                          {...provided.draggableProps}
+                          className={styles.mobileCard}
+                          style={{
+                            ...provided.draggableProps.style,
+                            backgroundColor: snapshot.isDragging ? '#f3f4f6' : 'white',
+                            position: 'relative' // For absolute positioning of grip if needed, though we use flex
+                          }}
+                        >
+                          <div className={styles.mobileCardHeader}>
+                            <div className={styles.mobileCardInfo} style={{ display: 'flex', alignItems: 'center' }}>
+                              {/* Drag Handle for Mobile */}
+                              <div 
+                                {...provided.dragHandleProps} 
+                                style={{ 
+                                  marginRight: '10px', 
+                                  cursor: isDragEnabled ? 'grab' : 'default',
+                                  opacity: isDragEnabled ? 1 : 0.3,
+                                  display: 'flex',
+                                  alignItems: 'center'
+                                }}
+                              >
+                                <GripVertical size={24} color="#9ca3af" />
+                              </div>
+                              
+                              <div className={styles.categoryImage}>
+                                {categoria.imagem_categoria_url ? (
+                                  <img src={categoria.imagem_categoria_url} alt={categoria.nome_categoria} />
+                                ) : (
+                                  <Store className={styles.placeholderImage} size={24} />
+                                )}
+                              </div>
+                              <div className={styles.mobileCardContent}>
+                                <div className={styles.categoryName}>{categoria.nome_categoria}</div>
+                                <div className={styles.establishmentCell} style={{ marginTop: '0.25rem', fontSize: '0.75rem' }}>
+                                  <Store size={14} />
+                                  <span>{establishmentName || 'Estabelecimento'}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <span className={`${styles.statusBadge} ${categoria.status_categoria === 'ativo' ? styles.activeBadge : styles.inactiveBadge}`}>
+                              {categoria.status_categoria === 'ativo' ? 'Ativa' : 'Inativa'}
+                            </span>
+                          </div>
+                          
+                          <div className={styles.mobileCardActions}>
+                            <button className={styles.mobileActionButton} title="Visualizar" onClick={() => handleView(categoria)}>
+                              <Eye size={20} />
+                            </button>
+                            <Link href={`/categorias/novo?id=${categoria.id}`} className={styles.mobileActionButton} title="Editar">
+                              <Edit size={20} />
+                            </Link>
+                            {role !== 'atendente' && !loadingRole && (
+                              <button 
+                                onClick={() => handleDelete(categoria.id)}
+                                className={styles.mobileActionButton} 
+                                title="Excluir"
+                              >
+                                <Trash2 size={20} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
                 </div>
-              </div>
-            ))}
+              )}
+            </Droppable>
           </div>
         )}
+        </DragDropContext>
 
         {/* Pagination */}
         {!loading && filteredCategorias.length > 0 && (

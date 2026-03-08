@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { EstablishmentCard } from './EstablishmentCard';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import { marketplaceService } from '@/services/marketplaceService';
 import { Establishment } from '@/types/marketplace';
@@ -11,6 +12,8 @@ export function TopTenSection() {
   const [establishments, setEstablishments] = useState<Establishment[]>([]);
   const [loading, setLoading] = useState(true);
   const [locationName, setLocationName] = useState('sua região');
+  const searchParams = useSearchParams();
+  const searchTerm = searchParams.get('q')?.toLowerCase() || '';
 
   useEffect(() => {
     async function loadData() {
@@ -33,6 +36,10 @@ export function TopTenSection() {
     loadData();
   }, []);
 
+  const filteredEstablishments = establishments.filter(est => 
+    est.name.toLowerCase().includes(searchTerm)
+  );
+
   if (loading) {
     return (
       <section className="py-2 px-4 animate-pulse">
@@ -46,7 +53,7 @@ export function TopTenSection() {
     );
   }
 
-  if (establishments.length === 0) {
+  if (filteredEstablishments.length === 0) {
     return null;
   }
 
@@ -58,7 +65,7 @@ export function TopTenSection() {
       </div>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-        {establishments.map((establishment) => (
+        {filteredEstablishments.map((establishment) => (
           <div key={establishment.id} className="w-full">
             <EstablishmentCard establishment={establishment} />
           </div>

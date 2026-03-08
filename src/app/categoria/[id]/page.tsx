@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { MarketplaceHeader } from '@/components/Header/MarketplaceHeader';
 import { MarketplaceFooter } from '@/components/Footer/MarketplaceFooter';
 import { EstablishmentCard } from '@/components/Marketplace/EstablishmentCard';
@@ -14,7 +14,9 @@ import Link from 'next/link';
 export default function CategoryPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const id = params?.id as string;
+  const searchTerm = searchParams.get('q')?.toLowerCase() || '';
   
   const [establishments, setEstablishments] = useState<Establishment[]>([]);
   const [categoryName, setCategoryName] = useState<string>('');
@@ -74,6 +76,10 @@ export default function CategoryPage() {
     }
   }, [id]);
 
+  const filteredEstablishments = establishments.filter(est => 
+    est.name.toLowerCase().includes(searchTerm)
+  );
+
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans">
       <MarketplaceHeader onOpenLocationModal={() => setIsLocationModalOpen(true)} />
@@ -106,7 +112,7 @@ export default function CategoryPage() {
           <p className="text-gray-500 mt-1">
             {loading 
               ? <span className="animate-pulse bg-gray-200 h-4 w-32 block rounded mt-2"></span> 
-              : `${establishments.length} estabelecimentos encontrados`
+              : `${filteredEstablishments.length} estabelecimentos encontrados`
             }
           </p>
         </div>
@@ -119,9 +125,9 @@ export default function CategoryPage() {
           </div>
         ) : (
           <>
-            {establishments.length > 0 ? (
+            {filteredEstablishments.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                {establishments.map((establishment) => (
+                {filteredEstablishments.map((establishment) => (
                   <div key={establishment.id} className="w-full">
                     <EstablishmentCard establishment={establishment} />
                   </div>
@@ -131,7 +137,9 @@ export default function CategoryPage() {
               <div className="text-center py-20 bg-gray-50 rounded-xl">
                 <span className="text-4xl block mb-4">🏪</span>
                 <h3 className="text-xl font-medium text-gray-900">Nenhum estabelecimento encontrado</h3>
-                <p className="text-gray-500 mt-2">Tente buscar em outra categoria.</p>
+                <p className="text-gray-500 mt-2">
+                  {searchTerm ? `Nenhum resultado para "${searchTerm}"` : 'Tente buscar em outra categoria.'}
+                </p>
               </div>
             )}
           </>

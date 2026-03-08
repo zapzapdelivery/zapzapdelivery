@@ -9,6 +9,7 @@
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
   },
   "dependencies": {
+    "@hello-pangea/dnd": "^18.0.1",
     "@mercadopago/sdk-react": "^1.0.7",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.98.0",

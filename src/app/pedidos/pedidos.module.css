@@ -723,6 +723,17 @@
     min-width: unset;
   }
 
+  .filterWrapper {
+    width: 100%;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .filterSelect {
+    width: 100%;
+    margin-right: 0 !important;
+  }
+
   .actionButtons {
     width: 100%;
     overflow-x: auto;

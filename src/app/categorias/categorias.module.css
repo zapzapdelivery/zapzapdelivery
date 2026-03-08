@@ -467,32 +467,41 @@
 .mobileCard {
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
 }
 
 .mobileCardHeader {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .mobileCardInfo {
   display: flex;
   gap: 1rem;
+  align-items: center;
+  flex: 1;
 }
 
 .mobileCardContent {
   display: flex;
   flex-direction: column;
+  gap: 0.25rem;
 }
 
 .mobileCardActions {
   display: flex;
-  border-top: 1px solid #e5e7eb;
-  margin-top: 1rem;
-  padding-top: 0.5rem;
+  background-color: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  margin: 1rem -1rem -1rem -1rem;
+  padding: 0.25rem;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
 }
 
 .mobileActionButton {
@@ -500,15 +509,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem;
-  color: #6b7280;
+  padding: 0.75rem;
+  color: #64748b;
   border: none;
   background: transparent;
-  border-right: 1px solid #e5e7eb;
+  border-right: 1px solid #e2e8f0;
+  transition: all 0.2s;
 }
 
 .mobileActionButton:last-child {
   border-right: none;
+}
+
+.mobileActionButton:active {
+  background-color: #e2e8f0;
 }
 
 @media (max-width: 768px) {

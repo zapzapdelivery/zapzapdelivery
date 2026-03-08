@@ -360,3 +360,72 @@
   display: inline-block;
   flex-shrink: 0;
 }
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .leftSection {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .greeting {
+    width: 100%;
+  }
+
+  .greeting h1 {
+    font-size: 1.25rem;
+  }
+
+  .subtitle {
+    font-size: 0.8rem;
+  }
+
+  .actions {
+    width: 100%;
+    justify-content: space-between;
+    gap: 0.5rem;
+    overflow-x: auto; /* Allow scroll if too many items */
+    padding-bottom: 4px; /* Space for scrollbar if needed */
+  }
+
+  /* Compact Cardapio Button on Mobile */
+  .cardapioButton span {
+    display: none;
+  }
+  
+  .cardapioButton {
+    padding: 0.5rem;
+    justify-content: center;
+  }
+  
+  /* Compact User Button on Mobile */
+  .userName {
+    display: none;
+  }
+  
+  .userChevron {
+    display: none;
+  }
+  
+  .userButton {
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+  }
+  
+  .avatarWrapper {
+    width: 36px;
+    height: 36px;
+  }
+}
