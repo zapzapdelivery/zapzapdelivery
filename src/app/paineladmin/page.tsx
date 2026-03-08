@@ -69,11 +69,14 @@ function LoginContent() {
         router.push('/dashboard');
       }
     } catch (err: any) {
+      console.error('Erro ao fazer login:', err);
       const msg = err.message || '';
+      
       if (msg.includes('Invalid login credentials')) {
         showError('E-mail ou senha incorretos. Tente novamente.');
+      } else if (msg.includes('fetch') || msg.includes('network')) {
+        showError('Erro de conexão. Verifique sua internet ou se o serviço está disponível.');
       } else {
-        console.error('Erro ao fazer login:', err);
         showError('Falha ao autenticar. Verifique suas credenciais.');
       }
     } finally {

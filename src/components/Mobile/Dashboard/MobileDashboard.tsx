@@ -136,11 +136,17 @@ export function MobileDashboard({ stats, weeklyData, orders }: MobileDashboardPr
             </div>
             <div className={styles.customerInfo}>
               <span className={styles.customerName}>{order.client}</span>
-              <span className={styles.orderItems}>{order.status} • {order.value}</span>
+              <div className={styles.orderDetails}>
+                <span className={styles.statusBadge}>{order.status}</span>
+                <span className={styles.dotSeparator}>•</span>
+                <span className={styles.orderValue}>{order.value}</span>
+              </div>
             </div>
             <div className={styles.orderActions}>
-              <button className={styles.secondaryButton}>Visualizar</button>
-              <button className={styles.primaryButton}>
+              <button className={`${styles.actionButton} ${styles.secondaryButton}`}>
+                Visualizar
+              </button>
+              <button className={`${styles.actionButton} ${styles.primaryButton}`}>
                 <MessageCircle size={18} />
                 WhatsApp
               </button>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
   ArrowLeft, 
@@ -40,6 +41,7 @@ import styles from './pedidos.module.css';
 import { canEditOrderByRole } from '@/utils/permissions';
 import { useToast } from '@/components/Toast/ToastProvider';
 import { OrderStatus, ORDER_STATUS_LABEL, ORDER_STATUS_SLUG, LEGACY_STATUS_MAP } from '@/types/orderStatus';
+import { KanbanSkeleton } from '@/components/Skeleton/KanbanSkeleton';
 
 // Data from OrderStatus enum
 const STATUS_OPTIONS = [
@@ -399,6 +401,7 @@ export default function PedidosPage() {
         
         <main className={styles.mainContent}>
           <div className={styles.pageHeader}>
+            <Link href="/dashboard" className={styles.backLink}>← Voltar para Dashboard</Link>
             <h1 className={styles.title}>Fluxo de Pedidos</h1>
           </div>
 
@@ -494,7 +497,9 @@ export default function PedidosPage() {
             ))}
           </div>
 
-          {viewMode === 'kanban' ? (
+          {loading ? (
+            <KanbanSkeleton />
+          ) : viewMode === 'kanban' ? (
             <div className={styles.kanbanBoard}>
               {STATUS_OPTIONS.map(status => {
                 const orders = getOrdersByStatus(status.id);
