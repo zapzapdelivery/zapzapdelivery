@@ -27,14 +27,14 @@ export function EstablishmentCard({ establishment }: EstablishmentCardProps) {
   return (
     <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 overflow-hidden flex flex-row sm:flex-col h-auto sm:h-full group">
       {/* Image Section - Landscape Ratio */}
-      <div className="relative w-16 sm:w-full h-24 sm:h-48 bg-gray-50 shrink-0 overflow-hidden">
+      <div className="relative w-28 sm:w-full h-24 sm:h-48 bg-gray-50 shrink-0 overflow-hidden">
         {establishment.logoUrl ? (
           <Image
             src={establishment.logoUrl}
             alt={establishment.name}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-500"
-            sizes="(max-width: 768px) 64px, (max-width: 1200px) 50vw, 33vw"
+            sizes="(max-width: 768px) 112px, (max-width: 1200px) 50vw, 33vw"
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-100">
