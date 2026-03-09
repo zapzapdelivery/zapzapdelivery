@@ -64,7 +64,7 @@ export const CustomerSidebar = ({ isOpen, onClose }: CustomerSidebarProps) => {
       )}
       
       <aside className={`${styles.sidebar} ${isOpen ? styles.open : ''}`.trim()}>
-        <div className={styles.logo}>ZapZap Delivery</div>
+        <Link href="/" className={styles.logo} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>ZapZap Delivery</Link>
         
         <nav className={styles.nav}>
           {navItems.map((item) => {
