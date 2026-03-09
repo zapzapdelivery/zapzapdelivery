@@ -4,7 +4,7 @@ import { useStorage } from '@/hooks/useStorage';
 import { useToast } from '@/components/Toast/ToastProvider';
 import styles from './ImageUpload.module.css';
 
-interface ImageUploadProps {
+export interface ImageUploadProps {
   bucket: string;
   value: string;
   onChange: (url: string) => void;
@@ -15,6 +15,9 @@ interface ImageUploadProps {
   className?: string;
   helpText?: string;
   allowAnonymous?: boolean;
+  width?: number;
+  height?: number;
+  rounded?: boolean;
 }
 
 export const ImageUpload: React.FC<ImageUploadProps> = ({
@@ -27,13 +30,22 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   maxSizeMB = 2,
   className,
   helpText,
-  allowAnonymous
+  allowAnonymous,
+  width,
+  height,
+  rounded
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { uploadFile, deleteFile, uploading, error: uploadError } = useStorage();
-  const { success, error: toastError } = useToast();
+  const { success: showSuccess, error: showError } = useToast();
   const [internalError, setInternalError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const containerStyle: React.CSSProperties = {
+    width: width ? `${width}px` : undefined,
+    height: height ? `${height}px` : undefined,
+    borderRadius: rounded ? '50%' : undefined,
+  };
 
   const handleAreaClick = () => {
     if (!uploading && !isDeleting) {
@@ -63,15 +75,15 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     try {
       const url = await uploadFile(file, { bucket, folder, maxSizeMB, allowAnonymous });
       if (url) {
-        if (oldUrl) {
+        if (oldUrl && !oldUrl.startsWith('http')) { // Only delete if it's a storage path, not external URL
           await deleteFile(oldUrl, bucket);
         }
         onChange(url);
-        success('Imagem enviada com sucesso!');
+        showSuccess('Imagem enviada com sucesso!');
       }
     } catch (err) {
       console.error(err);
-      toastError('Erro ao enviar imagem.');
+      showError('Erro ao enviar imagem.');
     } finally {
       // Reset input value to allow selecting same file again
       if (fileInputRef.current) {
@@ -87,10 +99,10 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       try {
         await deleteFile(value, bucket);
         onChange('');
-        success('Imagem excluída com sucesso!');
+        showSuccess('Imagem excluída com sucesso!');
       } catch (err) {
         console.error('Error deleting file:', err);
-        toastError('Erro ao excluir imagem.');
+        showError('Erro ao excluir imagem.');
       } finally {
         setIsDeleting(false);
       }
@@ -98,54 +110,51 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   };
 
   return (
-    <div className={`${styles.container} ${className || ''}`}>
-      {value ? (
-        <div style={{ position: 'relative' }}>
-          <img 
-            src={value} 
-            alt="Preview" 
-            className={styles.previewImage} 
-            onError={(e) => (e.currentTarget.style.display = 'none')} 
-          />
-          <button 
-            type="button"
-            className={styles.removeButton}
-            onClick={handleDeleteClick}
-            title="Excluir imagem"
-            disabled={isDeleting}
-          >
-            {isDeleting ? <Loader2 className={styles.animateSpin} size={14} /> : <X size={14} />}
-          </button>
-        </div>
-      ) : (
-        <div 
-          className={`${styles.uploadArea} ${uploading || isDeleting ? styles.disabled : ''}`}
-          onClick={handleAreaClick}
-        >
-          {(uploading || isDeleting) && (
-            <div className={styles.loadingOverlay}>
-              <div className={styles.loadingSpinner} />
-            </div>
-          )}
-          
-          <input 
-            type="file" 
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            style={{ display: 'none' }}
-            accept="image/png, image/jpeg, image/webp, image/gif, image/avif"
-            disabled={uploading || isDeleting}
-          />
-          
-          <UploadCloud size={32} className={styles.uploadIcon} />
-          <div className={styles.uploadText}>
-            {uploading ? 'Enviando...' : isDeleting ? 'Excluindo...' : 'Clique para enviar'}
+    <div className={`${styles.container} ${className || ''}`} style={containerStyle}>
+      <div 
+        className={styles.uploadArea}
+        onClick={handleAreaClick}
+        style={{ borderRadius: rounded ? '50%' : '0.5rem' }}
+      >
+        <input 
+          type="file" 
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          style={{ display: 'none' }}
+          accept="image/png, image/jpeg, image/webp, image/gif, image/avif"
+          disabled={uploading || isDeleting}
+        />
+        {uploading ? (
+          <div className={styles.loading}>
+            <Loader2 className={styles.spinner} />
+            <span>Enviando...</span>
           </div>
-          <div className={styles.uploadSubtext}>
-            {helpText || `PNG, JPG, WEBP, AVIF até ${maxSizeMB}MB`}
+        ) : value ? (
+          <div className={styles.preview}>
+            <img 
+              src={value.startsWith('http') ? value : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${bucket}/${value}`}
+              alt="Preview" 
+              className={styles.image} 
+              style={{ borderRadius: rounded ? '50%' : '0.5rem', objectFit: 'cover', width: '100%', height: '100%' }}
+            />
+            <button 
+              type="button"
+              className={styles.deleteButton}
+              onClick={handleDeleteClick}
+              title="Remover imagem"
+              style={{ borderRadius: '50%' }}
+            >
+              <X size={16} />
+            </button>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className={styles.placeholder}>
+            <UploadCloud size={32} />
+            <span>{label}</span>
+            <span className={styles.subtext}>Clique para selecionar</span>
+          </div>
+        )}
+      </div>
 
       {(uploadError || internalError) && (
         <div className={styles.error}>
