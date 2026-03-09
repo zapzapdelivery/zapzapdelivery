@@ -3,6 +3,7 @@
 
 import React, { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/Toast/ToastProvider';
 import { User, Lock, Eye, EyeOff, HelpCircle, MessageSquare, Bike } from 'lucide-react';
@@ -100,10 +101,10 @@ function LoginContent() {
           <div className={styles.header}>
             {/* Desktop Logo */}
             <div className={styles.desktopOnly}>
-              <div className={styles.logo}>
+              <Link href="/" className={styles.logo} style={{ textDecoration: 'none' }}>
                 <MessageSquare size={28} className={styles.logoIcon} fill="currentColor" />
                 <span>ZapZap Delivery</span>
-              </div>
+              </Link>
               <h1 className={styles.title}>Bem-vindo de volta!</h1>
               <p className={styles.subtitle}>Acesse o painel administrativo do seu negócio.</p>
             </div>

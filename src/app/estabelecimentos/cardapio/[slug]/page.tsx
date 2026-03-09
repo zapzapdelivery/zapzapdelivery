@@ -513,10 +513,10 @@ export default function CardapioPage() {
       {/* Header */}
       <header className={styles.header}>
         <div className={styles.headerContent}>
-          <div className={styles.logo}>
+          <Link href="/" className={styles.logo} style={{ textDecoration: 'none' }}>
             <div className={styles.logoIcon}><MessageSquare size={24} fill="#22c55e" color="#22c55e" /></div>
             <span className={styles.logoText}>ZAPZAP<span className={styles.logoTextGreen}>DELIVERY</span></span>
-          </div>
+          </Link>
           
           <div className={styles.searchBar}>
             <Search size={20} className={styles.searchIcon} />
