@@ -495,8 +495,6 @@ export default function NovoEstabelecimentoPage() {
                 <ImageUpload 
                   value={formData.logoUrl}
                   onChange={(url) => setFormData(prev => ({ ...prev, logoUrl: url }))}
-                  width={120}
-                  rounded
                   bucket="establishments"
                   allowAnonymous
                 />
