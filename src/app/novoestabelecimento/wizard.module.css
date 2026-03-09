@@ -196,3 +196,19 @@
   font-size: 0.75rem;
   color: #6b7280;
 }
+
+.logoSection {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+  position: relative;
+  z-index: 10;
+  min-height: 180px;
+}
+
+@media (max-width: 640px) {
+  .logoSection {
+    margin-bottom: 3rem;
+  }
+}
