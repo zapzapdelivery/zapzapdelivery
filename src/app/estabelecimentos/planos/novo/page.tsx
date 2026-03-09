@@ -237,21 +237,17 @@ export default function NovoPlanoPage() {
           </div>
 
           <div className={styles.stickyFooter}>
-            <button 
-              className={styles.btnCancel}
-              onClick={() => router.push('/estabelecimentos/planos')}
-              disabled={loading}
-            >
-              Cancelar
-            </button>
-            <button 
-              className={styles.btnSave}
-              onClick={handleSubmit}
-              disabled={loading}
-            >
-              {loading ? 'Salvando...' : 'Salvar Plano'}
-            </button>
-          </div>
+        <Link href="/estabelecimentos/planos" className={styles.btnCancel}>
+          Cancelar
+        </Link>
+        <button 
+          className={styles.btnSave}
+          onClick={handleSubmit}
+          disabled={loading}
+        >
+          {loading ? 'Salvando...' : 'Salvar Plano'}
+        </button>
+      </div>
         </div>
 
         {/* Mobile layout */}

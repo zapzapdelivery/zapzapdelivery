@@ -708,13 +708,10 @@ export default function NovoClientePage() {
             </div>
 
             <div className={styles.footer}>
-              <button 
-                className={`${styles.button} ${styles.cancelButton}`}
-                onClick={() => router.push('/clientes')}
-              >
+              <Link href="/clientes" className={`${styles.button} ${styles.cancelButton}`}>
                 <X size={18} />
                 Cancelar
-              </button>
+              </Link>
               <button 
                 className={`${styles.button} ${styles.saveButton}`}
                 onClick={handleSubmit}

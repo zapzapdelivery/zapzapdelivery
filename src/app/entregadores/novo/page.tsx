@@ -695,13 +695,9 @@ export default function NovoEntregadorPage() {
             </div>
 
             <div className={styles.footerActions}>
-              <button 
-                type="button" 
-                className={styles.btnCancel}
-                onClick={() => router.push('/entregadores')}
-              >
+              <Link href="/entregadores" className={styles.btnCancel}>
                 Cancelar
-              </button>
+              </Link>
               <button 
                 type="submit" 
                 className={styles.btnSave}

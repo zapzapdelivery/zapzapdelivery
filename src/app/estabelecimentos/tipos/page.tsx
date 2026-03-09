@@ -35,6 +35,8 @@ interface TipoEstabelecimento {
   descricao?: string;
 }
 
+import { supabase } from '@/lib/supabase';
+
 export default function TiposEstabelecimentosPage() {
   const router = useRouter();
   const { error, success } = useToast();
@@ -59,19 +61,6 @@ export default function TiposEstabelecimentosPage() {
     }
   }, [role, loadingRole, router]);
 
-  if (loadingRole) {
-    return (
-      <div className={styles.container}>
-        <Sidebar />
-        <div className={styles.mainContent}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '100px', color: '#6b7280' }}>
-            Carregando...
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const TYPE_LABELS = {
     id: 'ID',
     nome: 'Nome',
@@ -90,7 +79,14 @@ export default function TiposEstabelecimentosPage() {
      const load = async () => {
        try {
          setLoading(true);
-         const res = await fetch('/api/estabelecimentos/tipos', { signal: controller.signal });
+         
+         const { data: { session } } = await supabase.auth.getSession();
+         const token = session?.access_token;
+
+         const res = await fetch('/api/estabelecimentos/tipos', { 
+           signal: controller.signal,
+           headers: token ? { Authorization: `Bearer ${token}` } : undefined
+         });
          const data = await res.json();
          if (!res.ok) throw new Error(data?.error || 'Falha ao carregar tipos de estabelecimentos');
          const enriched: TipoEstabelecimento[] = (Array.isArray(data) ? data : []).map((t: any) => ({
@@ -129,7 +125,7 @@ export default function TiposEstabelecimentosPage() {
     return (
       <div className={styles.container}>
         <Sidebar />
-        <div className={styles.content}>
+        <div className={styles.mainContent}>
           <div style={{ display: 'flex', justifyContent: 'center', marginTop: '100px', color: '#6b7280' }}>
             Carregando...
           </div>
@@ -177,10 +173,8 @@ export default function TiposEstabelecimentosPage() {
        setIsDeleting(false);
      }
    };
- 
-   if (loadingRole) return null;
 
-   return (
+  return (
      <div className={styles.container}>
        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
        <main className={styles.mainContent}>
@@ -192,13 +186,13 @@ export default function TiposEstabelecimentosPage() {
           />
         </div>
         <div className={styles.mobileOnly} style={{ marginBottom: '1rem', marginTop: '-0.5rem', padding: '0 1rem' }}>
-          <Link href="/estabelecimentos" className={styles.backLink} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem' }}>
+          <Link href="/gerenciar/estabelecimentos" className={styles.backLink} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem' }}>
             <ArrowLeft size={18} />
             Voltar
           </Link>
         </div>
         <div className={styles.desktopOnly}>
-          <Link href="/estabelecimentos" className={styles.backLink}>
+          <Link href="/gerenciar/estabelecimentos" className={styles.backLink}>
             <ArrowLeft size={18} />
             Voltar para Estabelecimentos
           </Link>

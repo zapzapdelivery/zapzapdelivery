@@ -35,6 +35,7 @@ export async function GET(request: Request) {
       let query = supabaseAdmin
         .from('estabelecimentos')
         .select('*')
+        .order('ordem', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: false });
 
       if (role === 'estabelecimento' && establishmentId) {
@@ -48,6 +49,7 @@ export async function GET(request: Request) {
         let query2 = supabaseAdmin
           .from('estabelecimentos')
           .select('*')
+          .order('ordem', { ascending: true, nullsFirst: false })
           .order('criado_em', { ascending: false });
 
         if (role === 'estabelecimento' && establishmentId) {
@@ -91,6 +93,7 @@ export async function GET(request: Request) {
         e?.imagem_estabelecimento_url ??
         e?.imagem_estabelecimento_upload ??
         null;
+      const ordem = e?.ordem ?? 999999;
       return {
         id,
         name,
@@ -103,7 +106,20 @@ export async function GET(request: Request) {
         distance,
         isOpen,
         logoUrl,
+        ordem,
+        createdAt
       };
+    });
+
+    // Sort by ordem ASC, then created_at DESC (newest first for same order)
+    normalized.sort((a: any, b: any) => {
+      if (a.ordem !== b.ordem) {
+        return a.ordem - b.ordem;
+      }
+      if (a.createdAt && b.createdAt) {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      return 0;
     });
 
     return NextResponse.json(normalized);

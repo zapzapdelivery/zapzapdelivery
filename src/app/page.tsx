@@ -93,7 +93,7 @@ export default function MarketplaceHome() {
         }}
       />
       
-      <main className="flex-grow container mx-auto space-y-4 pb-16 px-4 sm:px-6 lg:px-8">
+      <main className="flex-grow w-full max-w-[1280px] mx-auto space-y-4 pb-16 px-4 sm:px-6 lg:px-8">
         <Suspense fallback={<div className="py-12 text-center text-gray-500">Carregando...</div>}>
           <MarketplaceContent />
         </Suspense>

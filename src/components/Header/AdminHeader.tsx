@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { Bell, Moon, Menu, ExternalLink, ChevronDown, Check, ShoppingBag, AlertCircle, DollarSign, X, Volume2 } from 'lucide-react';
+import { Bell, Moon, Menu, ExternalLink, ChevronDown, Check, ShoppingBag, AlertCircle, DollarSign, X, Volume2, Store } from 'lucide-react';
 import styles from './Header.module.css';
 import { supabase } from '@/lib/supabase';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -13,20 +13,78 @@ interface AdminHeaderProps {
   onMenuClick?: () => void;
 }
 
+import { useToast } from "@/components/Toast/ToastProvider";
+
 export function AdminHeader({ title, subtitle, onMenuClick }: AdminHeaderProps) {
   const [userName, setUserName] = React.useState<string>('Usuário');
   const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null);
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [showNotifications, setShowNotifications] = React.useState(false);
   
+  const toast = useToast();
   const { notifications, unreadCount, markAsRead, markAllAsRead, playNotificationSound } = useNotification();
   const router = useRouter();
 
-  const { role, establishmentName } = useUserRole();
+  const { role, establishmentName, establishmentId } = useUserRole();
   const menuRef = React.useRef<HTMLDivElement | null>(null);
   const notificationRef = React.useRef<HTMLDivElement | null>(null);
   const closeTimerRef = React.useRef<number | null>(null);
   const [dateTimeLabel, setDateTimeLabel] = React.useState<string>('');
+  const [isOpen, setIsOpen] = React.useState<boolean>(true);
+  const [statusLoading, setStatusLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    if (role === 'estabelecimento' && establishmentId) {
+      const fetchStatus = async () => {
+        const { data } = await supabase
+          .from('estabelecimentos')
+          .select('is_open')
+          .eq('id', establishmentId)
+          .single();
+        if (data) {
+          setIsOpen(data.is_open ?? true);
+        }
+      };
+      fetchStatus();
+    }
+  }, [role, establishmentId]);
+
+  const toggleStatus = async () => {
+    if (!establishmentId || statusLoading) return;
+    try {
+      setStatusLoading(true);
+      const newStatus = !isOpen;
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const res = await fetch('/api/estabelecimentos/status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({ isOpen: newStatus })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('Error updating status:', errorData.error || res.statusText);
+        toast.error(errorData.error || 'Erro ao atualizar status');
+        return;
+      }
+      
+      setIsOpen(newStatus);
+      if (newStatus) {
+        toast.success('Estabelecimento Aberto!');
+      } else {
+        toast.success('Estabelecimento Fechado!');
+      }
+    } catch (err) {
+      toast.error('Erro ao atualizar status');
+    } finally {
+      setStatusLoading(false);
+    }
+  };
 
   const toCardapioSlug = (val: string) => {
     return val
@@ -210,6 +268,18 @@ export function AdminHeader({ title, subtitle, onMenuClick }: AdminHeaderProps) 
 
       <div className={styles.actions}>
         {role === 'estabelecimento' && (
+          <button
+            className={`${styles.statusButton} ${isOpen ? styles.open : styles.closed}`}
+            onClick={toggleStatus}
+            disabled={statusLoading}
+            title={isOpen ? 'Fechar Estabelecimento' : 'Abrir Estabelecimento'}
+          >
+            <Store size={18} />
+            <span>{statusLoading ? '...' : (isOpen ? 'Aberto' : 'Fechado')}</span>
+          </button>
+        )}
+
+        {role === 'estabelecimento' && establishmentName && (
           <button
             className={styles.cardapioButton}
             onClick={handleOpenCardapio}

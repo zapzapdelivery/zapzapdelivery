@@ -44,14 +44,20 @@ export async function getAuthContext(request: Request | NextRequest): Promise<Au
     }
 
     // 2. Check Super Admin
-    const isSuperAdmin = user.email === 'everaldozs@gmail.com';
+    const isSuperAdmin = user.email === 'everaldozs@gmail.com' || user.email === 'everaldozszap@gmail.com';
     
     // 3. Get Establishment ID and Role
     // We try to find the user in public.usuarios to get their establishment_id and internal ID
     // We check both auth_user_id (standard) and id (legacy/migration support)
+    // console.log('[getAuthContext] Auth User ID:', user.id);
+
     const { data: userData, error: userError } = await supabaseAdmin
       .from('usuarios')
-      .select('id, estabelecimento_id')
+      .select(`
+        id, 
+        estabelecimento_id,
+        tipos_usuarios (nome_tipo_usuario)
+      `)
       .or(`auth_user_id.eq.${user.id},id.eq.${user.id}`)
       .maybeSingle();
 
@@ -63,10 +69,13 @@ export async function getAuthContext(request: Request | NextRequest): Promise<Au
       }
     }
 
+    // console.log('[getAuthContext] User Data found:', userData ? 'Yes' : 'No');
+
     const establishmentId = userData?.estabelecimento_id || null;
     let role = null;
 
     if (userData?.id) {
+       // First check user_roles
        const { data: roleData } = await supabaseAdmin
          .from('user_roles')
          .select('role')
@@ -75,8 +84,20 @@ export async function getAuthContext(request: Request | NextRequest): Promise<Au
        
        if (roleData) {
          role = roleData.role;
+       } else if (userData.tipos_usuarios) {
+         // Fallback to tipos_usuarios if no user_roles found
+         // @ts-ignore
+         const typeName = String(userData.tipos_usuarios?.nome_tipo_usuario || '').toLowerCase();
+         // console.log('[getAuthContext] Type Name:', typeName);
+         if (typeName.includes('estabelecimento')) {
+           role = 'estabelecimento';
+         } else {
+           role = typeName;
+         }
        }
     }
+    
+    // console.log('[getAuthContext] Final Role:', role);
 
     return {
       user,

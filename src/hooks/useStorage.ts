@@ -6,6 +6,7 @@ interface UploadOptions {
   folder?: string;
   maxSizeMB?: number;
   acceptedTypes?: string[];
+  allowAnonymous?: boolean;
 }
 
 interface UseStorageReturn {
@@ -60,13 +61,22 @@ export const useStorage = (): UseStorageReturn => {
 
       // Get session token for auth
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Usuário não autenticado');
+      
+      if (!session && !options.allowAnonymous) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      const headers: Record<string, string> = {};
+      if (session) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      if (options.allowAnonymous) {
+        headers['x-allow-anonymous'] = 'true';
+      }
 
       const response = await fetch('/api/upload', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        },
+        headers,
         body: formData
       });
 

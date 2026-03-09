@@ -37,7 +37,7 @@ export function MarketplaceHeader({ onOpenLocationModal }: { onOpenLocationModal
   return (
     <>
       <header className="w-full bg-white border-b border-gray-100 shadow-sm sticky top-0 z-50 py-3">
-        <div className="container mx-auto px-4 flex flex-col gap-4">
+        <div className="w-full max-w-[1280px] mx-auto px-4 flex flex-col gap-4">
           
           {/* Top Row: Logo Centered */}
           <div className="flex justify-center w-full">
@@ -74,7 +74,7 @@ export function MarketplaceHeader({ onOpenLocationModal }: { onOpenLocationModal
             {/* Right: CTA */}
             <div>
               <Link
-                href="/paineladmin?mode=register"
+                href="/novoestabelecimento"
                 className="bg-green-500 text-white px-4 py-2 rounded-full font-bold text-xs sm:text-sm hover:bg-green-600 transition-colors shadow-sm whitespace-nowrap"
               >
                 CADASTRE-SE

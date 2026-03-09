@@ -171,12 +171,7 @@ export default function Dashboard() {
                 OrderStatus.CONFIRMADO, 
                 OrderStatus.PREPARACAO, 
                 OrderStatus.PRONTO, 
-                OrderStatus.SAIU_ENTREGA, 
-                // Legacy
-                'Em Preparo', 
-                'Em Entrega',
-                'Saiu para Entrega',
-                'Em Andamento'
+                OrderStatus.SAIU_ENTREGA
               ]);
             if (estabId) {
               queryOngoing = queryOngoing.eq('estabelecimento_id', estabId);

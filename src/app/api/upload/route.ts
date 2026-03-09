@@ -3,13 +3,7 @@ import { supabaseAdmin, getAuthContext } from '@/lib/server-auth';
 
 export async function POST(request: Request) {
   try {
-    // 1. Auth Check
-    const { user, error: authError } = await getAuthContext(request);
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // 2. Parse Form Data
+    // 1. Parse Form Data
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const rawBucket = formData.get('bucket') as string;
@@ -18,6 +12,18 @@ export async function POST(request: Request) {
 
     if (!file || !bucket) {
       return NextResponse.json({ error: 'File and bucket are required' }, { status: 400 });
+    }
+
+    // 2. Auth Check
+    const allowAnonymous = request.headers.get('x-allow-anonymous') === 'true';
+    // Allow public uploads for specific buckets during registration/onboarding
+    const isPublicBucket = ['establishments', 'partners'].includes(bucket.toLowerCase());
+
+    if (!allowAnonymous || !isPublicBucket) {
+      const { user, error: authError } = await getAuthContext(request);
+      if (authError || !user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
     }
 
     // 3. Validation

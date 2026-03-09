@@ -14,6 +14,7 @@ interface ImageUploadProps {
   maxSizeMB?: number;
   className?: string;
   helpText?: string;
+  allowAnonymous?: boolean;
 }
 
 export const ImageUpload: React.FC<ImageUploadProps> = ({
@@ -25,7 +26,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   showUrlInput = true,
   maxSizeMB = 2,
   className,
-  helpText
+  helpText,
+  allowAnonymous
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { uploadFile, deleteFile, uploading, error: uploadError } = useStorage();
@@ -59,7 +61,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     setInternalError(null);
     
     try {
-      const url = await uploadFile(file, { bucket, folder, maxSizeMB });
+      const url = await uploadFile(file, { bucket, folder, maxSizeMB, allowAnonymous });
       if (url) {
         if (oldUrl) {
           await deleteFile(oldUrl, bucket);
