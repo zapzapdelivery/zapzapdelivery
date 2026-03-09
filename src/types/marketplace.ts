@@ -1,3 +1,4 @@
+
 export interface Establishment {
   id: string;
   name: string;
@@ -6,6 +7,7 @@ export interface Establishment {
   created_at?: string;
   address?: string;
   categoryId?: string;
+  ordem?: number;
   tipos_estabelecimento?: {
     id: string;
     name: string;

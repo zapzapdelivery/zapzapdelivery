@@ -474,14 +474,9 @@ function NovoParceiroContent() {
               <Check size={18} />
               {saving ? 'Salvando...' : 'Salvar Parceiro'}
             </button>
-            <button
-              type="button"
-              className={styles.btnCancel}
-              onClick={() => router.push('/parceiros')}
-              disabled={saving}
-            >
+            <Link href="/parceiros" className={styles.btnCancel}>
               Cancelar
-            </button>
+            </Link>
           </div>
         </form>
       </main>

@@ -864,6 +864,7 @@ function PerfilEstabelecimentoContent() {
                   folder="estabelecimentos"
                   value={formData.logoUrl}
                   onChange={(url) => setFormData(prev => ({ ...prev, logoUrl: url }))}
+                  helpText="Dimensão máxima: 300x300px | Máximo: 2MB"
                 />
               </div>
             </div>

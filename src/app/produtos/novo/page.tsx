@@ -515,13 +515,10 @@ function NovoProdutoContent() {
               </div>
             </div>
           <div className={styles.footer}>
-            <button 
-              className={`${styles.button} ${styles.cancelButton}`}
-              onClick={() => router.back()}
-            >
+            <Link href="/produtos" className={`${styles.button} ${styles.cancelButton}`}>
               <X size={18} />
               Cancelar
-            </button>
+            </Link>
             <button 
               className={`${styles.button} ${styles.saveButton}`}
               onClick={handleSave}

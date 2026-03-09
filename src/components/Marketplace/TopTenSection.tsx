@@ -58,13 +58,13 @@ export function TopTenSection() {
   }
 
   return (
-    <section className="py-2 px-4">
+    <section className="py-2 px-4 md:px-8">
       <div className="mb-4">
         <h2 className="text-2xl font-bold text-gray-900">Os Tops 10</h2>
         <p className="text-gray-500 text-sm">Os favoritos de {locationName}</p>
       </div>
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8">
         {filteredEstablishments.map((establishment) => (
           <div key={establishment.id} className="w-full">
             <EstablishmentCard establishment={establishment} />

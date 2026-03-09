@@ -296,7 +296,7 @@ function NovaCategoriaContent() {
               {saving ? 'Salvando...' : (
                   <>
                       <Check size={18} />
-                      Salvar Categoria
+                      {isEditing ? 'Salvar Alterações' : 'Criar Categoria'}
                   </>
               )}
             </button>

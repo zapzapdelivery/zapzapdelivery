@@ -3,7 +3,7 @@ import { Establishment, Category } from '@/types/marketplace';
 export const marketplaceService = {
   async getCategories(): Promise<Category[]> {
     try {
-      const res = await fetch('/api/marketplace/categorias');
+      const res = await fetch('/api/marketplace/categorias', { cache: 'no-store' });
       if (!res.ok) {
         throw new Error('Failed to fetch categories');
       }
@@ -22,7 +22,7 @@ export const marketplaceService = {
       if (uf) params.append('uf', uf);
       if (city) params.append('cidade', city);
       
-      const res = await fetch(`/api/marketplace/estabelecimentos?${params.toString()}`);
+      const res = await fetch(`/api/marketplace/estabelecimentos?${params.toString()}`, { cache: 'no-store' });
       if (!res.ok) {
         throw new Error('Failed to fetch establishments');
       }
@@ -48,7 +48,7 @@ export const marketplaceService = {
       if (uf) params.append('uf', uf);
       if (city) params.append('cidade', city);
 
-      const res = await fetch(`/api/marketplace/estabelecimentos?${params.toString()}`);
+      const res = await fetch(`/api/marketplace/estabelecimentos?${params.toString()}`, { cache: 'no-store' });
       if (!res.ok) {
         throw new Error('Failed to fetch top 10 establishments');
       }

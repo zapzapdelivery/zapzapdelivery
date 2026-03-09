@@ -371,7 +371,7 @@
 
 .productGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 2rem;
 }
 
@@ -409,7 +409,7 @@
 }
 
 .productInfo {
-  padding: 1.5rem;
+  padding: 1rem;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -440,6 +440,8 @@
   align-items: center;
   justify-content: space-between;
   margin-top: auto;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .price {
@@ -457,7 +459,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.75rem;
   background-color: #f0fdf4;
   color: #16a34a;
   border: none;

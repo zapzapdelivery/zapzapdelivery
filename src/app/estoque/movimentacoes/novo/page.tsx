@@ -222,14 +222,7 @@ function NovaMovimentacaoContent() {
               OrderStatus.CONFIRMADO,
               OrderStatus.PREPARACAO,
               OrderStatus.PRONTO,
-              OrderStatus.SAIU_ENTREGA,
-              'Pedindo', // Legacy
-              'Pedido Confirmado', // Legacy
-              'Em Preparação', // Legacy
-              'Pedido Pronto', // Legacy
-              'Saiu Para Entrega', // Legacy
-              'Em Andamento', // Old Legacy
-              'Em Entrega' // Old Legacy
+              OrderStatus.SAIU_ENTREGA
             ]);
 
           if (openError) {

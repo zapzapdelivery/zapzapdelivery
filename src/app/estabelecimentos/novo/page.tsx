@@ -465,8 +465,14 @@ function NovoEstabelecimentoContent() {
         return;
       }
     } else {
-      // For updates, if password is provided, validate it
-      if (p || c) {
+      // For updates, only validate if confirm password is provided.
+      // If confirm is empty, we assume the user does NOT want to change the password,
+      // regardless of what is in the password field (e.g. autofill).
+      if (c) {
+        if (!p) {
+          error('Preencha a senha para confirmar a alteração.');
+          return;
+        }
         const valid = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(p);
         if (!valid) {
           error('Senha deve ter 8+ caracteres, maiúscula, minúscula, número e símbolo.');
@@ -541,7 +547,7 @@ function NovoEstabelecimentoContent() {
         partner: formData.partner,
       };
 
-      if (formData.loginPassword) {
+      if (formData.loginPassword && formData.loginPasswordConfirm) {
         userPayload.password = formData.loginPassword;
         userPayload.confirmPassword = formData.loginPasswordConfirm;
       }
@@ -558,7 +564,7 @@ function NovoEstabelecimentoContent() {
       }
       
       success(id ? 'Estabelecimento atualizado com sucesso!' : 'Estabelecimento salvo com sucesso!');
-      router.push('/estabelecimentos');
+      router.push('/gerenciar/estabelecimentos');
     } catch (e: any) {
       error(e.message || 'Erro ao salvar estabelecimento');
     } finally {
@@ -586,7 +592,7 @@ function NovoEstabelecimentoContent() {
       <main className={styles.mainContent}>
         {/* Header Desktop */}
         <div className={`${styles.header} ${styles.desktopOnly}`}>
-          <Link href="/estabelecimentos" className={styles.backLink}>
+          <Link href="/gerenciar/estabelecimentos" className={styles.backLink}>
             <ArrowLeft size={16} />
             Voltar para Estabelecimentos
           </Link>
@@ -596,7 +602,7 @@ function NovoEstabelecimentoContent() {
 
         {/* Header Mobile - Simpler back button */}
         <div className={`${styles.mobileOnly}`} style={{ marginBottom: '1rem', marginTop: '-0.5rem' }}>
-          <Link href="/estabelecimentos" className={styles.backLink} style={{ marginBottom: '0' }}>
+          <Link href="/gerenciar/estabelecimentos" className={styles.backLink} style={{ marginBottom: '0' }}>
             <ArrowLeft size={16} />
             Voltar
           </Link>
@@ -1043,6 +1049,7 @@ function NovoEstabelecimentoContent() {
                   folder="estabelecimentos"
                   value={formData.logoUrl}
                   onChange={(url) => setFormData(prev => ({ ...prev, logoUrl: url }))}
+                  helpText="Dimensão máxima: 300x300px | Máximo: 2MB"
                 />
               </div>
             </div>
@@ -1134,14 +1141,9 @@ function NovoEstabelecimentoContent() {
 
         {/* Footer Actions */}
         <div className={styles.footer}>
-          <button 
-            type="button"
-            className={styles.btnCancel}
-            onClick={() => router.push('/estabelecimentos')}
-            disabled={saving}
-          >
+          <Link href="/gerenciar/estabelecimentos" className={styles.btnCancel}>
             Cancelar
-          </button>
+          </Link>
           <button className={styles.btnSave} onClick={handleSave} disabled={saving}>
             {saving ? (
               <>

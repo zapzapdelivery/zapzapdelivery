@@ -62,6 +62,7 @@ export async function middleware(request: NextRequest) {
       path.startsWith('/api/') || 
       path.startsWith('/estabelecimentos/cardapio') ||
       path === '/estabelecimentos' ||
+      path === '/novoestabelecimento' ||
       path === '/' ||
       path.startsWith('/categoria/')
 

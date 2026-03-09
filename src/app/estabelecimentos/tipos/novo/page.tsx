@@ -141,17 +141,13 @@ export default function NovoTipoEstabelecimentoPage() {
               </div>
             </div>
             <div className={styles.footer}>
-              <button 
-                type="button" 
-                className={styles.btnCancel}
-                onClick={() => router.push('/estabelecimentos/tipos')}
-              >
-                Cancelar
-              </button>
-              <button type="submit" className={styles.btnSave} disabled={saving}>
-                {saving ? 'Salvando...' : 'Salvar Tipo'}
-              </button>
-            </div>
+            <Link href="/estabelecimentos/tipos" className={styles.btnCancel}>
+              Cancelar
+            </Link>
+            <button type="submit" className={styles.btnSave} disabled={saving}>
+              {saving ? 'Salvando...' : 'Salvar Tipo'}
+            </button>
+          </div>
           </form>
         </div>
 

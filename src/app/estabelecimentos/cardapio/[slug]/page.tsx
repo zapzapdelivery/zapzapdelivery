@@ -24,7 +24,8 @@ import {
   Banknote,
   ShieldCheck,
   Send,
-  Check
+  Check,
+  Store
 } from 'lucide-react';
 import styles from './cardapio.module.css';
 import { supabase } from '@/lib/supabase';
@@ -62,6 +63,7 @@ interface Estabelecimento {
   bairro?: string;
   cidade?: string;
   uf?: string;
+  is_open?: boolean;
 }
 
 export default function CardapioPage() {
@@ -274,6 +276,54 @@ export default function CardapioPage() {
     }
   }, [estabelecimento, slug]);
 
+  // Realtime subscription for establishment status (open/closed)
+  useEffect(() => {
+    if (!estabelecimento?.id) return;
+
+    // Use polling as fallback since RLS might block anon realtime
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/estabelecimentos/cardapio/${slug}/dados`, { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.estabelecimento && typeof data.estabelecimento.is_open === 'boolean') {
+             setEstabelecimento(prev => {
+               if (prev && prev.is_open !== data.estabelecimento.is_open) {
+                 return { ...prev, is_open: data.estabelecimento.is_open };
+               }
+               return prev;
+             });
+          }
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+      }
+    }, 3000); // Check every 3 seconds
+
+    const channel = supabase
+      .channel(`establishment-status-${estabelecimento.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'estabelecimentos',
+          filter: `id=eq.${estabelecimento.id}`
+        },
+        (payload) => {
+          if (payload.new && typeof payload.new.is_open === 'boolean') {
+             setEstabelecimento(prev => prev ? { ...prev, is_open: payload.new.is_open } : null);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(pollInterval);
+    };
+  }, [estabelecimento?.id, slug]);
+
   useEffect(() => {
     if (selectedProduct) {
       document.body.style.overflow = 'hidden';
@@ -286,6 +336,62 @@ export default function CardapioPage() {
   }, [selectedProduct]);
 
   if (loading) return <Loading message="Carregando cardápio..." fullScreen />;
+
+  if (estabelecimento && estabelecimento.is_open === false) {
+    return (
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(0,0,0,0.85)',
+        backdropFilter: 'blur(8px)',
+        padding: '1rem'
+      }}>
+        <div style={{
+          backgroundColor: '#fff',
+          borderRadius: '1rem',
+          padding: '2.5rem',
+          maxWidth: '28rem',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          textAlign: 'center',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+        }}>
+          <div style={{
+            width: '5rem',
+            height: '5rem',
+            backgroundColor: '#f3f4f6',
+            borderRadius: '9999px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '1.5rem'
+          }}>
+            <Store size={40} color="#6b7280" />
+          </div>
+          <h2 style={{
+            fontSize: '1.5rem',
+            fontWeight: 700,
+            color: '#1f2937',
+            marginBottom: '0.75rem'
+          }}>Estabelecimento Fechado</h2>
+          <p style={{
+            color: '#4b5563',
+            marginBottom: '2rem',
+            lineHeight: 1.625
+          }}>
+            No momento não estamos aceitando pedidos. <br/>
+            Agradecemos a compreensão e esperamos atendê-lo em breve!
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (error || !estabelecimento) {
     return (

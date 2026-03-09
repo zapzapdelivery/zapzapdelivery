@@ -26,11 +26,15 @@ import {
   ChevronRight,
   MapPin,
   Clock,
-  Star
+  Star,
+  GripVertical
 } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { useToast } from '@/components/Toast/ToastProvider';
 import { DeleteConfirmationModal } from '@/components/Modal/DeleteConfirmationModal';
 import { ViewDetailsModal } from '@/components/Modal/ViewDetailsModal';
+// ReorderModal removed as per user request for inline DnD
+// import { ReorderModal } from '@/components/Modal/ReorderModal';
 import { useUserRole } from '@/hooks/useUserRole';
 
 // --- Types ---
@@ -46,6 +50,7 @@ interface Establishment {
   rating: number;
   distance: number; // km
   logoUrl?: string;
+  ordem?: number;
 }
 
 
@@ -66,8 +71,60 @@ export default function EstabelecimentosPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [viewData, setViewData] = useState<any>(null);
+  // const [reorderModalOpen, setReorderModalOpen] = useState(false); // Removed
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const { role, loading: loadingRole } = useUserRole();
+
+  const isDragEnabled = !searchTerm && activeFilter === 'Todos' && sortOption === 'distance'; // Only allow drag on default view
+
+  const handleDragEnd = async (result: DropResult) => {
+    if (!result.destination) return;
+
+    const sourceIndex = result.source.index;
+    const destinationIndex = result.destination.index;
+
+    if (sourceIndex === destinationIndex) return;
+
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const realSourceIndex = start + sourceIndex;
+    const realDestinationIndex = start + destinationIndex;
+
+    const newItems = Array.from(items);
+    const [movedItem] = newItems.splice(realSourceIndex, 1);
+    newItems.splice(realDestinationIndex, 0, movedItem);
+
+    setItems(newItems);
+
+    try {
+      const updates = newItems.map((item, index) => ({
+        id: item.id,
+        ordem: index
+      }));
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/estabelecimentos/reorder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || ''}`
+        },
+        body: JSON.stringify({ items: updates })
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ao salvar ordem');
+      }
+      
+      success('Ordem atualizada com sucesso');
+    } catch (e: any) {
+      console.error(e);
+      error('Erro ao salvar ordem: ' + e.message);
+      setRefreshKey(prev => prev + 1);
+    }
+  };
+
 
   const VIEW_LABELS = {
     id: 'ID',
@@ -188,7 +245,7 @@ export default function EstabelecimentosPage() {
     };
     load();
     return () => controller.abort();
-  }, []);
+  }, [refreshKey]);
 
   const handleView = async (id: string) => {
     try {
@@ -357,6 +414,12 @@ export default function EstabelecimentosPage() {
               )}
               {role !== 'atendente' && role !== 'estabelecimento' && (
                 <>
+                  {/* <button 
+                    className={`${styles.button} ${styles.btnDark}`}
+                    onClick={() => setReorderModalOpen(true)}
+                  >
+                    <LayoutList size={18} /> Organizar Ordem
+                  </button> */}
                   <button className={`${styles.button} ${styles.btnBlue}`}>
                     <Upload size={18} /> Importar
                   </button>
@@ -577,88 +640,127 @@ export default function EstabelecimentosPage() {
                   </div>
                 )}
 
+                <DragDropContext onDragEnd={handleDragEnd}>
                 {viewMode === 'list' && (
                   <div className={styles.tableContainer}>
-                    <table className={styles.table}>
-                      <thead>
-                        <tr>
-                          <th>Logo</th>
-                          <th>Nome</th>
-                          <th>Categoria</th>
-                          <th>Status</th>
-                          <th>Localização</th>
-                          <th>Ações</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {paginatedItems.map((item) => {
-                          const catStyle = getCategoryColor(item.category);
-                          const logoStyle = getLogoColor(item.name);
-                          return (
-                            <tr key={item.id}>
-                              <td style={{ width: '60px' }}>
-                                <div 
-                                  className={styles.logoCircle}
-                                  style={{ backgroundColor: logoStyle.bg, color: logoStyle.text, overflow: 'hidden' }}
-                                >
-                                  {item.logoUrl ? (
-                                    <img
-                                      src={item.logoUrl}
-                                      alt={item.name}
-                                      style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
-                                    />
-                                  ) : (
-                                    getInitials(item.name)
-                                  )}
-                                </div>
-                              </td>
-                              <td>
-                                <div className={styles.infoText}>
-                                  <h4>{item.name}</h4>
-                                  <span>Desde {item.since}</span>
-                                </div>
-                              </td>
-                              <td>
-                                <span 
-                                  className={styles.categoryBadge}
-                                  style={{ backgroundColor: catStyle.bg, color: catStyle.text }}
-                                >
-                                  {item.category}
-                                </span>
-                              </td>
-                              <td>
-                                <div 
-                                  className={`${styles.statusToggle} ${item.isActive ? styles.statusToggleActive : ''}`}
-                                  title={item.isActive ? 'Ativo' : 'Inativo'}
-                                >
-                                  <div className={styles.toggleCircle} />
-                                </div>
-                              </td>
-                              <td>{item.city}, {item.state}</td>
-                              <td>
-                                <div className={styles.actions}>
-                                  <button className={`${styles.actionButton} ${styles.viewButton}`} title="Visualizar" onClick={() => handleView(item.id)}>
-                                    <Eye size={16} />
-                                  </button>
-                                  {role !== 'atendente' && (
-                                    <button className={`${styles.actionButton} ${styles.editButton}`} title="Editar" onClick={() => handleEdit(item.id)}>
-                                      <Pencil size={16} />
-                                    </button>
-                                  )}
-                                  {role !== 'atendente' && role !== 'estabelecimento' && (
-                                    <button className={`${styles.actionButton} ${styles.deleteButton}`} title="Excluir" onClick={() => handleDelete(item.id)} disabled={removingId === item.id}>
-                                      {removingId === item.id ? <Clock size={16} /> : <Trash2 size={16} />}
-                                    </button>
-                                  )}
-                                </div>
-                              </td>
+                    <Droppable droppableId="estabelecimentos-list" isDropDisabled={!isDragEnabled}>
+                      {(provided) => (
+                        <table className={styles.table}>
+                          <thead>
+                            <tr>
+                              <th style={{ width: '40px' }}></th>
+                              <th>Logo</th>
+                              <th>Nome</th>
+                              <th>Categoria</th>
+                              <th>Status</th>
+                              <th>Localização</th>
+                              <th>Ações</th>
                             </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                          </thead>
+                          <tbody ref={provided.innerRef} {...provided.droppableProps}>
+                            {paginatedItems.map((item, index) => {
+                              const catStyle = getCategoryColor(item.category);
+                              const logoStyle = getLogoColor(item.name);
+                              return (
+                                <Draggable 
+                                  key={item.id} 
+                                  draggableId={item.id} 
+                                  index={index}
+                                  isDragDisabled={!isDragEnabled}
+                                >
+                                  {(provided, snapshot) => (
+                                    <tr 
+                                      ref={provided.innerRef} 
+                                      {...provided.draggableProps}
+                                      style={{
+                                        ...provided.draggableProps.style,
+                                        background: snapshot.isDragging ? '#f3f4f6' : 'transparent',
+                                        display: snapshot.isDragging ? 'table' : undefined
+                                      }}
+                                    >
+                                      <td style={{ width: '40px' }}>
+                                        <div 
+                                          {...provided.dragHandleProps} 
+                                          style={{ 
+                                            cursor: isDragEnabled ? 'grab' : 'default', 
+                                            opacity: isDragEnabled ? 1 : 0.3,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                          }}
+                                        >
+                                          <GripVertical size={20} color="#9ca3af" />
+                                        </div>
+                                      </td>
+                                      <td style={{ width: '60px' }}>
+                                        <div 
+                                          className={styles.logoCircle}
+                                          style={{ backgroundColor: logoStyle.bg, color: logoStyle.text, overflow: 'hidden' }}
+                                        >
+                                          {item.logoUrl ? (
+                                            <img
+                                              src={item.logoUrl}
+                                              alt={item.name}
+                                              style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                                            />
+                                          ) : (
+                                            getInitials(item.name)
+                                          )}
+                                        </div>
+                                      </td>
+                                      <td>
+                                        <div className={styles.infoText}>
+                                          <h4>{item.name}</h4>
+                                          <span>Desde {item.since}</span>
+                                        </div>
+                                      </td>
+                                      <td>
+                                        <span 
+                                          className={styles.categoryBadge}
+                                          style={{ backgroundColor: catStyle.bg, color: catStyle.text }}
+                                        >
+                                          {item.category}
+                                        </span>
+                                      </td>
+                                      <td>
+                                        <div 
+                                          className={`${styles.statusToggle} ${item.isActive ? styles.statusToggleActive : ''}`}
+                                          title={item.isActive ? 'Ativo' : 'Inativo'}
+                                        >
+                                          <div className={styles.toggleCircle} />
+                                        </div>
+                                      </td>
+                                      <td>{item.city}, {item.state}</td>
+                                      <td>
+                                        <div className={styles.actions}>
+                                          <button className={`${styles.actionButton} ${styles.viewButton}`} title="Visualizar" onClick={() => handleView(item.id)}>
+                                            <Eye size={16} />
+                                          </button>
+                                          {role !== 'atendente' && (
+                                            <button className={`${styles.actionButton} ${styles.editButton}`} title="Editar" onClick={() => handleEdit(item.id)}>
+                                              <Pencil size={16} />
+                                            </button>
+                                          )}
+                                          {role !== 'atendente' && role !== 'estabelecimento' && (
+                                            <button className={`${styles.actionButton} ${styles.deleteButton}`} title="Excluir" onClick={() => handleDelete(item.id)} disabled={removingId === item.id}>
+                                              {removingId === item.id ? <Clock size={16} /> : <Trash2 size={16} />}
+                                            </button>
+                                          )}
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  )}
+                                </Draggable>
+                              );
+                            })}
+                            {provided.placeholder}
+                          </tbody>
+                        </table>
+                      )}
+                    </Droppable>
                   </div>
                 )}
+                </DragDropContext>
               </div>
 
               {/* Pagination */}
@@ -718,16 +820,16 @@ export default function EstabelecimentosPage() {
       />
       <DeleteConfirmationModal
         isOpen={deleteModalOpen}
-      onClose={() => !removingId && setDeleteModalOpen(false)}
-      onConfirm={confirmDelete}
-      isDeleting={!!removingId}
-      title="Excluir Estabelecimento"
-      description={
-        <>
-          Tem certeza que deseja excluir <strong>{deleteTarget?.name}</strong>? Esta ação não pode ser desfeita.
-        </>
-      }
-    />
+        onClose={() => !removingId && setDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        isDeleting={!!removingId}
+        title="Excluir Estabelecimento"
+        description={
+          <>
+            Tem certeza que deseja excluir <strong>{deleteTarget?.name}</strong>? Esta ação não pode ser desfeita.
+          </>
+        }
+      />
     </>
   );
 }

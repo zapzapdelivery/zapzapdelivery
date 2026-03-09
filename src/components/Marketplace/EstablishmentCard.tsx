@@ -47,7 +47,7 @@ export function EstablishmentCard({ establishment }: EstablishmentCardProps) {
       {/* Content Section */}
       <div className="p-2 sm:p-4 flex flex-col flex-grow justify-between min-w-0">
         <div>
-          <h3 className="font-bold text-sm sm:text-lg text-gray-900 mb-0.5 sm:mb-1 line-clamp-2 sm:line-clamp-1 group-hover:text-green-600 transition-colors leading-tight">
+          <h3 className="font-bold text-sm sm:text-base text-gray-900 mb-0.5 sm:mb-1 line-clamp-2 group-hover:text-green-600 transition-colors leading-tight min-h-[2.5rem] flex items-center" title={establishment.name}>
             {establishment.name}
           </h3>
           

@@ -110,6 +110,8 @@ export async function GET(request: Request, props: { params: Promise<{ slug: str
       bairro: e?.bairro ?? e?.neighborhood ?? '',
       cidade: e?.cidade ?? e?.city ?? '',
       uf: e?.uf ?? e?.estado ?? e?.state ?? '',
+      status_estabelecimento: e?.status_estabelecimento ?? e?.status ?? 'ativo',
+      is_open: e?.is_open ?? true,
     };
 
     // Fetch delivery fee config

@@ -32,7 +32,7 @@ export function CategoryPills() {
 
   return (
     <div className="w-full bg-white border-b border-gray-100 py-3 sticky top-16 z-40 shadow-sm overflow-x-auto no-scrollbar">
-      <div className="container mx-auto px-4 flex items-center justify-start md:justify-center gap-3 min-w-max">
+      <div className="w-full max-w-[1280px] mx-auto px-4 flex items-center justify-start md:justify-center gap-3 min-w-max">
         <button
           onClick={() => {
             const params = new URLSearchParams(searchParams.toString());
