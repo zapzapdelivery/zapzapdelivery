@@ -53,7 +53,8 @@ const menuItems: MenuItem[] = [
     href: '/configuracoes',
     subItems: [
       { label: 'Taxa de Entregas', href: '/configuracoes/taxa-entrega' },
-      { label: 'Mercado Pago', href: '/configuracoes/mercado-pago' }
+      { label: 'Mercado Pago', href: '/configuracoes/mercado-pago' },
+      { label: 'Horários', href: '/configuracoes/horarios' }
     ]
   },
   { icon: Users, label: 'Parceiros', href: '/parceiros' },
