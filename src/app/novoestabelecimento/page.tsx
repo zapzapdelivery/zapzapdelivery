@@ -489,18 +489,17 @@ export default function NovoEstabelecimentoPage() {
       case 1:
         return (
           <div className={styles.formGrid}>
-            <div className={styles.fullWidth} style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+            <div className={styles.logoSection}>
               <div style={{ textAlign: 'center' }}>
                 <label className={styles.label} style={{ display: 'block', marginBottom: '0.5rem' }}>LOGO</label>
                 <ImageUpload 
                   value={formData.logoUrl}
                   onChange={(url) => setFormData(prev => ({ ...prev, logoUrl: url }))}
                   width={120}
-                    height={120}
-                    rounded
-                    bucket="establishments"
-                    allowAnonymous
-                  />
+                  rounded
+                  bucket="establishments"
+                  allowAnonymous
+                />
               </div>
             </div>
 
