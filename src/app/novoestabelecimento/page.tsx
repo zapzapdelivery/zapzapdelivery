@@ -942,44 +942,45 @@ export default function NovoEstabelecimentoPage() {
         
         {renderStepContent()}
 
-        <div className={styles.actions}>
-          {step > 1 ? (
-            <button type="button" onClick={handleBack} className={`${styles.button} ${styles.buttonSecondary}`}>
-              <ChevronLeft size={16} className="mr-1" />
-              Voltar
-            </button>
-          ) : (
-            <Link href="/" className={`${styles.button} ${styles.buttonSecondary}`}>
-              Cancelar
-            </Link>
-          )}
+      </div>
 
-          {step < steps.length ? (
-            <button type="button" onClick={handleNext} className={`${styles.button} ${styles.buttonPrimary}`}>
-              Próximo
-              <ChevronRight size={16} className="ml-1" />
-            </button>
-          ) : (
-            <button 
-              type="button" 
-              onClick={handleSave} 
-              disabled={saving}
-              className={`${styles.button} ${styles.buttonPrimary} ${saving ? styles.buttonDisabled : ''}`}
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="animate-spin mr-2" size={16} />
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <Check size={16} className="mr-1" />
-                  Concluir Cadastro
-                </>
-              )}
-            </button>
-          )}
-        </div>
+      <div className={styles.actions}>
+        {step > 1 ? (
+          <button type="button" onClick={handleBack} className={`${styles.button} ${styles.buttonSecondary}`}>
+            <ChevronLeft size={16} className="mr-1" />
+            Voltar
+          </button>
+        ) : (
+          <Link href="/" className={`${styles.button} ${styles.buttonSecondary}`}>
+            Cancelar
+          </Link>
+        )}
+
+        {step < steps.length ? (
+          <button type="button" onClick={handleNext} className={`${styles.button} ${styles.buttonPrimary}`}>
+            Próximo
+            <ChevronRight size={16} className="ml-1" />
+          </button>
+        ) : (
+          <button 
+            type="button" 
+            onClick={handleSave} 
+            disabled={saving}
+            className={`${styles.button} ${styles.buttonPrimary} ${saving ? styles.buttonDisabled : ''}`}
+          >
+            {saving ? (
+              <>
+                <Loader2 className="animate-spin mr-2" size={16} />
+                Salvando...
+              </>
+            ) : (
+              <>
+                <Check size={16} className="mr-1" />
+                Concluir Cadastro
+              </>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );

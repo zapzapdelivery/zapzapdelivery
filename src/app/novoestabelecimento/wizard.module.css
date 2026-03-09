@@ -149,22 +149,26 @@
 
 .actions {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 1rem;
   width: 100%;
   max-width: 800px;
-  margin-top: 1rem;
+  margin-top: 1.5rem;
+  padding: 0 1rem;
 }
 
 .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.75rem 1.5rem;
+  padding: 0.5rem 1rem;
+  min-width: 120px;
   border-radius: 0.5rem;
   font-weight: 600;
   font-size: 0.875rem;
   transition: all 0.2s;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .buttonPrimary {
