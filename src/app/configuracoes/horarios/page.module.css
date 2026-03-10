@@ -11,11 +11,11 @@
 }
 
 .contentWrapper {
-  max-width: 1000px;
+  max-width: 1200px;
   width: 100%;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
   gap: 1.5rem;
 }
 
@@ -25,6 +25,7 @@
   padding: 1.5rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   border: 1px solid #e5e7eb;
+  height: fit-content;
 }
 
 .cardHeader {
@@ -46,6 +47,21 @@
   margin: 0;
 }
 
+.replicateLink {
+  color: #10b981;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: uppercase;
+  border: none;
+  background: none;
+  padding: 0;
+}
+
+.replicateLink:hover {
+  text-decoration: underline;
+}
+
 .scheduleList {
   display: flex;
   flex-direction: column;
@@ -53,10 +69,10 @@
 
 .dayRow {
   display: grid;
-  grid-template-columns: 140px 1fr auto;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
+  grid-template-columns: auto 150px 1fr auto;
+  align-items: start;
+  gap: 1.5rem;
+  padding: 1.5rem 0;
   border-bottom: 1px solid #f3f4f6;
 }
 
@@ -65,35 +81,119 @@
 }
 
 .dayName {
-  font-weight: 500;
+  font-weight: 600;
   color: #374151;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
 }
 
-.hoursContainer {
+.hoursColumn {
   display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-.hoursContainerClosed {
-  color: #9ca3af;
-  font-style: italic;
+.timeSlot {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #f9fafb;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
 }
 
 .hourInput {
-  padding: 0.5rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  width: 100px;
+  padding: 0.25rem 0.5rem;
+  border: none;
+  background: transparent;
+  width: 70px;
+  font-size: 0.95rem;
+  color: #374151;
+  font-family: inherit;
+}
+
+.timeSeparator {
+  color: #9ca3af;
   font-size: 0.875rem;
 }
 
+.clockIcon {
+  width: 14px;
+  height: 14px;
+  color: #6b7280;
+}
+
+.removeSlotBtn {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.removeSlotBtn:hover {
+  background-color: #fee2e2;
+  color: #ef4444;
+}
+
+.addTurnBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #10b981;
+  font-weight: 600;
+  font-size: 0.875rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 0.25rem;
+}
+
+.addTurnBtn:hover {
+  text-decoration: underline;
+}
+
+.statusBadge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-top: 0.5rem;
+}
+
+.statusOpen {
+  background-color: #d1fae5;
+  color: #059669;
+}
+
+.statusClosed {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+}
+
+.closedText {
+  color: #9ca3af;
+  font-style: italic;
+  font-size: 0.95rem;
+  margin-top: 0.5rem;
+}
+
+/* Toggles */
 .toggleSwitch {
   position: relative;
   display: inline-block;
   width: 44px;
   height: 24px;
+  margin-top: 0.25rem;
 }
 
 .toggleSwitch input {
@@ -135,6 +235,120 @@ input:checked + .slider:before {
   transform: translateX(20px);
 }
 
+/* Right Column */
+.exceptionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.exceptionItem {
+  background-color: #f9fafb;
+  border-radius: 8px;
+  padding: 1rem;
+  position: relative;
+}
+
+.exceptionDate {
+  color: #10b981;
+  font-weight: 700;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+
+.exceptionDesc {
+  color: #4b5563;
+  font-size: 0.875rem;
+}
+
+.removeExceptionBtn {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.removeExceptionBtn:hover {
+  color: #ef4444;
+}
+
+.addExceptionBtn {
+  width: 100%;
+  padding: 1rem;
+  border: 2px dashed #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  color: #9ca3af;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.addExceptionBtn:hover {
+  border-color: #10b981;
+  color: #10b981;
+  background-color: #f0fdf4;
+}
+
+.tipCard {
+  background-color: #ecfdf5;
+  border: 1px solid #d1fae5;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  gap: 1rem;
+}
+
+.tipIcon {
+  color: #059669;
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+}
+
+.tipContent h3 {
+  color: #065f46;
+  font-weight: 700;
+  font-size: 1rem;
+  margin: 0 0 0.5rem 0;
+}
+
+.tipContent p {
+  color: #064e3b;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.footerActions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.cancelButton {
+  padding: 0.75rem 1.5rem;
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+}
+
 .saveButton {
   display: flex;
   align-items: center;
@@ -144,8 +358,10 @@ input:checked + .slider:before {
   color: white;
   border: none;
   border-radius: 8px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
+  text-transform: uppercase;
+  font-size: 0.875rem;
   transition: background-color 0.2s;
 }
 
@@ -153,20 +369,10 @@ input:checked + .slider:before {
   background-color: #059669;
 }
 
-.saveButton:disabled {
-  background-color: #9ca3af;
-  cursor: not-allowed;
-}
-
 .icon {
   width: 20px;
   height: 20px;
   color: #10b981;
-}
-
-.smallIcon {
-  width: 16px;
-  height: 16px;
 }
 
 .loader {
@@ -180,18 +386,31 @@ input:checked + .slider:before {
   to { transform: rotate(360deg); }
 }
 
-@media (max-width: 768px) {
-  .mainContent {
-    padding: 1rem;
+@media (max-width: 1024px) {
+  .contentWrapper {
+    grid-template-columns: 1fr;
   }
-  
+}
+
+@media (max-width: 640px) {
   .dayRow {
-    grid-template-columns: 1fr auto;
-    gap: 0.5rem;
+    grid-template-columns: auto 1fr auto;
+    gap: 1rem;
   }
   
-  .hoursContainer {
+  .dayName {
+    grid-column: 2;
+    margin-top: 0;
+  }
+  
+  .hoursColumn {
     grid-column: 1 / -1;
-    margin-top: 0.5rem;
+    margin-left: 3rem;
+  }
+  
+  .statusBadge {
+    grid-column: 3;
+    grid-row: 1;
+    margin-top: 0;
   }
 }
