@@ -52,13 +52,47 @@ export default function PainelEntregador() {
   const [aceitosPage, setAceitosPage] = useState(1);
   const [aceitosPerPage, setAceitosPerPage] = useState(8);
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const [incomingOrder, setIncomingOrder] = useState<any | null>(null);
+  const [incomingAccepting, setIncomingAccepting] = useState(false);
   const fetchInFlightRef = useRef(false);
   const fetchEntreguesInFlightRef = useRef(false);
   const lastAvailableOrdersRef = useRef<Set<string> | null>(null);
+  const declinedOrdersRef = useRef<Map<string, number>>(new Map());
+  const modalTimerRef = useRef<any>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const timeZone = 'America/Sao_Paulo';
 
   const PER_PAGE_OPTIONS = [8, 10, 20, 30, 50, 100];
+  const REOFFER_AFTER_MS = 45000;
+
+  const cleanExpiredDeclines = (now: number) => {
+    const map = declinedOrdersRef.current;
+    if (!map || map.size === 0) return;
+    for (const [orderId, ts] of map.entries()) {
+      if (now - ts >= REOFFER_AFTER_MS) {
+        map.delete(orderId);
+      }
+    }
+  };
+
+  const pickNextAvailableOrder = (orders: any[]) => {
+    const now = Date.now();
+    cleanExpiredDeclines(now);
+    const declined = declinedOrdersRef.current;
+    const sorted = Array.isArray(orders) ? [...orders] : [];
+    sorted.sort((a, b) => {
+      const ta = new Date(a?.criado_em || 0).getTime();
+      const tb = new Date(b?.criado_em || 0).getTime();
+      return (Number.isNaN(ta) ? 0 : ta) - (Number.isNaN(tb) ? 0 : tb);
+    });
+    for (const o of sorted) {
+      const id = String(o?.id || '');
+      if (!id) continue;
+      if (declined?.has(id)) continue;
+      return o;
+    }
+    return null;
+  };
 
   const clampPage = (page: number, totalPages: number) => {
     const safeTotal = Math.max(1, totalPages);
@@ -227,6 +261,20 @@ export default function PainelEntregador() {
     } catch {}
   };
 
+  const fireReadyOrderAlert = (message: string) => {
+    setNotification({ type: 'success', message });
+    vibrate([180, 80, 180]);
+    if (alertsMode === 'off') return;
+    beep().then((ok) => {
+      if (!ok) {
+        setNotification({ type: 'error', message: 'Toque no sino para ativar o som do alerta.' });
+      }
+    }).catch(() => {});
+    if (alertsMode === 'push') {
+      showBrowserNotification('Pedido pronto', message).catch(() => {});
+    }
+  };
+
   const fetchPainel = async () => {
     if (fetchInFlightRef.current) return;
     fetchInFlightRef.current = true;
@@ -339,7 +387,7 @@ export default function PainelEntregador() {
     }
   };
 
-  const handleAcceptOrder = async (orderId: string) => {
+  const handleAcceptOrder = async (orderId: string): Promise<boolean> => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
@@ -363,8 +411,10 @@ export default function PainelEntregador() {
       if (activeSection === 'minhas_entregas') {
         await fetchMinhasEntregas({ page: 1, perPage: entreguesPerPage });
       }
+      return true;
     } catch (error: any) {
       setNotification({ type: 'error', message: error?.message || 'Erro ao aceitar pedido' });
+      return false;
     }
   };
 
@@ -500,7 +550,6 @@ export default function PainelEntregador() {
   }, [currentDeliveries.length, aceitosPerPage]);
 
   useEffect(() => {
-    if (activeSection !== 'inicio') return;
     if (!isOnline) return;
     const ids = new Set<string>(
       (availableOrders || [])
@@ -512,7 +561,6 @@ export default function PainelEntregador() {
     const prevSize = prev?.size || 0;
     lastAvailableOrdersRef.current = ids;
     if (!prev) return;
-    if (alertsMode === 'off') return;
 
     const newIds: string[] = [];
     ids.forEach((id) => {
@@ -526,18 +574,66 @@ export default function PainelEntregador() {
       ? `Pedido pronto: #${firstLabel}`
       : `${newIds.length} pedidos prontos`;
 
-    setNotification({ type: 'success', message });
-    vibrate([180, 80, 180]);
-    beep().then((ok) => {
-      if (!ok) {
-        setNotification({ type: 'error', message: 'Toque no sino para ativar o som do alerta.' });
-      }
-    }).catch(() => {});
-
-    if (alertsMode === 'push') {
-      showBrowserNotification('Pedido pronto', message).catch(() => {});
+    fireReadyOrderAlert(message);
+    if (!incomingOrder) {
+      const candidate = first || pickNextAvailableOrder(availableOrders);
+      if (candidate) setIncomingOrder(candidate);
     }
-  }, [availableOrders, activeSection, alertsMode, isOnline]);
+  }, [availableOrders, alertsMode, isOnline, incomingOrder]);
+
+  useEffect(() => {
+    if (!incomingOrder) return;
+    const id = String(incomingOrder?.id || '');
+    if (!id) {
+      setIncomingOrder(null);
+      setIncomingAccepting(false);
+      return;
+    }
+    const stillAvailable = (availableOrders || []).some((p: any) => String(p?.id || '') === id);
+    if (!stillAvailable) {
+      setIncomingOrder(null);
+      setIncomingAccepting(false);
+    }
+  }, [availableOrders, incomingOrder]);
+
+  useEffect(() => {
+    if (!isOnline) return;
+    if (incomingOrder) return;
+    if (!Array.isArray(availableOrders) || availableOrders.length === 0) return;
+
+    if (modalTimerRef.current) {
+      clearTimeout(modalTimerRef.current);
+      modalTimerRef.current = null;
+    }
+
+    const now = Date.now();
+    cleanExpiredDeclines(now);
+    const next = pickNextAvailableOrder(availableOrders);
+    if (next) {
+      setIncomingOrder(next);
+      return;
+    }
+
+    let minRemaining = REOFFER_AFTER_MS;
+    for (const ts of declinedOrdersRef.current.values()) {
+      const remaining = REOFFER_AFTER_MS - (now - ts);
+      if (remaining > 0 && remaining < minRemaining) minRemaining = remaining;
+    }
+    modalTimerRef.current = setTimeout(() => {
+      const candidate = pickNextAvailableOrder(availableOrders);
+      if (candidate) {
+        setIncomingOrder(candidate);
+        fireReadyOrderAlert('Pedido pronto disponível');
+      }
+    }, Math.max(1500, minRemaining));
+
+    return () => {
+      if (modalTimerRef.current) {
+        clearTimeout(modalTimerRef.current);
+        modalTimerRef.current = null;
+      }
+    };
+  }, [availableOrders, incomingOrder, isOnline]);
 
   if (loading) return <div>Carregando...</div>;
 
@@ -551,6 +647,91 @@ export default function PainelEntregador() {
 
   return (
     <div className={styles.container}>
+      {incomingOrder ? (
+        <div className={styles.incomingOverlay}>
+          <div className={styles.incomingModal} role="dialog" aria-modal="true">
+            <div className={styles.incomingModalHeader}>
+              <div className={styles.incomingModalTitle}>Pedido pronto</div>
+              <div className={styles.incomingModalMeta}>
+                <span>#{incomingOrder?.numero_pedido || String(incomingOrder?.id || '').slice(0, 8)}</span>
+                <span className={styles.incomingModalDot}>•</span>
+                <span>{formatHour(incomingOrder?.criado_em)}</span>
+              </div>
+            </div>
+
+            <div className={styles.incomingModalBody}>
+              <div className={styles.incomingModalRow}>
+                <span className={styles.incomingModalLabel}>Loja</span>
+                <span className={styles.incomingModalValue}>{incomingOrder?.estabelecimento?.nome || 'Estabelecimento'}</span>
+              </div>
+              <div className={styles.incomingModalRow}>
+                <span className={styles.incomingModalLabel}>Total</span>
+                <span className={styles.incomingModalValue}>
+                  {formatBRL(incomingOrder?.total_pedido || 0)}
+                </span>
+              </div>
+
+              {(() => {
+                const address = getClienteEnderecoCompleto(incomingOrder);
+                const mapsUrl = address ? getGoogleMapsUrl(address) : '';
+                const clienteNome = incomingOrder?.cliente?.nome || '';
+                return (
+                  <div className={styles.clienteBlock}>
+                    {clienteNome ? (
+                      <div className={styles.clienteName}>{clienteNome}</div>
+                    ) : null}
+                    <div className={styles.addressRow}>
+                      <span className={styles.addressText}>{address || 'Endereço não informado'}</span>
+                      {mapsUrl ? (
+                        <a
+                          className={styles.mapsIconBtn}
+                          href={mapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label="Abrir no Google Maps"
+                        >
+                          <MapPin size={18} />
+                        </a>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className={styles.incomingModalActions}>
+              <button
+                className={styles.declineBtn}
+                disabled={incomingAccepting}
+                onClick={() => {
+                  const id = String(incomingOrder?.id || '');
+                  if (id) declinedOrdersRef.current.set(id, Date.now());
+                  setIncomingOrder(null);
+                  setIncomingAccepting(false);
+                  setNotification({ type: 'success', message: 'Entrega recusada.' });
+                }}
+              >
+                Recusar
+              </button>
+              <button
+                className={styles.acceptModalBtn}
+                disabled={incomingAccepting}
+                onClick={async () => {
+                  const id = String(incomingOrder?.id || '');
+                  if (!id) return;
+                  setIncomingAccepting(true);
+                  const ok = await handleAcceptOrder(id);
+                  setIncomingAccepting(false);
+                  setIncomingOrder(null);
+                  if (ok) setActiveSection('minhas_entregas');
+                }}
+              >
+                Aceitar entrega
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {/* Sidebar */}
       <aside className={styles.sidebar}>
         <div className={styles.logo}>
@@ -748,7 +929,14 @@ export default function PainelEntregador() {
                       const clienteNome = p?.cliente?.nome || '';
 
                       return (
-                        <div key={p.id} className={`${styles.activityItem} ${styles.readyOrderItem}`}>
+                        <div
+                          key={p.id}
+                          className={`${styles.activityItem} ${styles.readyOrderItem} ${styles.readyOrderClickable}`}
+                          onClick={() => {
+                            setIncomingAccepting(false);
+                            setIncomingOrder(p);
+                          }}
+                        >
                         <div className={styles.activityIcon}>
                           <Clock size={16} />
                         </div>
@@ -776,15 +964,13 @@ export default function PainelEntregador() {
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   aria-label="Abrir no Google Maps"
+                                  onClick={(e) => e.stopPropagation()}
                                 >
                                   <MapPin size={18} />
                                 </a>
                               ) : null}
                             </div>
                           </div>
-                          <button className={styles.acceptBtn} onClick={() => handleAcceptOrder(p.id)}>
-                            Aceitar Entrega
-                          </button>
                         </div>
                       </div>
                       );

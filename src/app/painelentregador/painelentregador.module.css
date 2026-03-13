@@ -870,6 +870,147 @@
   transform: translateY(0);
 }
 
+.readyOrderClickable {
+  cursor: pointer;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+.readyOrderClickable:hover {
+  filter: brightness(0.985);
+  transform: translateY(-1px);
+}
+
+.readyOrderClickable:active {
+  transform: translateY(0);
+}
+
+.incomingOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.58);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+}
+
+.incomingModal {
+  width: min(520px, 100%);
+  background: #ffffff;
+  border-radius: 1.25rem;
+  border: 2px solid rgba(16, 185, 129, 0.35);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.incomingModalHeader {
+  padding: 1rem 1.25rem;
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.12), rgba(255, 255, 255, 1));
+  border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.incomingModalTitle {
+  font-size: 1.125rem;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.incomingModalMeta {
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 900;
+  color: #334155;
+}
+
+.incomingModalDot {
+  color: #94a3b8;
+  font-weight: 900;
+}
+
+.incomingModalBody {
+  padding: 1rem 1.25rem 0.25rem;
+}
+
+.incomingModalRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #334155;
+  margin-bottom: 0.5rem;
+}
+
+.incomingModalLabel {
+  color: #64748b;
+}
+
+.incomingModalValue {
+  text-align: right;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.incomingModalActions {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.declineBtn {
+  flex: 1;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.9rem;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #0f172a;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+.declineBtn:hover {
+  filter: brightness(0.98);
+  transform: translateY(-1px);
+}
+
+.declineBtn:active {
+  transform: translateY(0);
+}
+
+.acceptModalBtn {
+  flex: 1;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.9rem;
+  border: none;
+  background: #10b981;
+  color: #ffffff;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+.acceptModalBtn:hover {
+  filter: brightness(0.95);
+  transform: translateY(-1px);
+}
+
+.acceptModalBtn:active {
+  transform: translateY(0);
+}
+
+.declineBtn:disabled,
+.acceptModalBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .quickActionsCard {
   background: linear-gradient(135deg, #065f46 0%, #047857 100%);
   padding: 1.5rem;
