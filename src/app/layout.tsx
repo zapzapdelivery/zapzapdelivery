@@ -11,6 +11,14 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "ZapZap Delivery Admin",
   description: "Painel Administrativo",
+  applicationName: "ZapZap Delivery",
+  manifest: "/manifest.webmanifest",
+  themeColor: "#10b981",
+  appleWebApp: {
+    capable: true,
+    title: "ZapZap Delivery",
+    statusBarStyle: "default",
+  },
 };
 
 export default function RootLayout({
