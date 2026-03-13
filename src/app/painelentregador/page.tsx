@@ -23,7 +23,9 @@ import {
   Package,
   Clock,
   CheckCircle2,
-  Ban
+  Ban,
+  Menu,
+  X
 } from 'lucide-react';
 
 export default function PainelEntregador() {
@@ -31,6 +33,7 @@ export default function PainelEntregador() {
   const { role, establishmentId, loading } = useUserRole();
   const [userName, setUserName] = useState('Usuário');
   const [isOnline, setIsOnline] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<'inicio' | 'minhas_entregas'>('inicio');
   const [alertsMode, setAlertsMode] = useState<'off' | 'som' | 'push'>('som');
   const [stats, setStats] = useState({
@@ -64,6 +67,47 @@ export default function PainelEntregador() {
 
   const PER_PAGE_OPTIONS = [8, 10, 20, 30, 50, 100];
   const REOFFER_AFTER_MS = 45000;
+
+  const getInitials = (name: string) => {
+    const parts = String(name || '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    const first = parts[0]?.[0] || '';
+    const last = parts.length > 1 ? parts[parts.length - 1]?.[0] || '' : '';
+    const raw = `${first}${last}`.toUpperCase();
+    return raw || 'U';
+  };
+
+  const handleNavTo = (section: 'inicio' | 'minhas_entregas') => {
+    setActiveSection(section);
+    setMobileMenuOpen(false);
+  };
+
+  const handleComingSoon = () => {
+    setNotification({ type: 'error', message: 'Em breve.' });
+    setMobileMenuOpen(false);
+  };
+
+  const toggleAlertsMode = async () => {
+    const nextMode = alertsMode === 'off' ? 'som' : alertsMode === 'som' ? 'push' : 'off';
+    setAlertsMode(nextMode);
+    if (nextMode === 'push') {
+      await showBrowserNotification('Notificações ativadas', 'Você vai receber alertas de pedido pronto.');
+      setNotification({ type: 'success', message: 'Alertas: Push + Som' });
+      vibrate([80, 50, 80]);
+      await beep();
+      return;
+    }
+    if (nextMode === 'som') {
+      setNotification({ type: 'success', message: 'Alertas: Som' });
+      vibrate(80);
+      const ok = await beep();
+      if (!ok) setNotification({ type: 'error', message: 'Som bloqueado. Toque na tela e tente novamente.' });
+      return;
+    }
+    setNotification({ type: 'success', message: 'Alertas: Desligado' });
+  };
 
   const cleanExpiredDeclines = (now: number) => {
     const map = declinedOrdersRef.current;
@@ -732,6 +776,55 @@ export default function PainelEntregador() {
           </div>
         </div>
       ) : null}
+      {mobileMenuOpen ? (
+        <div className={styles.mobileMenuOverlay} onClick={() => setMobileMenuOpen(false)} role="presentation">
+          <aside className={styles.mobileMenuDrawer} onClick={(e) => e.stopPropagation()} aria-label="Menu do entregador">
+            <div className={styles.mobileMenuHeader}>
+              <div className={styles.mobileMenuUser}>
+                <div className={styles.avatarCircle}>{getInitials(userName)}</div>
+                <div className={styles.mobileMenuUserText}>
+                  <div className={styles.mobileMenuHello}>Olá,</div>
+                  <div className={styles.mobileMenuName}>{userName}</div>
+                </div>
+              </div>
+              <button className={styles.mobileMenuCloseBtn} onClick={() => setMobileMenuOpen(false)} aria-label="Fechar menu">
+                <X size={20} />
+              </button>
+            </div>
+
+            <nav className={styles.mobileMenuNav}>
+              <button
+                className={`${styles.mobileMenuItem} ${activeSection === 'inicio' ? styles.mobileMenuItemActive : ''}`}
+                onClick={() => handleNavTo('inicio')}
+              >
+                <LayoutDashboard size={20} /> Início
+              </button>
+              <button
+                className={`${styles.mobileMenuItem} ${activeSection === 'minhas_entregas' ? styles.mobileMenuItemActive : ''}`}
+                onClick={() => handleNavTo('minhas_entregas')}
+              >
+                <Truck size={20} /> Minhas Entregas
+              </button>
+              <button className={styles.mobileMenuItem} onClick={handleComingSoon}>
+                <Wallet size={20} /> Carteira
+              </button>
+              <button className={styles.mobileMenuItem} onClick={handleComingSoon}>
+                <User size={20} /> Perfil
+              </button>
+              <button className={styles.mobileMenuItem} onClick={handleComingSoon}>
+                <Bike size={20} /> Meus Veículos
+              </button>
+              <button className={styles.mobileMenuItem} onClick={handleComingSoon}>
+                <MapPin size={20} /> Meus Endereços
+              </button>
+            </nav>
+
+            <button className={styles.mobileMenuLogout} onClick={handleLogout}>
+              <LogOut size={20} /> Sair
+            </button>
+          </aside>
+        </div>
+      ) : null}
       {/* Sidebar */}
       <aside className={styles.sidebar}>
         <div className={styles.logo}>
@@ -776,6 +869,41 @@ export default function PainelEntregador() {
 
       {/* Main Content */}
       <main className={styles.mainContent}>
+        <header className={styles.mobileTopBar}>
+          <button className={styles.hamburgerBtn} onClick={() => setMobileMenuOpen(true)} aria-label="Abrir menu">
+            <Menu size={22} />
+          </button>
+          <div className={styles.mobileGreeting}>
+            <div className={styles.mobileHello}>Olá,</div>
+            <div className={styles.mobileName}>{userName}!</div>
+          </div>
+          <div className={styles.mobileTopActions}>
+            <button
+              className={`${styles.btnIcon} ${alertsMode !== 'off' ? styles.btnIconActive : ''} ${alertsMode === 'push' ? styles.btnIconPush : ''}`}
+              onClick={async () => {
+                await toggleAlertsMode();
+              }}
+              aria-label="Configurar alertas"
+              title={alertsMode === 'off' ? 'Alertas desligados' : alertsMode === 'som' ? 'Alertas com som' : 'Alertas com push + som'}
+            >
+              <Bell size={20} />
+            </button>
+            <div className={styles.avatarCircle}>{getInitials(userName)}</div>
+          </div>
+        </header>
+
+        <div className={styles.mobileSubheader}>
+          <div className={styles.mobileSubtitle}>Vamos fazer ótimas entregas hoje.</div>
+          <div className={styles.statusToggle}>
+            <span className={styles.statusLabel}>Status:</span>
+            <label className={styles.switch}>
+              <input type="checkbox" checked={isOnline} onChange={() => setIsOnline(!isOnline)} />
+              <span className={styles.slider}></span>
+            </label>
+            <span className={styles.statusBadge}>{isOnline ? 'Disponível' : 'Offline'}</span>
+          </div>
+        </div>
+
         {/* Header */}
         <header className={styles.header}>
           <div className={styles.welcome}>
@@ -794,60 +922,24 @@ export default function PainelEntregador() {
             </div>
             <button
               className={`${styles.btnIcon} ${alertsMode !== 'off' ? styles.btnIconActive : ''} ${alertsMode === 'push' ? styles.btnIconPush : ''}`}
-              onClick={async () => {
-                const nextMode = alertsMode === 'off' ? 'som' : alertsMode === 'som' ? 'push' : 'off';
-                setAlertsMode(nextMode);
-                if (nextMode === 'push') {
-                  await showBrowserNotification('Notificações ativadas', 'Você vai receber alertas de pedido pronto.');
-                  setNotification({ type: 'success', message: 'Alertas: Push + Som' });
-                  vibrate([80, 50, 80]);
-                  await beep();
-                  return;
-                }
-                if (nextMode === 'som') {
-                  setNotification({ type: 'success', message: 'Alertas: Som' });
-                  vibrate(80);
-                  const ok = await beep();
-                  if (!ok) setNotification({ type: 'error', message: 'Som bloqueado. Toque na tela e tente novamente.' });
-                  return;
-                }
-                setNotification({ type: 'success', message: 'Alertas: Desligado' });
-              }}
+              onClick={toggleAlertsMode}
               aria-label="Configurar alertas"
               title={alertsMode === 'off' ? 'Alertas desligados' : alertsMode === 'som' ? 'Alertas com som' : 'Alertas com push + som'}
             >
               <Bell size={20} />
             </button>
-            <div className={styles.userAvatar}>
-              <img src="https://ui-avatars.com/api/?name=Carlos&background=065f46&color=fff" alt="User" style={{borderRadius: '50%', width: '40px'}} />
-            </div>
+            <div className={styles.avatarCircle}>{getInitials(userName)}</div>
           </div>
         </header>
 
         {notification && (
-          <div style={{
-            position: 'fixed',
-            top: '24px',
-            right: '24px',
-            zIndex: 1000,
-            padding: '16px 24px',
-            borderRadius: '12px',
-            backgroundColor: notification.type === 'success' ? '#10b981' : '#ef4444',
-            color: '#fff',
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            animation: 'slideIn 0.3s ease-out'
-          }}>
-            <style jsx>{`
-              @keyframes slideIn {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-              }
-            `}</style>
+          <div
+            className={`${styles.toast} ${notification.type === 'success' ? styles.toastSuccess : styles.toastError}`}
+            role="status"
+            aria-live="polite"
+          >
             {notification.type === 'success' ? <CheckCircle2 size={24} /> : <Ban size={24} />}
-            <span style={{ fontWeight: 600 }}>{notification.message}</span>
+            <span className={styles.toastText}>{notification.message}</span>
           </div>
         )}
 
@@ -1241,6 +1333,35 @@ export default function PainelEntregador() {
             </div>
           </>
         )}
+
+        <nav className={styles.bottomNav} aria-label="Navegação inferior">
+          <button
+            className={`${styles.bottomNavItem} ${activeSection === 'inicio' ? styles.bottomNavItemActive : ''}`}
+            onClick={() => handleNavTo('inicio')}
+          >
+            <LayoutDashboard size={18} />
+            <span>Início</span>
+          </button>
+          <button
+            className={`${styles.bottomNavItem} ${activeSection === 'minhas_entregas' ? styles.bottomNavItemActive : ''}`}
+            onClick={() => handleNavTo('minhas_entregas')}
+          >
+            <Truck size={18} />
+            <span>Entregas</span>
+          </button>
+          <button className={styles.bottomNavItem} onClick={handleComingSoon}>
+            <Wallet size={18} />
+            <span>Carteira</span>
+          </button>
+          <button className={styles.bottomNavItem} onClick={handleComingSoon}>
+            <User size={18} />
+            <span>Perfil</span>
+          </button>
+          <button className={styles.bottomNavItem} onClick={handleLogout}>
+            <LogOut size={18} />
+            <span>Sair</span>
+          </button>
+        </nav>
       </main>
     </div>
   );
