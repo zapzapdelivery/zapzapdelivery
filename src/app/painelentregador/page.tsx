@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useUserRole } from '@/hooks/useUserRole';
 import styles from './painelentregador.module.css';
 import { OrderStatus } from '@/types/orderStatus';
+import { Loading } from '@/components/Loading/Loading';
 import { 
   LayoutDashboard, 
   Truck, 
@@ -36,6 +37,7 @@ export default function PainelEntregador() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<'inicio' | 'minhas_entregas'>('inicio');
   const [alertsMode, setAlertsMode] = useState<'off' | 'som' | 'push'>('som');
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [stats, setStats] = useState({
     entregasHoje: 0,
     faturamentoTotal: 0,
@@ -210,6 +212,19 @@ export default function PainelEntregador() {
     if (raw === 'off' || raw === 'som' || raw === 'push') {
       setAlertsMode(raw);
     }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(max-width: 768px)');
+    const update = () => setIsMobileViewport(Boolean(mql.matches));
+    update();
+    if (typeof mql.addEventListener === 'function') {
+      mql.addEventListener('change', update);
+      return () => mql.removeEventListener('change', update);
+    }
+    mql.addListener(update);
+    return () => mql.removeListener(update);
   }, []);
 
   useEffect(() => {
@@ -679,7 +694,7 @@ export default function PainelEntregador() {
     };
   }, [availableOrders, incomingOrder, isOnline]);
 
-  if (loading) return <div>Carregando...</div>;
+  if (loading) return <Loading message="Carregando Painel do Entregador..." fullScreen />;
 
   const prontosTotalPages = calcTotalPages(availableOrders.length, prontosPerPage);
   const prontosFrom = (prontosPage - 1) * prontosPerPage;
@@ -1250,9 +1265,13 @@ export default function PainelEntregador() {
                       const total = Number(p?.total_pedido || 0);
 
                       return (
-                        <div key={p.id} className={styles.entregueCard}>
+                        <div
+                          key={p.id}
+                          className={styles.entregueCard}
+                          style={isMobileViewport ? { padding: '0.9rem', gap: '0.65rem' } : undefined}
+                        >
                           <div className={styles.entregueTop}>
-                            <div className={styles.entregueIconWrap}>
+                            <div className={styles.entregueIconWrap} style={isMobileViewport ? { width: 36, height: 36 } : undefined}>
                               <CheckCircle2 size={18} />
                             </div>
                             <div className={styles.entregueTopMain}>
@@ -1274,7 +1293,21 @@ export default function PainelEntregador() {
                           <div className={styles.entregueClienteBlock}>
                             {clienteNome ? <div className={styles.entregueClienteNome}>{clienteNome}</div> : null}
                             <div className={styles.entregueEnderecoRow}>
-                              <span className={styles.entregueEnderecoText}>{address || 'Endereço não informado'}</span>
+                              <span
+                                className={styles.entregueEnderecoText}
+                                style={
+                                  isMobileViewport
+                                    ? {
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden'
+                                      }
+                                    : undefined
+                                }
+                              >
+                                {address || 'Endereço não informado'}
+                              </span>
                               {mapsUrl ? (
                                 <a
                                   className={styles.entregueMapBtn}
@@ -1285,7 +1318,11 @@ export default function PainelEntregador() {
                                 >
                                   <MapPin size={18} />
                                 </a>
-                              ) : null}
+                              ) : (
+                                <button className={styles.entregueMapBtn} type="button" disabled aria-label="Mapa indisponível">
+                                  <MapPin size={18} />
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1294,7 +1331,10 @@ export default function PainelEntregador() {
                   )}
                 </div>
 
-                <div className={styles.entreguesFooter}>
+                <div
+                  className={styles.entreguesFooter}
+                  style={isMobileViewport ? { justifyContent: 'space-between', flexWrap: 'wrap' } : undefined}
+                >
                   <div className={styles.perPageControl}>
                     <span className={styles.perPageLabel}>Ver</span>
                     <select
