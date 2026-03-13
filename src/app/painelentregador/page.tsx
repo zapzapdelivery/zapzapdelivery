@@ -32,6 +32,7 @@ export default function PainelEntregador() {
   const [userName, setUserName] = useState('Usuário');
   const [isOnline, setIsOnline] = useState(true);
   const [activeSection, setActiveSection] = useState<'inicio' | 'minhas_entregas'>('inicio');
+  const [alertsMode, setAlertsMode] = useState<'off' | 'som' | 'push'>('som');
   const [stats, setStats] = useState({
     entregasHoje: 0,
     faturamentoTotal: 0,
@@ -53,6 +54,8 @@ export default function PainelEntregador() {
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const fetchInFlightRef = useRef(false);
   const fetchEntreguesInFlightRef = useRef(false);
+  const lastAvailableOrdersRef = useRef<Set<string> | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
   const timeZone = 'America/Sao_Paulo';
 
   const PER_PAGE_OPTIONS = [8, 10, 20, 30, 50, 100];
@@ -122,6 +125,107 @@ export default function PainelEntregador() {
       return () => clearTimeout(timer);
     }
   }, [notification]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const raw = window.localStorage.getItem('entregador_alerts_mode');
+    if (raw === 'off' || raw === 'som' || raw === 'push') {
+      setAlertsMode(raw);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('entregador_alerts_mode', alertsMode);
+  }, [alertsMode]);
+
+  useEffect(() => {
+    const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+
+    const ensureAudio = async () => {
+      try {
+        if (!audioCtxRef.current) {
+          audioCtxRef.current = new AudioCtx();
+        }
+        const ctx = audioCtxRef.current;
+        if (ctx && ctx.state === 'suspended') {
+          await ctx.resume();
+        }
+      } catch {}
+    };
+
+    const onFirstInteraction = () => {
+      ensureAudio().finally(() => {});
+      window.removeEventListener('pointerdown', onFirstInteraction, { capture: true } as any);
+      window.removeEventListener('touchstart', onFirstInteraction, { capture: true } as any);
+      window.removeEventListener('mousedown', onFirstInteraction, { capture: true } as any);
+      window.removeEventListener('keydown', onFirstInteraction, { capture: true } as any);
+    };
+
+    window.addEventListener('pointerdown', onFirstInteraction, { capture: true, passive: true } as any);
+    window.addEventListener('touchstart', onFirstInteraction, { capture: true, passive: true } as any);
+    window.addEventListener('mousedown', onFirstInteraction, { capture: true, passive: true } as any);
+    window.addEventListener('keydown', onFirstInteraction, { capture: true, passive: true } as any);
+    return () => {
+      window.removeEventListener('pointerdown', onFirstInteraction, { capture: true } as any);
+      window.removeEventListener('touchstart', onFirstInteraction, { capture: true } as any);
+      window.removeEventListener('mousedown', onFirstInteraction, { capture: true } as any);
+      window.removeEventListener('keydown', onFirstInteraction, { capture: true } as any);
+    };
+  }, []);
+
+  const vibrate = (pattern: number | number[]) => {
+    try {
+      if (typeof navigator === 'undefined') return;
+      const v = (navigator as any).vibrate;
+      if (typeof v !== 'function') return;
+      v.call(navigator, pattern);
+    } catch {}
+  };
+
+  const beep = async (): Promise<boolean> => {
+    try {
+      const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return false;
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioCtx();
+      }
+      const ctx = audioCtxRef.current;
+      if (!ctx) return false;
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 980;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.24, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.38);
+      osc.stop(ctx.currentTime + 0.4);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const showBrowserNotification = async (title: string, body: string) => {
+    if (typeof window === 'undefined') return;
+    if (typeof Notification === 'undefined') return;
+    if (Notification.permission === 'default') {
+      try {
+        await Notification.requestPermission();
+      } catch {}
+    }
+    if (Notification.permission !== 'granted') return;
+    try {
+      new Notification(title, { body, tag: 'pedido-pronto' });
+    } catch {}
+  };
 
   const fetchPainel = async () => {
     if (fetchInFlightRef.current) return;
@@ -395,6 +499,46 @@ export default function PainelEntregador() {
     setAceitosPage((p) => clampPage(p, totalPages));
   }, [currentDeliveries.length, aceitosPerPage]);
 
+  useEffect(() => {
+    if (activeSection !== 'inicio') return;
+    if (!isOnline) return;
+    const ids = new Set<string>(
+      (availableOrders || [])
+        .map((p: any) => String(p?.id || ''))
+        .filter(Boolean)
+    );
+
+    const prev = lastAvailableOrdersRef.current;
+    const prevSize = prev?.size || 0;
+    lastAvailableOrdersRef.current = ids;
+    if (!prev) return;
+    if (alertsMode === 'off') return;
+
+    const newIds: string[] = [];
+    ids.forEach((id) => {
+      if (!prev.has(id)) newIds.push(id);
+    });
+    if (newIds.length === 0 && !(ids.size > prevSize)) return;
+
+    const first = (availableOrders || []).find((p: any) => String(p?.id || '') === newIds[0]);
+    const firstLabel = first?.numero_pedido || (first?.id ? String(first.id).slice(0, 8) : '');
+    const message = newIds.length === 1
+      ? `Pedido pronto: #${firstLabel}`
+      : `${newIds.length} pedidos prontos`;
+
+    setNotification({ type: 'success', message });
+    vibrate([180, 80, 180]);
+    beep().then((ok) => {
+      if (!ok) {
+        setNotification({ type: 'error', message: 'Toque no sino para ativar o som do alerta.' });
+      }
+    }).catch(() => {});
+
+    if (alertsMode === 'push') {
+      showBrowserNotification('Pedido pronto', message).catch(() => {});
+    }
+  }, [availableOrders, activeSection, alertsMode, isOnline]);
+
   if (loading) return <div>Carregando...</div>;
 
   const prontosTotalPages = calcTotalPages(availableOrders.length, prontosPerPage);
@@ -467,7 +611,32 @@ export default function PainelEntregador() {
               </label>
               <span className={styles.statusBadge}>{isOnline ? 'Disponível' : 'Offline'}</span>
             </div>
-            <button className={styles.btnIcon}><Bell size={20} /></button>
+            <button
+              className={`${styles.btnIcon} ${alertsMode !== 'off' ? styles.btnIconActive : ''} ${alertsMode === 'push' ? styles.btnIconPush : ''}`}
+              onClick={async () => {
+                const nextMode = alertsMode === 'off' ? 'som' : alertsMode === 'som' ? 'push' : 'off';
+                setAlertsMode(nextMode);
+                if (nextMode === 'push') {
+                  await showBrowserNotification('Notificações ativadas', 'Você vai receber alertas de pedido pronto.');
+                  setNotification({ type: 'success', message: 'Alertas: Push + Som' });
+                  vibrate([80, 50, 80]);
+                  await beep();
+                  return;
+                }
+                if (nextMode === 'som') {
+                  setNotification({ type: 'success', message: 'Alertas: Som' });
+                  vibrate(80);
+                  const ok = await beep();
+                  if (!ok) setNotification({ type: 'error', message: 'Som bloqueado. Toque na tela e tente novamente.' });
+                  return;
+                }
+                setNotification({ type: 'success', message: 'Alertas: Desligado' });
+              }}
+              aria-label="Configurar alertas"
+              title={alertsMode === 'off' ? 'Alertas desligados' : alertsMode === 'som' ? 'Alertas com som' : 'Alertas com push + som'}
+            >
+              <Bell size={20} />
+            </button>
             <div className={styles.userAvatar}>
               <img src="https://ui-avatars.com/api/?name=Carlos&background=065f46&color=fff" alt="User" style={{borderRadius: '50%', width: '40px'}} />
             </div>
