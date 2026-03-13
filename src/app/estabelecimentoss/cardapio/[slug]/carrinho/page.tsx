@@ -33,6 +33,7 @@ import styles from './carrinho.module.css';
 import { supabase } from '@/lib/supabase';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/components/Toast/ToastProvider';
+import { useNotification } from '@/context/NotificationContext';
 import { Loading } from '@/components/Loading/Loading';
 import Link from 'next/link';
 
@@ -60,6 +61,7 @@ interface Estabelecimento {
 
 export default function CarrinhoPage() {
   const toast = useToast();
+  const { playNotificationSound } = useNotification();
   const params = useParams();
   const router = useRouter();
   const slug = params.slug as string;
@@ -760,6 +762,7 @@ export default function CarrinhoPage() {
 
       if (order) {
         console.log('Pedido criado com sucesso:', order);
+        playNotificationSound(1);
         
         sessionStorage.removeItem('pendingOrder');
 
@@ -767,6 +770,7 @@ export default function CarrinhoPage() {
            clearCart();
         }
 
+        await new Promise((resolve) => setTimeout(resolve, 200));
         window.location.href = `/checkout/${order.id}`;
         return;
       }

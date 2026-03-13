@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -28,18 +28,93 @@ import {
 
 export default function PainelEntregador() {
   const router = useRouter();
-  const { role, loading } = useUserRole();
+  const { role, establishmentId, loading } = useUserRole();
   const [userName, setUserName] = useState('Usuário');
   const [isOnline, setIsOnline] = useState(true);
+  const [activeSection, setActiveSection] = useState<'inicio' | 'minhas_entregas'>('inicio');
   const [stats, setStats] = useState({
-    entregasHoje: 12,
-    faturamentoTotal: 345.00,
-    taxaAceitacao: 98,
-    avaliacaoMedia: 4.9
+    entregasHoje: 0,
+    faturamentoTotal: 0,
+    taxaAceitacao: 0,
+    avaliacaoMedia: 0
   });
-  const [currentDelivery, setCurrentDelivery] = useState<any>(null);
-  const [history, setHistory] = useState<any[]>([]);
+  const [currentDeliveries, setCurrentDeliveries] = useState<any[]>([]);
+  const [availableOrders, setAvailableOrders] = useState<any[]>([]);
+  const [ganhos, setGanhos] = useState({ dia: 0, semana: 0, mes: 0 });
+  const [entregues, setEntregues] = useState<any[]>([]);
+  const [entreguesPage, setEntreguesPage] = useState(1);
+  const [entreguesHasMore, setEntreguesHasMore] = useState(true);
+  const [entreguesPerPage, setEntreguesPerPage] = useState(8);
+  const [entreguesLoading, setEntreguesLoading] = useState(false);
+  const [prontosPage, setProntosPage] = useState(1);
+  const [prontosPerPage, setProntosPerPage] = useState(8);
+  const [aceitosPage, setAceitosPage] = useState(1);
+  const [aceitosPerPage, setAceitosPerPage] = useState(8);
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const fetchInFlightRef = useRef(false);
+  const fetchEntreguesInFlightRef = useRef(false);
+  const timeZone = 'America/Sao_Paulo';
+
+  const PER_PAGE_OPTIONS = [8, 10, 20, 30, 50, 100];
+
+  const clampPage = (page: number, totalPages: number) => {
+    const safeTotal = Math.max(1, totalPages);
+    const safePage = Math.max(1, Number(page) || 1);
+    return Math.min(safePage, safeTotal);
+  };
+
+  const calcTotalPages = (totalItems: number, perPage: number) => {
+    const p = Math.max(1, Number(perPage) || 1);
+    return Math.max(1, Math.ceil((Number(totalItems) || 0) / p));
+  };
+
+  const formatHour = (value: any) => {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone });
+  };
+
+  const getClienteEnderecoCompleto = (pedido: any) => {
+    const addr = pedido?.cliente?.enderecos?.[0];
+    if (!addr) return '';
+
+    const firstLineParts = [addr.endereco, addr.numero].filter(Boolean);
+    const firstLine = firstLineParts.join(', ');
+
+    const midParts = [addr.complemento, addr.bairro].filter(Boolean);
+    const mid = midParts.join(' - ');
+
+    const cityUf = [addr.cidade, addr.uf].filter(Boolean).join('/');
+
+    const tailParts = [cityUf, addr.cep ? `CEP ${addr.cep}` : null].filter(Boolean);
+    const tail = tailParts.join(' - ');
+
+    return [firstLine, mid, tail].filter(Boolean).join(', ');
+  };
+
+  const getGoogleMapsUrl = (address: string) => {
+    const a = (address || '').trim();
+    if (!a) return '';
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a)}`;
+  };
+
+  const formatBRL = (value: any) => {
+    const n = Number(value);
+    const safe = Number.isFinite(n) ? n : 0;
+    return safe.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  };
+
+  const getWhatsAppUrl = (rawPhone: string, message: string) => {
+    const digits = String(rawPhone || '').replace(/\D/g, '');
+    if (!digits) return '';
+    const normalized = digits.startsWith('55')
+      ? digits
+      : digits.length === 10 || digits.length === 11
+        ? `55${digits}`
+        : digits;
+    return `https://wa.me/${normalized}?text=${encodeURIComponent(message || '')}`;
+  };
 
   useEffect(() => {
     if (notification) {
@@ -48,18 +123,173 @@ export default function PainelEntregador() {
     }
   }, [notification]);
 
-  // Function to handle delivery status update
-  const handleUpdateStatus = async (deliveryId: string, newStatus: string) => {
+  const fetchPainel = async () => {
+    if (fetchInFlightRef.current) return;
+    fetchInFlightRef.current = true;
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) {
+      fetchInFlightRef.current = false;
+      return;
+    }
+
     try {
-      // Aqui faríamos o update no Supabase
-      // const { error } = await supabase.from('pedidos').update({ status_pedido: newStatus }).eq('id', deliveryId);
-      
-      // Atualização local para feedback imediato
-      setCurrentDelivery((prev: any) => prev ? { ...prev, status_pedido: newStatus } : null);
-      setNotification({ type: 'success', message: `Status da entrega #${deliveryId} atualizado para: ${newStatus}` });
-    } catch (error) {
-      console.error('Erro ao atualizar status:', error);
-      setNotification({ type: 'error', message: 'Erro ao atualizar status' });
+      const resp = await fetch('/api/entregadores/painel', {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store'
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        throw new Error(data?.error || `HTTP ${resp.status}`);
+      }
+
+      const rawDisponiveis = Array.isArray(data?.disponiveis) ? data.disponiveis : [];
+      const onlyDeliveryDisponiveis = rawDisponiveis.filter(
+        (p: any) => String(p?.forma_entrega || '').toLowerCase() === 'delivery'
+      );
+      const rawEntregaAtual = Array.isArray(data?.entrega_atual)
+        ? data.entrega_atual
+        : data?.entrega_atual
+          ? [data.entrega_atual]
+          : [];
+      const onlyDeliveryEntregaAtual = rawEntregaAtual.filter(
+        (p: any) => String(p?.forma_entrega || '').toLowerCase() === 'delivery'
+      );
+
+      setAvailableOrders(onlyDeliveryDisponiveis);
+      setCurrentDeliveries(onlyDeliveryEntregaAtual);
+      setStats((prev) => ({
+        ...prev,
+        entregasHoje: Number(data?.stats?.entregasHoje || 0),
+        faturamentoTotal: Number(data?.stats?.faturamentoTotal || 0),
+      }));
+    } catch (error: any) {
+      const message =
+        error?.message === 'Failed to fetch'
+          ? 'Falha ao conectar no servidor.'
+          : error?.message || 'Erro ao carregar painel';
+      setNotification((prev) => {
+        if (prev?.type === 'error' && prev.message === message) return prev;
+        return { type: 'error', message };
+      });
+    } finally {
+      fetchInFlightRef.current = false;
+    }
+  };
+
+  const fetchMinhasEntregas = async (opts?: { page?: number; perPage?: number }) => {
+    if (fetchEntreguesInFlightRef.current) return;
+    fetchEntreguesInFlightRef.current = true;
+    setEntreguesLoading(true);
+    const page = Math.max(1, Number(opts?.page || 1) || 1);
+    const perPage = Math.min(100, Math.max(1, Number(opts?.perPage || entreguesPerPage) || 8));
+
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) {
+      setEntreguesLoading(false);
+      fetchEntreguesInFlightRef.current = false;
+      return;
+    }
+
+    try {
+      const qs = new URLSearchParams({
+        includeEntregues: '1',
+        page: String(page),
+        perPage: String(perPage)
+      });
+      const resp = await fetch(`/api/entregadores/painel?${qs.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store'
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        throw new Error(data?.error || `HTTP ${resp.status}`);
+      }
+
+      const ganhosRaw = data?.ganhos || {};
+      setGanhos({
+        dia: Number(ganhosRaw?.dia || 0),
+        semana: Number(ganhosRaw?.semana || 0),
+        mes: Number(ganhosRaw?.mes || 0)
+      });
+
+      const items = Array.isArray(data?.entregues) ? data.entregues : [];
+      const hasMore = Boolean(data?.entregues_paginacao?.hasMore) || items.length === perPage;
+
+      setEntreguesHasMore(hasMore);
+      setEntreguesPage(page);
+      setEntregues(items);
+    } catch (error: any) {
+      const message =
+        error?.message === 'Failed to fetch'
+          ? 'Falha ao conectar no servidor.'
+          : error?.message || 'Erro ao carregar entregas';
+      setNotification((prev) => {
+        if (prev?.type === 'error' && prev.message === message) return prev;
+        return { type: 'error', message };
+      });
+    } finally {
+      fetchEntreguesInFlightRef.current = false;
+      setEntreguesLoading(false);
+    }
+  };
+
+  const handleAcceptOrder = async (orderId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('Sessão expirada');
+
+      const resp = await fetch('/api/entregadores/painel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ action: 'aceitar', orderId })
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        throw new Error(data?.error || `HTTP ${resp.status}`);
+      }
+
+      setNotification({ type: 'success', message: 'Pedido aceito! Boa entrega.' });
+      await fetchPainel();
+      if (activeSection === 'minhas_entregas') {
+        await fetchMinhasEntregas({ page: 1, perPage: entreguesPerPage });
+      }
+    } catch (error: any) {
+      setNotification({ type: 'error', message: error?.message || 'Erro ao aceitar pedido' });
+    }
+  };
+
+  const handleFinishDelivery = async (orderId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('Sessão expirada');
+
+      const resp = await fetch('/api/entregadores/painel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ action: 'finalizar', orderId })
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        throw new Error(data?.error || `HTTP ${resp.status}`);
+      }
+
+      setNotification({ type: 'success', message: 'Entrega finalizada com sucesso.' });
+      await fetchPainel();
+      if (activeSection === 'minhas_entregas') {
+        await fetchMinhasEntregas({ page: 1, perPage: entreguesPerPage });
+      }
+    } catch (error: any) {
+      setNotification({ type: 'error', message: error?.message || 'Erro ao finalizar entrega' });
     }
   };
 
@@ -81,31 +311,11 @@ export default function PainelEntregador() {
       if (!user) return;
 
       setUserName(user.user_metadata?.nome || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Entregador');
-
-      // Aqui buscaríamos dados reais do Supabase
-      // 1. Buscar estatísticas do entregador
-      // 2. Buscar entrega atual (status 'Em Entrega' ou 'Pedido Pronto' atribuída a ele)
-      // 3. Buscar histórico de entregas
-
-      // Mock de dados para demonstração inicial conforme imagem
-      setCurrentDelivery({
-        id: '4921',
-        status_pedido: OrderStatus.SAIU_ENTREGA,
-        retirada: {
-          local: 'Burger King - Centro',
-          endereco: 'Rua Augusta, 1500'
-        },
-        entrega: {
-          cliente: 'Ana Souza',
-          endereco: 'Av. Paulista, 200 - Apt 42'
-        }
-      });
-
-      setHistory([
-        { id: 1, data: 'Hoje, 14:30', local: "McDonald's", distancia: '3.2 km', valor: 12.50, status_pedido: OrderStatus.ENTREGUE },
-        { id: 2, data: 'Hoje, 11:15', local: "Subway", distancia: '1.8 km', valor: 9.00, status_pedido: OrderStatus.ENTREGUE },
-        { id: 3, data: 'Ontem, 19:45', local: "Pizza Hut", distancia: '4.5 km', valor: 15.00, status_pedido: OrderStatus.CANCELADO_CLIENTE }
-      ]);
+      try {
+        await fetchPainel();
+      } catch (e: any) {
+        setNotification({ type: 'error', message: e?.message || 'Erro ao carregar painel' });
+      }
     }
 
     if (!loading && role) {
@@ -113,7 +323,87 @@ export default function PainelEntregador() {
     }
   }, [loading, role]);
 
+  useEffect(() => {
+    if (!role || (role !== 'entregador' && role !== 'admin')) return;
+    let ignore = false;
+    let channel: any = null;
+
+    const start = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || ignore) return;
+
+      channel = supabase
+        .channel('realtime-entregador-painel')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'pedidos',
+            filter: establishmentId ? `estabelecimento_id=eq.${establishmentId}` : undefined
+          },
+          () => {
+            if (activeSection === 'minhas_entregas') {
+              fetchMinhasEntregas({ page: 1, perPage: entreguesPerPage }).catch(() => {});
+            } else {
+              fetchPainel().catch(() => {});
+            }
+          }
+        )
+        .subscribe();
+    };
+
+    start();
+    return () => {
+      ignore = true;
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [role, establishmentId, activeSection, entreguesPerPage]);
+
+  useEffect(() => {
+    if (!role || (role !== 'entregador' && role !== 'admin')) return;
+
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      if (activeSection === 'minhas_entregas') {
+        fetchMinhasEntregas({ page: 1, perPage: entreguesPerPage }).catch(() => {});
+      } else {
+        fetchPainel().catch(() => {});
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [role, establishmentId, activeSection, entreguesPerPage]);
+
+  useEffect(() => {
+    if (!role || (role !== 'entregador' && role !== 'admin')) return;
+    if (activeSection !== 'minhas_entregas') return;
+
+    setEntregues([]);
+    setEntreguesPage(1);
+    setEntreguesHasMore(true);
+    fetchMinhasEntregas({ page: 1, perPage: entreguesPerPage }).catch(() => {});
+  }, [activeSection, role, entreguesPerPage]);
+
+  useEffect(() => {
+    const totalPages = calcTotalPages(availableOrders.length, prontosPerPage);
+    setProntosPage((p) => clampPage(p, totalPages));
+  }, [availableOrders.length, prontosPerPage]);
+
+  useEffect(() => {
+    const totalPages = calcTotalPages(currentDeliveries.length, aceitosPerPage);
+    setAceitosPage((p) => clampPage(p, totalPages));
+  }, [currentDeliveries.length, aceitosPerPage]);
+
   if (loading) return <div>Carregando...</div>;
+
+  const prontosTotalPages = calcTotalPages(availableOrders.length, prontosPerPage);
+  const prontosFrom = (prontosPage - 1) * prontosPerPage;
+  const prontosItems = availableOrders.slice(prontosFrom, prontosFrom + prontosPerPage);
+
+  const aceitosTotalPages = calcTotalPages(currentDeliveries.length, aceitosPerPage);
+  const aceitosFrom = (aceitosPage - 1) * aceitosPerPage;
+  const aceitosItems = currentDeliveries.slice(aceitosFrom, aceitosFrom + aceitosPerPage);
 
   return (
     <div className={styles.container}>
@@ -128,10 +418,16 @@ export default function PainelEntregador() {
         </div>
 
         <nav className={styles.nav}>
-          <button className={`${styles.navItem} ${styles.navItemActive}`}>
+          <button
+            className={`${styles.navItem} ${activeSection === 'inicio' ? styles.navItemActive : ''}`}
+            onClick={() => setActiveSection('inicio')}
+          >
             <LayoutDashboard size={20} /> Início
           </button>
-          <button className={styles.navItem}>
+          <button
+            className={`${styles.navItem} ${activeSection === 'minhas_entregas' ? styles.navItemActive : ''}`}
+            onClick={() => setActiveSection('minhas_entregas')}
+          >
             <Truck size={20} /> Minhas Entregas
           </button>
           <button className={styles.navItem}>
@@ -205,127 +501,391 @@ export default function PainelEntregador() {
           </div>
         )}
 
-        {/* Stats Grid */}
-        <div className={styles.statsGrid}>
-          <div className={styles.statCard}>
-            <div className={`${styles.statIcon} ${styles.blueIcon}`}><Package size={20} /></div>
-            <div className={styles.statTrend}>+2</div>
-            <div className={styles.statValue}>{stats.entregasHoje}</div>
-            <div className={styles.statLabel}>Entregas Hoje</div>
-          </div>
-          <div className={styles.statCard}>
-            <div className={`${styles.statIcon} ${styles.greenIcon}`}><Wallet size={20} /></div>
-            <div className={`${styles.statTrend} ${styles.trendPositive}`}>+15%</div>
-            <div className={styles.statValue}>R$ {stats.faturamentoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
-            <div className={styles.statLabel}>Faturamento Total</div>
-          </div>
-          <div className={styles.statCard}>
-            <div className={`${styles.statIcon} ${styles.purpleIcon}`}><Trophy size={20} /></div>
-            <div className={styles.statValue}>{stats.taxaAceitacao}%</div>
-            <div className={styles.statLabel}>Taxa de Aceitação</div>
-          </div>
-          <div className={styles.statCard}>
-            <div className={`${styles.statIcon} ${styles.orangeIcon}`}><User size={20} /></div>
-            <div className={styles.statValue}>{stats.avaliacaoMedia}</div>
-            <div className={styles.statLabel}>Avaliação Média</div>
-          </div>
-        </div>
-
-        {/* Dashboard Content Grid */}
-        <div className={styles.dashboardGrid}>
-          {/* Current Delivery */}
-          {currentDelivery ? (
-            <section className={styles.currentDeliveryCard}>
-              <div className={styles.cardHeader}>
-                <h3><Navigation size={18} /> Entrega Atual</h3>
-                <span className={styles.deliveryStatus}>#{currentDelivery.id} • {currentDelivery.status_pedido}</span>
+        {activeSection === 'inicio' ? (
+          <>
+            <div className={styles.statsGrid}>
+              <div className={styles.statCard}>
+                <div className={`${styles.statIcon} ${styles.blueIcon}`}><Package size={20} /></div>
+                <div className={styles.statTrend}>+2</div>
+                <div className={styles.statValue}>{stats.entregasHoje}</div>
+                <div className={styles.statLabel}>Entregas Hoje</div>
               </div>
-              <div className={styles.deliveryContent}>
-                <div className={styles.mapPlaceholder}>
-                  <div style={{textAlign: 'center'}}>
-                    <Bike size={48} color="#10b981" />
-                    <p>Mapa Interativo</p>
+              <div className={styles.statCard}>
+                <div className={`${styles.statIcon} ${styles.greenIcon}`}><Wallet size={20} /></div>
+                <div className={`${styles.statTrend} ${styles.trendPositive}`}>+15%</div>
+                <div className={styles.statValue}>R$ {stats.faturamentoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                <div className={styles.statLabel}>Faturamento Total</div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={`${styles.statIcon} ${styles.purpleIcon}`}><Trophy size={20} /></div>
+                <div className={styles.statValue}>{stats.taxaAceitacao}%</div>
+                <div className={styles.statLabel}>Taxa de Aceitação</div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={`${styles.statIcon} ${styles.orangeIcon}`}><User size={20} /></div>
+                <div className={styles.statValue}>{stats.avaliacaoMedia}</div>
+                <div className={styles.statLabel}>Avaliação Média</div>
+              </div>
+            </div>
+
+            <div className={styles.dashboardGrid}>
+              <section className={`${styles.recentActivityCard} ${styles.readyOrdersCard}`}>
+                <div className={styles.cardTitleRow}>
+                  <h3>Pedidos Prontos</h3>
+                  <div className={styles.listHeaderRight}>
+                    <span className={styles.readyBadge}>{availableOrders.length}</span>
+                    <div className={styles.perPageControl}>
+                      <span className={styles.perPageLabel}>Ver</span>
+                      <select
+                        className={styles.perPageSelect}
+                        value={prontosPerPage}
+                        onChange={(e) => {
+                          const v = Number(e.target.value) || 8;
+                          setProntosPerPage(v);
+                          setProntosPage(1);
+                        }}
+                      >
+                        {PER_PAGE_OPTIONS.map((n) => (
+                          <option key={`prontos-${n}`} value={n}>{n}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className={styles.pager}>
+                      <button
+                        className={styles.pagerBtn}
+                        onClick={() => setProntosPage((p) => Math.max(1, p - 1))}
+                        disabled={prontosPage <= 1}
+                      >
+                        ‹
+                      </button>
+                      <span className={styles.pagerInfo}>{prontosPage}/{prontosTotalPages}</span>
+                      <button
+                        className={styles.pagerBtn}
+                        onClick={() => setProntosPage((p) => Math.min(prontosTotalPages, p + 1))}
+                        disabled={prontosPage >= prontosTotalPages}
+                      >
+                        ›
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div className={styles.deliveryInfo}>
-                  <div className={styles.infoItem}>
-                    <div className={styles.infoIcon}><Store size={18} /></div>
-                    <div className={styles.infoText}>
-                      <h4>RETIRADA</h4>
-                      <p>{currentDelivery.retirada.local}</p>
-                      <span>{currentDelivery.retirada.endereco}</span>
+                <div className={`${styles.activityList} ${styles.readyOrdersGrid}`}>
+                  {availableOrders.length === 0 ? (
+                    <div className={styles.emptyState}>Nenhum pedido pronto no momento.</div>
+                  ) : (
+                    prontosItems.map((p) => {
+                      const address = getClienteEnderecoCompleto(p);
+                      const mapsUrl = address ? getGoogleMapsUrl(address) : '';
+                      const clienteNome = p?.cliente?.nome || '';
+
+                      return (
+                        <div key={p.id} className={`${styles.activityItem} ${styles.readyOrderItem}`}>
+                        <div className={styles.activityIcon}>
+                          <Clock size={16} />
+                        </div>
+                        <div className={styles.activityContent}>
+                          <div className={styles.activityHeader}>
+                            <span className={styles.activityTitle}>#{p.numero_pedido || p.id.slice(0, 8)}</span>
+                            <span className={styles.activityTime}>{formatHour(p.criado_em)}</span>
+                          </div>
+                          <div className={styles.activityDetails}>
+                            <span>{p?.estabelecimento?.nome || 'Estabelecimento'}</span>
+                            <span>R$ {Number(p.total_pedido || 0).toFixed(2).replace('.', ',')}</span>
+                          </div>
+                          <div className={styles.clienteBlock}>
+                            {clienteNome ? (
+                              <div className={styles.clienteName}>{clienteNome}</div>
+                            ) : null}
+                            <div className={styles.addressRow}>
+                              <span className={styles.addressText}>
+                                {address || 'Endereço não informado'}
+                              </span>
+                              {mapsUrl ? (
+                                <a
+                                  className={styles.mapsIconBtn}
+                                  href={mapsUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  aria-label="Abrir no Google Maps"
+                                >
+                                  <MapPin size={18} />
+                                </a>
+                              ) : null}
+                            </div>
+                          </div>
+                          <button className={styles.acceptBtn} onClick={() => handleAcceptOrder(p.id)}>
+                            Aceitar Entrega
+                          </button>
+                        </div>
+                      </div>
+                      );
+                    })
+                  )}
+                </div>
+              </section>
+
+              {currentDeliveries.length > 0 ? (
+                <section className={styles.currentDeliveryCard}>
+                  <div className={styles.cardHeader}>
+                    <h3><Navigation size={18} /> Entrega Atual</h3>
+                    <div className={styles.listHeaderRight}>
+                      <span className={styles.deliveryStatus}>{currentDeliveries.length} aceita{currentDeliveries.length === 1 ? '' : 's'}</span>
+                      <div className={styles.perPageControl}>
+                        <span className={styles.perPageLabel}>Ver</span>
+                        <select
+                          className={styles.perPageSelect}
+                          value={aceitosPerPage}
+                          onChange={(e) => {
+                            const v = Number(e.target.value) || 8;
+                            setAceitosPerPage(v);
+                            setAceitosPage(1);
+                          }}
+                        >
+                          {PER_PAGE_OPTIONS.map((n) => (
+                            <option key={`aceitos-${n}`} value={n}>{n}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className={styles.pager}>
+                        <button
+                          className={styles.pagerBtn}
+                          onClick={() => setAceitosPage((p) => Math.max(1, p - 1))}
+                          disabled={aceitosPage <= 1}
+                        >
+                          ‹
+                        </button>
+                        <span className={styles.pagerInfo}>{aceitosPage}/{aceitosTotalPages}</span>
+                        <button
+                          className={styles.pagerBtn}
+                          onClick={() => setAceitosPage((p) => Math.min(aceitosTotalPages, p + 1))}
+                          disabled={aceitosPage >= aceitosTotalPages}
+                        >
+                          ›
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <div className={styles.infoItem}>
-                    <div className={styles.infoIcon} style={{color: '#10b981'}}><User size={18} /></div>
-                    <div className={styles.infoText}>
-                      <h4>ENTREGA</h4>
-                      <p>{currentDelivery.entrega.cliente}</p>
-                      <span>{currentDelivery.entrega.endereco}</span>
-                    </div>
+                  <div className={`${styles.deliveryContent} ${styles.deliveryGrid}`}>
+                    {aceitosItems.map((delivery: any) => {
+                      const address = getClienteEnderecoCompleto(delivery);
+                      const mapsUrl = address ? getGoogleMapsUrl(address) : '';
+                      const clienteNome = delivery?.cliente?.nome || '';
+                      const clienteTelefone = String(delivery?.cliente?.telefone || '');
+                      const deliveryFee = Number(delivery?.taxa_entrega || 0);
+                      const orderLabel = delivery.numero_pedido || delivery.id.slice(0, 8);
+                      const whatsappUrl = getWhatsAppUrl(
+                        clienteTelefone,
+                        `Olá! Sou o entregador do seu pedido #${orderLabel}.`
+                      );
+
+                      return (
+                        <div key={delivery.id} className={`${styles.activityItem} ${styles.readyOrderItem}`}>
+                          <div className={styles.activityContent}>
+                            <div className={styles.activityHeader}>
+                              <span className={styles.activityTitle}>#{delivery.numero_pedido || delivery.id.slice(0, 8)}</span>
+                              <span className={styles.activityTime}>{formatHour(delivery.criado_em)}</span>
+                            </div>
+                            <div className={styles.activityDetails}>
+                              <span>{delivery?.estabelecimento?.nome || 'Estabelecimento'}</span>
+                              <span>R$ {Number(delivery.total_pedido || 0).toFixed(2).replace('.', ',')}</span>
+                            </div>
+                            <div className={styles.deliveryFeeRow}>
+                              <span>Valor da Entrega</span>
+                              <span>{formatBRL(deliveryFee)}</span>
+                            </div>
+                            <div className={styles.clienteBlock}>
+                              {clienteNome ? (
+                                <div className={styles.clienteName}>{clienteNome}</div>
+                              ) : null}
+                              <div className={styles.addressRow}>
+                                <span className={styles.addressText}>
+                                  {address || 'Endereço não informado'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className={styles.deliveryActions}>
+                              {whatsappUrl ? (
+                                <a
+                                  className={styles.btnChat}
+                                  href={whatsappUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <MessageCircle size={18} /> Chat
+                                </a>
+                              ) : (
+                                <button className={styles.btnChat} disabled>
+                                  <MessageCircle size={18} /> Chat
+                                </button>
+                              )}
+                              {mapsUrl ? (
+                                <a
+                                  className={styles.btnMap}
+                                  href={mapsUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <MapPin size={18} /> Mapa
+                                </a>
+                              ) : (
+                                <button className={styles.btnMap} disabled>
+                                  <MapPin size={18} /> Mapa
+                                </button>
+                              )}
+                              <button
+                                className={styles.btnFinish}
+                                disabled={delivery.status_pedido !== OrderStatus.SAIU_ENTREGA}
+                                onClick={() => handleFinishDelivery(delivery.id)}
+                              >
+                                <CheckCircle2 size={18} /> Finalizar
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <div className={styles.deliveryActions}>
-                    <button className={styles.btnDetails}>Detalhes</button>
-                    <button className={styles.btnChat}>
-                      <MessageCircle size={18} /> Chat
+                </section>
+              ) : (
+                <section className={styles.currentDeliveryCard}>
+                  <div className={styles.cardHeader}>
+                    <h3><Navigation size={18} /> Entrega Atual</h3>
+                  </div>
+                  <div className={styles.deliveryContent} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+                    <p style={{ color: '#64748b' }}>Nenhuma entrega em andamento no momento.</p>
+                  </div>
+                </section>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className={styles.statsGrid}>
+              <div className={styles.statCard}>
+                <div className={`${styles.statIcon} ${styles.greenIcon}`}><Wallet size={20} /></div>
+                <div className={styles.statValue}>{formatBRL(ganhos.dia)}</div>
+                <div className={styles.statLabel}>Ganhos Hoje</div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={`${styles.statIcon} ${styles.blueIcon}`}><Wallet size={20} /></div>
+                <div className={styles.statValue}>{formatBRL(ganhos.semana)}</div>
+                <div className={styles.statLabel}>Ganhos Semana</div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={`${styles.statIcon} ${styles.purpleIcon}`}><Wallet size={20} /></div>
+                <div className={styles.statValue}>{formatBRL(ganhos.mes)}</div>
+                <div className={styles.statLabel}>Ganhos Mês</div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={`${styles.statIcon} ${styles.orangeIcon}`}><Package size={20} /></div>
+                <div className={styles.statValue}>{entregues.length}</div>
+                <div className={styles.statLabel}>Pedidos Entregues</div>
+              </div>
+            </div>
+
+            <div className={styles.dashboardGrid}>
+              <section className={styles.recentActivityCard}>
+                <div className={styles.cardTitleRow}>
+                  <h3>Pedidos Entregues</h3>
+                  <span className={styles.readyBadge}>{entregues.length}</span>
+                </div>
+
+                <div className={styles.entreguesGrid}>
+                  {entregues.length === 0 ? (
+                    <div className={styles.emptyState}>Nenhum pedido entregue ainda.</div>
+                  ) : (
+                    entregues.map((p: any) => {
+                      const address = getClienteEnderecoCompleto(p);
+                      const mapsUrl = address ? getGoogleMapsUrl(address) : '';
+                      const clienteNome = p?.cliente?.nome || '';
+                      const deliveryFee = Number(p?.taxa_entrega || 0);
+                      const estabelecimentoNome = p?.estabelecimento?.nome || 'ZapZap Delivery';
+                      const total = Number(p?.total_pedido || 0);
+
+                      return (
+                        <div key={p.id} className={styles.entregueCard}>
+                          <div className={styles.entregueTop}>
+                            <div className={styles.entregueIconWrap}>
+                              <CheckCircle2 size={18} />
+                            </div>
+                            <div className={styles.entregueTopMain}>
+                              <div className={styles.entregueTitleRow}>
+                                <span className={styles.entregueNumero}>#{p.numero_pedido || p.id.slice(0, 8)}</span>
+                                <span className={styles.entregueHora}>{formatHour(p.criado_em)}</span>
+                              </div>
+                              <div className={styles.entregueDetailsRow}>
+                                <span className={styles.entregueEstabelecimento}>{estabelecimentoNome}</span>
+                                <span className={styles.entregueTotal}>{formatBRL(total)}</span>
+                              </div>
+                              <div className={styles.entregueFeeRow}>
+                                <span>Ganho da entrega</span>
+                                <span>{formatBRL(deliveryFee)}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className={styles.entregueClienteBlock}>
+                            {clienteNome ? <div className={styles.entregueClienteNome}>{clienteNome}</div> : null}
+                            <div className={styles.entregueEnderecoRow}>
+                              <span className={styles.entregueEnderecoText}>{address || 'Endereço não informado'}</span>
+                              {mapsUrl ? (
+                                <a
+                                  className={styles.entregueMapBtn}
+                                  href={mapsUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  aria-label="Abrir no Google Maps"
+                                >
+                                  <MapPin size={18} />
+                                </a>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                <div className={styles.entreguesFooter}>
+                  <div className={styles.perPageControl}>
+                    <span className={styles.perPageLabel}>Ver</span>
+                    <select
+                      className={styles.perPageSelect}
+                      value={entreguesPerPage}
+                      onChange={(e) => {
+                        const v = Number(e.target.value) || 8;
+                        setEntreguesPerPage(v);
+                        setEntreguesPage(1);
+                      }}
+                    >
+                      {PER_PAGE_OPTIONS.map((n) => (
+                        <option key={`entregues-${n}`} value={n}>{n}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className={styles.pager}>
+                    <button
+                      className={styles.pagerBtn}
+                      onClick={() => fetchMinhasEntregas({ page: Math.max(1, entreguesPage - 1), perPage: entreguesPerPage })}
+                      disabled={entreguesLoading || entreguesPage <= 1}
+                    >
+                      ‹
+                    </button>
+                    <span className={styles.pagerInfo}>{entreguesPage}</span>
+                    <button
+                      className={styles.pagerBtn}
+                      onClick={() => fetchMinhasEntregas({ page: entreguesPage + 1, perPage: entreguesPerPage })}
+                      disabled={entreguesLoading || !entreguesHasMore}
+                    >
+                      ›
                     </button>
                   </div>
                 </div>
-              </div>
-            </section>
-          ) : (
-            <section className={styles.currentDeliveryCard}>
-              <div className={styles.cardHeader}>
-                <h3><Navigation size={18} /> Entrega Atual</h3>
-              </div>
-              <div className={styles.deliveryContent} style={{ justifyContent: 'center', alignItems: 'center', height: '300px' }}>
-                <p style={{ color: '#64748b' }}>Nenhuma entrega em andamento no momento.</p>
-              </div>
-            </section>
-          )}
-
-          {/* Right Panel */}
-          <aside className={styles.rightPanel}>
-            <div className={styles.quickActionsCard}>
-              <h3>Ações Rápidas</h3>
-              <p>Gerencie suas preferências</p>
-              <div className={styles.actionButtons}>
-                <button className={styles.actionBtn}>
-                  <Bike size={20} />
-                  Atualizar Veículo
-                </button>
-                <button className={styles.actionBtn}>
-                  <User size={20} />
-                  Editar Perfil
-                </button>
-              </div>
+              </section>
             </div>
-
-            <div className={styles.recentActivityCard}>
-              <h3>Atividade Recente</h3>
-              <div className={styles.activityList}>
-                {history.map(item => (
-                  <div key={item.id} className={styles.activityItem}>
-                    <div className={styles.activityIcon}>
-                      <CheckCircle2 size={16} />
-                    </div>
-                    <div className={styles.activityContent}>
-                      <div className={styles.activityHeader}>
-                        <span className={styles.activityTitle}>{item.local}</span>
-                        <span className={styles.activityTime}>{item.data}</span>
-                      </div>
-                      <div className={styles.activityDetails}>
-                        <span>{item.distancia}</span>
-                        <span>R$ {item.valor.toFixed(2)}</span>
-                      </div>
-                      <div className={styles.activityStatus}>{item.status_pedido}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </aside>
-        </div>
+          </>
+        )}
       </main>
     </div>
   );

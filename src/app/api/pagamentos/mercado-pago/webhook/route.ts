@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
 import { OrderStatus } from '@/types/orderStatus';
+import { sendOrderStatusWebhook } from '@/app/api/webhooks/notificaclientestatusdopedido/route';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -130,7 +131,7 @@ export async function POST(request: Request) {
 
                     // Só atualiza se houver mudança
                     if (novoStatus !== statusAtual || novaObservacao !== pedido.observacao_cliente) {
-                        await supabaseAdmin
+                        const { error: updateErr } = await supabaseAdmin
                             .from('pedidos')
                             .update({ 
                                 status_pedido: novoStatus,
@@ -138,7 +139,24 @@ export async function POST(request: Request) {
                             })
                             .eq('id', pedidoId);
                             
-                        console.log(`[Webhook MP] Pedido ${pedidoId} atualizado para ${novoStatus}`);
+                        if (updateErr) {
+                            console.error(`[Webhook MP] Erro ao atualizar pedido ${pedidoId}:`, updateErr);
+                        } else {
+                            console.log(`[Webhook MP] Pedido ${pedidoId} atualizado para ${novoStatus}`);
+
+                            if (novoStatus === OrderStatus.CONFIRMADO && statusAtual !== OrderStatus.CONFIRMADO) {
+                                const notifyResult = await sendOrderStatusWebhook({
+                                    orderId: pedidoId,
+                                    newStatus: novoStatus,
+                                    previousStatus: statusAtual,
+                                    establishmentId: estabelecimentoId,
+                                    isSuperAdmin: true
+                                });
+                                if (!notifyResult.ok && !notifyResult.skipped) {
+                                    console.error('[Webhook MP] Falha ao disparar webhook de status:', notifyResult);
+                                }
+                            }
+                        }
                     } else {
                         console.log(`[Webhook MP] Pedido ${pedidoId} já estava atualizado.`);
                     }

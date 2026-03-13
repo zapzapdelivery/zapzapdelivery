@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
@@ -69,6 +69,7 @@ export default function PedidosPage() {
   const [dateFilter, setDateFilter] = useState('0'); // Default: Hoje (0 dias)
   const [ordersData, setOrdersData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const fetchInFlightRef = useRef(false);
   const [draggedOrderId, setDraggedOrderId] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
@@ -80,14 +81,16 @@ export default function PedidosPage() {
   const { role } = useUserRole();
   const { error: showError, success: showSuccess } = useToast();
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (opts?: { silent?: boolean }) => {
     try {
-      setLoading(true);
+      if (fetchInFlightRef.current) return;
+      fetchInFlightRef.current = true;
+      if (!opts?.silent) setLoading(true);
       // Buscar via API com token (contorna RLS no cliente)
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         setOrdersData([]);
-        setLoading(false);
+        if (!opts?.silent) setLoading(false);
         return;
       }
       
@@ -135,6 +138,9 @@ export default function PedidosPage() {
         const nomeCliente = clienteRel?.nome_cliente || 'Cliente não identificado';
         const avatarCliente = clienteRel?.imagem_cliente_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(nomeCliente || 'C')}&background=random&color=fff`;
 
+        const entregadorRel = Array.isArray(order.entregadores) ? order.entregadores?.[0] : order.entregadores;
+        const nomeEntregador = entregadorRel?.nome_entregador || null;
+
         return {
           id: `#${order.numero_pedido}`,
           real_id: order.id, // Keep real ID for updates
@@ -142,6 +148,7 @@ export default function PedidosPage() {
             nome: nomeCliente,
             avatar: avatarCliente
           },
+          entregadorNome: nomeEntregador,
           itens: itensString,
           data: order.criado_em ? format(new Date(order.criado_em), 'dd MMM, yyyy', { locale: ptBR }) : '-',
           hora: order.criado_em ? format(new Date(order.criado_em), 'HH:mm') : '-',
@@ -159,7 +166,8 @@ export default function PedidosPage() {
       const msg = error?.message || error?.error_description || JSON.stringify(error || {});
       console.error('Error fetching orders:', { message: msg, raw: error });
     } finally {
-      setLoading(false);
+      fetchInFlightRef.current = false;
+      if (!opts?.silent) setLoading(false);
     }
   };
 
@@ -170,6 +178,31 @@ export default function PedidosPage() {
     }, 500);
     return () => clearTimeout(timer);
   }, [dateFilter, searchTerm]);
+
+  useEffect(() => {
+    const intervalMs = viewMode === 'kanban' ? 2000 : 6000;
+
+    const tick = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      fetchOrders({ silent: true });
+    };
+
+    const interval = setInterval(tick, intervalMs);
+
+    const onFocus = () => tick();
+    const onVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') tick();
+    };
+
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [viewMode, dateFilter, searchTerm]);
 
   useEffect(() => {
     const onResize = () => setIsMobileView(window.innerWidth < 768);
@@ -190,7 +223,11 @@ export default function PedidosPage() {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos' }, () => {
           fetchOrders();
         })
-        .subscribe();
+        .subscribe((status: any) => {
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            fetchOrders({ silent: true });
+          }
+        });
     } catch (e) {
       console.warn('Realtime subscription error:', e);
     }
@@ -207,6 +244,7 @@ export default function PedidosPage() {
     const currentOrder = ordersData.find(o => o.real_id === orderId);
     if (!currentOrder) return;
 
+    const previousStatus = currentOrder.status;
     const isCancelled = currentOrder.status === OrderStatus.CANCELADO_CLIENTE || currentOrder.status === OrderStatus.CANCELADO_ESTABELECIMENTO;
     
     // Se o pedido estiver cancelado, apenas admin ou estabelecimento pode alterar
@@ -214,6 +252,7 @@ export default function PedidosPage() {
       showError('Apenas administradores e estabelecimentos podem alterar o status de pedidos cancelados.');
       return;
     }
+    if (previousStatus === newStatus) return;
 
     // Optimistic update
     setOrdersData(prev => prev.map(order => 
@@ -556,34 +595,41 @@ export default function PedidosPage() {
                               </div>
                             </div>
                             <div className={styles.cardBottom}>
-                              <span className={styles.cardPrice}>{order.total}</span>
-                              <div className={styles.cardActions} onDragStart={(e) => e.stopPropagation()} draggable="false">
-                                <button 
-                                  className={styles.actionIconButton} 
-                                  onDragStart={(e) => e.stopPropagation()} 
-                                  draggable="false"
-                                >
-                                  <MoreVertical size={16} />
-                                </button>
-                                <button 
-                                  className={`${styles.actionIconButton} ${styles.actionIconButtonView}`} 
-                                  onDragStart={(e) => e.stopPropagation()} 
-                                  draggable="false"
-                                  onClick={() => handleViewOrder(order)}
-                                >
-                                  <Eye size={16} />
-                                </button>
-                                <button 
-                                  className={`${styles.actionIconButton} ${styles.actionIconButtonDelete}`} 
-                                  onDragStart={(e) => e.stopPropagation()} 
-                                  draggable="false"
-                                  onClick={() => openCancelModal(order)}
-                                  title="Cancelar pedido"
-                                  style={{ opacity: canEditOrderByRole(role) ? 1 : 0.4, cursor: canEditOrderByRole(role) ? 'pointer' : 'not-allowed' }}
-                                >
-                                  <Trash2 size={16} />
-                                </button>
+                              <div className={styles.cardBottomTop}>
+                                <span className={styles.cardPrice}>{order.total}</span>
+                                <div className={styles.cardActions} onDragStart={(e) => e.stopPropagation()} draggable="false">
+                                  <button 
+                                    className={styles.actionIconButton} 
+                                    onDragStart={(e) => e.stopPropagation()} 
+                                    draggable="false"
+                                  >
+                                    <MoreVertical size={16} />
+                                  </button>
+                                  <button 
+                                    className={`${styles.actionIconButton} ${styles.actionIconButtonView}`} 
+                                    onDragStart={(e) => e.stopPropagation()} 
+                                    draggable="false"
+                                    onClick={() => handleViewOrder(order)}
+                                  >
+                                    <Eye size={16} />
+                                  </button>
+                                  <button 
+                                    className={`${styles.actionIconButton} ${styles.actionIconButtonDelete}`} 
+                                    onDragStart={(e) => e.stopPropagation()} 
+                                    draggable="false"
+                                    onClick={() => openCancelModal(order)}
+                                    title="Cancelar pedido"
+                                    style={{ opacity: canEditOrderByRole(role) ? 1 : 0.4, cursor: canEditOrderByRole(role) ? 'pointer' : 'not-allowed' }}
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
                               </div>
+                              {order.entregadorNome ? (
+                                <div className={styles.cardDelivererRow}>
+                                  <span className={styles.cardDelivererName}>{order.entregadorNome}</span>
+                                </div>
+                              ) : null}
                             </div>
                           </div>
                           );

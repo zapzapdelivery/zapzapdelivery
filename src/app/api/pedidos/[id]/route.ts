@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin, getAuthContext } from '@/lib/server-auth';
+import { OrderStatus } from '@/types/orderStatus';
 
 const isValidUuid = (value: any): value is string => {
   return value != null 
@@ -101,6 +102,31 @@ export async function PATCH(
     const id = typeof rawId === 'string' ? rawId.trim() : '';
     if (!isValidUuid(id)) {
       return NextResponse.json({ error: 'ID de pedido inválido' }, { status: 400 });
+    }
+
+    if (role === 'atendente') {
+      let statusQuery = supabaseAdmin
+        .from('pedidos')
+        .select('id, status_pedido, estabelecimento_id')
+        .eq('id', id);
+
+      if (!isSuperAdmin && establishmentId) {
+        statusQuery = statusQuery.eq('estabelecimento_id', establishmentId);
+      }
+
+      const { data: pedidoRow, error: pedidoErr } = await statusQuery.maybeSingle();
+      if (pedidoErr) {
+        return NextResponse.json({ error: pedidoErr.message }, { status: 400 });
+      }
+      if (!pedidoRow) {
+        return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
+      }
+      if ((pedidoRow as any).status_pedido === OrderStatus.ENTREGUE) {
+        return NextResponse.json(
+          { error: 'Pedido entregue não pode ser alterado por atendente' },
+          { status: 403 }
+        );
+      }
     }
 
     const body = await request.json().catch(() => ({}));

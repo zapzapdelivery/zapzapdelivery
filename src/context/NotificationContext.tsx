@@ -77,27 +77,34 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
              ctx.resume().catch(() => {});
         }
 
-        const playBeep = (startTime: number) => {
+        const playTone = (startTime: number, freqStart: number, freqEnd: number, duration: number, volume: number, type: OscillatorType) => {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             
             osc.connect(gain);
             gain.connect(ctx.destination);
             
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(880, startTime); // A5
-            osc.frequency.exponentialRampToValueAtTime(440, startTime + 0.1);
+            osc.type = type;
+            osc.frequency.setValueAtTime(freqStart, startTime);
+            osc.frequency.exponentialRampToValueAtTime(Math.max(1, freqEnd), startTime + Math.max(0.01, duration * 0.75));
             
-            gain.gain.setValueAtTime(0.1, startTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.1);
+            gain.gain.setValueAtTime(volume, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, startTime + Math.max(0.01, duration));
             
             osc.start(startTime);
-            osc.stop(startTime + 0.15);
+            osc.stop(startTime + duration);
         };
 
         const now = ctx.currentTime;
+        const isOrderSound = repeats >= 2;
         for (let i = 0; i < repeats; i++) {
-            playBeep(now + i * 0.4);
+            const base = now + i * (isOrderSound ? 0.55 : 0.4);
+            if (isOrderSound) {
+              playTone(base, 1175, 784, 0.18, 0.32, 'triangle');
+              playTone(base + 0.22, 988, 659, 0.22, 0.28, 'triangle');
+            } else {
+              playTone(base, 880, 440, 0.15, 0.16, 'sine');
+            }
         }
     } catch (e) {
         console.error('Error playing notification sound:', e);
@@ -114,9 +121,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     setNotifications(prev => [newNotification, ...prev]);
     
-    // Repeat 3 times for new orders, 1 time for others
+    // Repeat 1 time for new orders, 1 time for others
     if (notification.type === 'order') {
-      playNotificationSound(3);
+      playNotificationSound(1);
     } else {
       playNotificationSound(1);
     }

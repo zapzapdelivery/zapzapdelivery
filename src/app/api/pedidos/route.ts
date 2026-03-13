@@ -27,11 +27,15 @@ export async function GET(request: Request) {
     let query = supabaseAdmin
       .from('pedidos')
       .select(`
-        id, numero_pedido, cliente_id, criado_em, forma_pagamento, total_pedido, status_pedido, estabelecimento_id,
+        id, numero_pedido, cliente_id, criado_em, forma_pagamento, total_pedido, status_pedido, estabelecimento_id, entregador_id,
         clientes:cliente_id (
           nome_cliente,
           telefone,
           imagem_cliente_url
+        ),
+        entregadores:entregador_id (
+          id,
+          nome_entregador
         ),
         itens_pedidos (
           quantidade,
