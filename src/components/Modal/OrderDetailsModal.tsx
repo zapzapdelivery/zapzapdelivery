@@ -164,6 +164,15 @@ export function OrderDetailsModal({ isOpen, onClose, order, onCancel }: OrderDet
   const addressList = cliente?.enderecos_clientes || [];
   const address = Array.isArray(addressList) && addressList.length > 0 ? addressList[0] : null;
   const deliverer = details?.entregadores;
+  const orderNumberRaw =
+    details?.numero_pedido ??
+    order?.numero_pedido ??
+    order?.original?.numero_pedido ??
+    order?.id ??
+    order?.real_id ??
+    null;
+  const orderNumberCleaned = orderNumberRaw ? String(orderNumberRaw).replace(/^#+/, '').trim() : '';
+  const orderTitle = orderNumberCleaned ? `#${orderNumberCleaned}` : 'Pedido';
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -172,7 +181,7 @@ export function OrderDetailsModal({ isOpen, onClose, order, onCancel }: OrderDet
           <div className={styles.headerContent}>
             <div className={styles.leftHeader}>
               <div className={styles.titleRow}>
-                <h2 className={styles.orderTitle}>#{order?.numero_pedido || order?.id?.slice(0, 8) || 'Pedido'}</h2>
+                <h2 className={styles.orderTitle}>{orderTitle}</h2>
                 <span className={`${styles.statusBadge} ${styles['status_' + (details?.status_pedido || order?.status || '').toLowerCase().replace(/\s+/g, '')] || ''}`}>
                   {details?.status_pedido || order?.status || 'Status não informado'}
                 </span>

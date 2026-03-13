@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin, getAuthContext } from '@/lib/server-auth';
 import { OrderStatus } from '@/types/orderStatus';
+import { sendOrderStatusWebhook } from '@/app/api/webhooks/notificaclientestatusdopedido/route';
 
 const isValidUuid = (value: any): value is string => {
   return value != null
@@ -29,6 +30,28 @@ export async function POST(request: Request) {
     }
     if (!isValidUuid(safeId)) {
       return NextResponse.json({ error: 'ID de pedido inválido' }, { status: 400 });
+    }
+
+    let prevQuery = supabaseAdmin
+      .from('pedidos')
+      .select('id, status_pedido, estabelecimento_id')
+      .eq('id', safeId);
+
+    if (!ctx.isSuperAdmin && ctx.establishmentId) {
+      prevQuery = prevQuery.eq('estabelecimento_id', ctx.establishmentId);
+    }
+
+    const { data: prevRow, error: prevError } = await prevQuery.maybeSingle();
+    if (prevError) {
+      return NextResponse.json({ error: prevError.message }, { status: 400 });
+    }
+    if (!prevRow) {
+      return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
+    }
+
+    const previousStatus = String((prevRow as any).status_pedido || '');
+    if (previousStatus === String(newStatus)) {
+      return NextResponse.json({ ok: true, skipped: true });
     }
 
     if (newStatus === OrderStatus.CONFIRMADO) {
@@ -67,16 +90,30 @@ export async function POST(request: Request) {
       }
     }
 
-    const { error: updateError } = await supabaseAdmin
+    let updateQuery = supabaseAdmin
       .from('pedidos')
       .update({ status_pedido: newStatus })
       .eq('id', safeId);
+
+    if (!ctx.isSuperAdmin && ctx.establishmentId) {
+      updateQuery = updateQuery.eq('estabelecimento_id', ctx.establishmentId);
+    }
+
+    const { error: updateError } = await updateQuery;
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 400 });
     }
 
-    return NextResponse.json({ ok: true });
+    const webhookResult = await sendOrderStatusWebhook({
+      orderId: safeId,
+      newStatus: String(newStatus),
+      previousStatus,
+      establishmentId: ctx.establishmentId,
+      isSuperAdmin: ctx.isSuperAdmin
+    });
+
+    return NextResponse.json({ ok: true, webhook: webhookResult });
   } catch (e: any) {
     const message = e?.message || 'Internal Server Error';
     return NextResponse.json({ error: message }, { status: 500 });

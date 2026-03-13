@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/Toast/ToastProvider';
+import { useNotification } from '@/context/NotificationContext';
 import { 
   ArrowLeft, 
   Search, 
@@ -65,6 +66,7 @@ interface Category {
 export default function NovoPedido() {
   const router = useRouter();
   const toast = useToast();
+  const { playNotificationSound } = useNotification();
   const [establishmentId, setEstablishmentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   
@@ -361,6 +363,7 @@ export default function NovoPedido() {
         throw new Error(body?.error || `HTTP ${resp.status}`);
       }
 
+      playNotificationSound(1);
       toast.success('Pedido realizado com sucesso!');
       router.push('/pedidos');
 

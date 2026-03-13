@@ -104,6 +104,15 @@ export function OrderDetailsMobile({ isOpen, onClose, order, onCancel }: Props) 
   // Handle cliente as object or array (just in case)
   const clienteRaw = details?.clientes || order?.cliente;
   const cliente = Array.isArray(clienteRaw) ? clienteRaw[0] : (clienteRaw || {});
+  const orderNumberRaw =
+    details?.numero_pedido ??
+    order?.numero_pedido ??
+    order?.original?.numero_pedido ??
+    order?.id ??
+    order?.real_id ??
+    null;
+  const orderNumberCleaned = orderNumberRaw ? String(orderNumberRaw).replace(/^#+/, '').trim() : '';
+  const orderTitle = orderNumberCleaned ? `#${orderNumberCleaned}` : 'Pedido';
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -125,7 +134,7 @@ export function OrderDetailsMobile({ isOpen, onClose, order, onCancel }: Props) 
           </div>
           <div className={styles.headerInfo}>
             <div className={styles.orderInfo}>
-              <h2 className={styles.orderTitle}>{order?.id || 'Pedido'}</h2>
+              <h2 className={styles.orderTitle}>{orderTitle}</h2>
               <div className={styles.orderStatus}>
                 <span className={`${styles.statusBadge} ${styles[details?.status_pedido?.toLowerCase().replace(/\s+/g, '')] || ''}`}>
                   {details?.status_pedido || order?.status || 'Status não informado'}
