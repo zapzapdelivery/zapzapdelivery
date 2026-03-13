@@ -3,9 +3,9 @@ import type { MetadataRoute } from 'next';
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'ZapZap Delivery',
-    short_name: 'ZapZap',
+    short_name: 'ZZD',
     description: 'ZapZap Delivery',
-    start_url: '/',
+    start_url: '/paineladmin?pwa=1',
     scope: '/',
     display: 'standalone',
     background_color: '#ffffff',
@@ -24,4 +24,3 @@ export default function manifest(): MetadataRoute.Manifest {
     ]
   };
 }
-

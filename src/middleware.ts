@@ -92,6 +92,9 @@ export async function middleware(request: NextRequest) {
 
       // Special case for login page: redirect to appropriate dashboard
       if (path === '/paineladmin') {
+        if (search.get('pwa') === '1') {
+          return response
+        }
         const url = request.nextUrl.clone()
         if (role === 'cliente') url.pathname = '/minhaconta'
         else if (role === 'entregador') url.pathname = '/painelentregador'
