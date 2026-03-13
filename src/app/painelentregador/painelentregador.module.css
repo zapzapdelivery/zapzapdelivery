@@ -95,6 +95,16 @@
   cursor: pointer;
 }
 
+.btnIconActive {
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.btnIconPush {
+  color: #0f766e;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12), 0 1px 3px rgba(0,0,0,0.1);
+}
+
 .mainContent {
   flex: 1;
   margin-left: 260px;
