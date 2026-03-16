@@ -17,6 +17,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { CustomerSidebar } from '@/components/CustomerSidebar/CustomerSidebar';
+import { Loading } from '@/components/Loading/Loading';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/Toast/ToastProvider';
 import { formatCEP } from '@/utils/validators';
@@ -320,14 +321,7 @@ export default function EnderecosPage() {
   };
 
   if (loading) {
-    return (
-      <div className={styles.container}>
-        <CustomerSidebar />
-        <main className={styles.mainContent}>
-          <div className={styles.loadingContainer}>Carregando endereços...</div>
-        </main>
-      </div>
-    );
+    return <Loading message="Carregando minha conta..." fullScreen />;
   }
 
   return (

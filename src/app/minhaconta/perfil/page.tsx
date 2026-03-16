@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { CustomerSidebar } from '@/components/CustomerSidebar/CustomerSidebar';
 import { MobileHeader } from '@/components/Mobile/Header/MobileHeader';
+import { Loading } from '@/components/Loading/Loading';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/Toast/ToastProvider';
 import { formatCPF } from '@/utils/validators';
@@ -199,16 +200,7 @@ export default function PerfilPage() {
   };
 
   if (loading) {
-    return (
-      <div className={styles.container}>
-        <CustomerSidebar />
-        <main className={styles.mainContent}>
-          <div className={styles.header}>
-            <h1 className={styles.title}>Carregando...</h1>
-          </div>
-        </main>
-      </div>
-    );
+    return <Loading message="Carregando minha conta..." fullScreen />;
   }
 
   return (

@@ -20,6 +20,7 @@ import {
 import { CustomerSidebar } from '@/components/CustomerSidebar/CustomerSidebar';
 import { CustomerBottomNav } from '@/components/CustomerBottomNav/CustomerBottomNav';
 import { OrderTrackingModal } from '@/components/OrderTrackingModal/OrderTrackingModal';
+import { Loading } from '@/components/Loading/Loading';
 import { supabase } from '@/lib/supabase';
 import styles from './minhaconta.module.css';
 import { OrderStatus, LEGACY_STATUS_MAP } from '@/types/orderStatus';
@@ -32,6 +33,8 @@ export default function CustomerDashboard() {
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [orders, setOrders] = useState<any[]>([]);
+  const [lastOrder, setLastOrder] = useState<any>(null);
+  const [reordering, setReordering] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [statsData, setStatsData] = useState({
@@ -112,6 +115,75 @@ export default function CustomerDashboard() {
     }
   };
 
+  const fetchLastOrder = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      const res = await fetch('/api/minhaconta/ultimo-pedido', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        cache: 'no-store'
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return;
+      setLastOrder(data?.pedido || null);
+    } catch {}
+  };
+
+  const handleReorder = async () => {
+    if (reordering) return;
+    if (!lastOrder) return;
+
+    setReordering(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) return;
+
+      const rawItems = Array.isArray(lastOrder?.itens_pedidos) ? lastOrder.itens_pedidos : [];
+      const items = rawItems
+        .map((it: any) => {
+          const produtoId = String(it?.produto_id || it?.produtos?.id || '').trim();
+          const quantidade = Number(it?.quantidade || 0);
+          const valorBase = Number(it?.valor_unitario ?? it?.produtos?.valor_base ?? 0);
+          if (!produtoId || quantidade <= 0 || !Number.isFinite(valorBase)) return null;
+          return {
+            id: produtoId,
+            quantidade,
+            valor_base: valorBase,
+            observacao: String(it?.observacao_item || '')
+          };
+        })
+        .filter(Boolean);
+
+      if (items.length === 0) return;
+
+      const resp = await fetch('/api/pedidos/criar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items,
+          estabelecimento_id: lastOrder.estabelecimento_id,
+          forma_pagamento: lastOrder.forma_pagamento,
+          forma_entrega: lastOrder.forma_entrega,
+          observacao: String(lastOrder.observacao_cliente || ''),
+          user_id: user.id,
+          cupom_id: null,
+          valor_desconto: 0,
+          endereco_entrega: null
+        })
+      });
+
+      const result = await resp.json().catch(() => ({}));
+      if (!resp.ok) return;
+
+      const order = result?.order;
+      if (!order?.id) return;
+
+      window.location.href = `/checkout/${order.id}`;
+    } finally {
+      setReordering(false);
+    }
+  };
+
   useEffect(() => {
     async function getData() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -139,6 +211,7 @@ export default function CustomerDashboard() {
 
         await fetchOrders(user.id);
         await fetchStats();
+        await fetchLastOrder();
       }
       setLoading(false);
     }
@@ -300,7 +373,56 @@ export default function CustomerDashboard() {
     setIsModalOpen(true);
   };
 
-  if (loading) return null;
+  const lastOrderNumberRaw = lastOrder?.numero_pedido ? `#${lastOrder.numero_pedido}` : (lastOrder?.id ? `#${String(lastOrder.id).slice(0, 8)}` : '');
+  const lastOrderDate = lastOrder?.criado_em
+    ? new Date(lastOrder.criado_em).toLocaleDateString('pt-BR') +
+      ' ' +
+      new Date(lastOrder.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    : '';
+  const lastOrderTotal = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(lastOrder?.total_pedido || 0));
+  const lastOrderStatus = String(lastOrder?.status_pedido || 'Pendente');
+  const lastOrderStatusClass = getStatusClass(lastOrderStatus);
+  const lastOrderPaymentKey = String(lastOrder?.forma_pagamento || '').toLowerCase();
+  const lastOrderPaymentLabel =
+    lastOrderPaymentKey === 'pix'
+      ? 'PIX (Online)'
+      : lastOrderPaymentKey === 'mercado_pago'
+        ? 'Cartão (Online)'
+        : lastOrderPaymentKey === 'cartao_entrega'
+          ? 'Cartão (Na Entrega)'
+          : lastOrderPaymentKey === 'dinheiro'
+            ? 'Dinheiro (Na Entrega)'
+            : lastOrder?.forma_pagamento
+              ? String(lastOrder.forma_pagamento)
+              : '';
+  const lastOrderDeliveryKey = String(lastOrder?.forma_entrega || '').toLowerCase();
+  const lastOrderDeliveryLabel =
+    lastOrderDeliveryKey === 'delivery'
+      ? 'Delivery'
+      : lastOrderDeliveryKey === 'retirada'
+        ? 'Retirada'
+        : lastOrderDeliveryKey === 'consumo'
+          ? 'Consumo no local'
+          : lastOrder?.forma_entrega
+            ? String(lastOrder.forma_entrega)
+            : '';
+  const lastOrderEstabRaw = lastOrder?.estabelecimentos;
+  const lastOrderEstab = Array.isArray(lastOrderEstabRaw) ? lastOrderEstabRaw[0] : lastOrderEstabRaw;
+  const lastOrderEstabName = String(lastOrderEstab?.nome_estabelecimento || 'Estabelecimento');
+  const lastOrderEstabUrl = lastOrderEstab?.url_cardapio ? String(lastOrderEstab.url_cardapio) : '';
+  const lastOrderItemsRaw = Array.isArray(lastOrder?.itens_pedidos) ? lastOrder.itens_pedidos : [];
+  const lastOrderItemsSummary = lastOrderItemsRaw
+    .map((it: any) => {
+      const qty = Number(it?.quantidade || 0);
+      const name = String(it?.produtos?.nome_produto || '').trim();
+      if (!name || qty <= 0) return null;
+      return `${qty}x ${name}`;
+    })
+    .filter(Boolean)
+    .slice(0, 3)
+    .join(', ');
+
+  if (loading) return <Loading message="Carregando minha conta..." fullScreen />;
 
   return (
     <div className={styles.container}>
@@ -343,6 +465,80 @@ export default function CustomerDashboard() {
           </h1>
           <p className={styles.subtitle}>Área do Cliente</p>
         </header>
+
+        {lastOrder && (
+          <section className={styles.lastOrderSection}>
+            <div className={styles.lastOrderCard}>
+              <div className={styles.lastOrderLeft}>
+                <div className={styles.lastOrderIcon}>
+                  <Utensils size={20} />
+                </div>
+
+                <div className={styles.lastOrderInfo}>
+                  <div className={styles.lastOrderTopRow}>
+                    <div className={styles.lastOrderTitleBlock}>
+                      <div className={styles.lastOrderLabel}>Meu Último Pedido</div>
+                      <div className={styles.lastOrderTitle}>Pedido {lastOrderNumberRaw}</div>
+                    </div>
+                    <button
+                      className={styles.actionBtn}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleOpenModal(lastOrder);
+                      }}
+                      type="button"
+                      aria-label="Ver pedido"
+                    >
+                      <Eye size={18} />
+                    </button>
+                  </div>
+
+                  <div className={styles.lastOrderMeta}>
+                    {lastOrderTotal} • {lastOrderDate}
+                  </div>
+                  {(lastOrderPaymentLabel || lastOrderDeliveryLabel) && (
+                    <div className={styles.lastOrderMeta}>
+                      {lastOrderDeliveryLabel ? `Entrega: ${lastOrderDeliveryLabel}` : null}
+                      {lastOrderDeliveryLabel && lastOrderPaymentLabel ? ' • ' : null}
+                      {lastOrderPaymentLabel ? `Pagamento: ${lastOrderPaymentLabel}` : null}
+                    </div>
+                  )}
+
+                  <div className={styles.lastOrderEstablishment}>
+                    {lastOrderEstabUrl ? (
+                      <Link
+                        href={lastOrderEstabUrl.startsWith('http') ? lastOrderEstabUrl : `/estabelecimentos/cardapio/${lastOrderEstabUrl}`}
+                        className={styles.lastOrderEstablishmentLink}
+                      >
+                        {lastOrderEstabName}
+                      </Link>
+                    ) : (
+                      <span>{lastOrderEstabName}</span>
+                    )}
+                  </div>
+
+                  {lastOrderItemsSummary ? (
+                    <div className={styles.lastOrderItems}>Itens: {lastOrderItemsSummary}</div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className={styles.lastOrderRight}>
+                <span className={`${styles.lastOrderStatus} ${styles[lastOrderStatusClass]}`}>
+                  {lastOrderStatus.toUpperCase()}
+                </span>
+                <button
+                  className={styles.reorderBtn}
+                  onClick={handleReorder}
+                  disabled={reordering}
+                  type="button"
+                >
+                  {reordering ? 'Processando...' : 'Pedir novamente'}
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
 
         <div className={styles.statsGrid}>
           {stats.map((stat, index) => {
@@ -456,6 +652,23 @@ export default function CustomerDashboard() {
                       <div className={styles.orderText}>
                         <h4>Pedido {order.id}</h4>
                         <p>{order.total} • {order.date}</p>
+                        <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                          {order.establishmentUrl ? (
+                            <Link
+                              href={
+                                order.establishmentUrl.startsWith('http')
+                                  ? order.establishmentUrl
+                                  : `/estabelecimentos/cardapio/${order.establishmentUrl}`
+                              }
+                              className={styles.establishmentLinkMobile}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {order.establishment}
+                            </Link>
+                          ) : (
+                            order.establishment
+                          )}
+                        </p>
                       </div>
                     </div>
                     <div className={`${styles.orderStatusBadge} ${styles[order.statusClass]}`}>

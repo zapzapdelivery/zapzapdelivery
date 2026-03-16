@@ -24,6 +24,7 @@ import {
   Package,
   Clock,
   CheckCircle2,
+  Loader2,
   Ban,
   Menu,
   X
@@ -59,12 +60,14 @@ export default function PainelEntregador() {
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [incomingOrder, setIncomingOrder] = useState<any | null>(null);
   const [incomingAccepting, setIncomingAccepting] = useState(false);
+  const [finishingOrderId, setFinishingOrderId] = useState<string | null>(null);
   const fetchInFlightRef = useRef(false);
   const fetchEntreguesInFlightRef = useRef(false);
   const lastAvailableOrdersRef = useRef<Set<string> | null>(null);
   const declinedOrdersRef = useRef<Map<string, number>>(new Map());
   const modalTimerRef = useRef<any>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const pushEnsuredRef = useRef(false);
   const timeZone = 'America/Sao_Paulo';
 
   const PER_PAGE_OPTIONS = [8, 10, 20, 30, 50, 100];
@@ -95,6 +98,11 @@ export default function PainelEntregador() {
     const nextMode = alertsMode === 'off' ? 'som' : alertsMode === 'som' ? 'push' : 'off';
     setAlertsMode(nextMode);
     if (nextMode === 'push') {
+      const ok = await ensurePushSubscription();
+      if (!ok) {
+        setNotification({ type: 'error', message: 'Não foi possível ativar push neste dispositivo.' });
+        return;
+      }
       await showBrowserNotification('Notificações ativadas', 'Você vai receber alertas de pedido pronto.');
       setNotification({ type: 'success', message: 'Alertas: Push + Som' });
       vibrate([80, 50, 80]);
@@ -233,6 +241,24 @@ export default function PainelEntregador() {
   }, [alertsMode]);
 
   useEffect(() => {
+    if (loading) return;
+    if (!role || (role !== 'entregador' && role !== 'admin')) return;
+    if (alertsMode !== 'push') {
+      pushEnsuredRef.current = false;
+      return;
+    }
+    if (pushEnsuredRef.current) return;
+    pushEnsuredRef.current = true;
+    ensurePushSubscription()
+      .then((ok) => {
+        if (!ok) setNotification({ type: 'error', message: 'Não foi possível ativar push neste dispositivo.' });
+      })
+      .catch(() => {
+        setNotification({ type: 'error', message: 'Não foi possível ativar push neste dispositivo.' });
+      });
+  }, [alertsMode, role, loading]);
+
+  useEffect(() => {
     const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
     if (!AudioCtx) return;
 
@@ -304,6 +330,62 @@ export default function PainelEntregador() {
     } catch {
       return false;
     }
+  };
+
+  const urlBase64ToUint8Array = (base64String: string) => {
+    const value = String(base64String || '').trim();
+    const padding = '='.repeat((4 - (value.length % 4)) % 4);
+    const base64 = (value + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = window.atob(base64);
+    const output = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) output[i] = raw.charCodeAt(i);
+    return output;
+  };
+
+  const ensurePushSubscription = async (): Promise<boolean> => {
+    if (typeof window === 'undefined') return false;
+    if (typeof Notification === 'undefined') return false;
+    if (!('serviceWorker' in navigator)) return false;
+    if (!('PushManager' in window)) return false;
+
+    const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    if (!vapidPublicKey) return false;
+
+    if (Notification.permission === 'default') {
+      try {
+        await Notification.requestPermission();
+      } catch {}
+    }
+    if (Notification.permission !== 'granted') return false;
+
+    try {
+      await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    } catch {}
+
+    const reg = await navigator.serviceWorker.ready;
+    const existing = await reg.pushManager.getSubscription();
+    const subscription =
+      existing ||
+      (await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+      }));
+
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) return false;
+
+    const resp = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ subscription: subscription.toJSON() })
+    });
+
+    if (!resp.ok) return false;
+    return true;
   };
 
   const showBrowserNotification = async (title: string, body: string) => {
@@ -478,6 +560,8 @@ export default function PainelEntregador() {
   };
 
   const handleFinishDelivery = async (orderId: string) => {
+    if (finishingOrderId === orderId) return;
+    setFinishingOrderId(orderId);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
@@ -503,6 +587,8 @@ export default function PainelEntregador() {
       }
     } catch (error: any) {
       setNotification({ type: 'error', message: error?.message || 'Erro ao finalizar entrega' });
+    } finally {
+      setFinishingOrderId((prev) => (prev === orderId ? null : prev));
     }
   };
 
@@ -729,6 +815,18 @@ export default function PainelEntregador() {
                   {formatBRL(incomingOrder?.total_pedido || 0)}
                 </span>
               </div>
+              {(() => {
+                const fee = Number(incomingOrder?.taxa_entrega || 0);
+                const entregaKey = String(incomingOrder?.forma_entrega || '').trim().toLowerCase();
+                const shouldShow = entregaKey === 'delivery' || fee > 0;
+                if (!shouldShow) return null;
+                return (
+                  <div className={styles.incomingModalRow}>
+                    <span className={styles.incomingModalLabel}>Valor da Entrega</span>
+                    <span className={styles.incomingModalValue}>{fee === 0 ? 'Grátis' : formatBRL(fee)}</span>
+                  </div>
+                );
+              })()}
 
               {(() => {
                 const address = getClienteEnderecoCompleto(incomingOrder);
@@ -1196,10 +1294,19 @@ export default function PainelEntregador() {
                               )}
                               <button
                                 className={styles.btnFinish}
-                                disabled={delivery.status_pedido !== OrderStatus.SAIU_ENTREGA}
+                                disabled={delivery.status_pedido !== OrderStatus.SAIU_ENTREGA || finishingOrderId === delivery.id}
+                                aria-busy={finishingOrderId === delivery.id}
                                 onClick={() => handleFinishDelivery(delivery.id)}
                               >
-                                <CheckCircle2 size={18} /> Finalizar
+                                {finishingOrderId === delivery.id ? (
+                                  <>
+                                    <Loader2 size={18} className="animate-spin" /> Finalizando...
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle2 size={18} /> Finalizar
+                                  </>
+                                )}
                               </button>
                             </div>
                           </div>

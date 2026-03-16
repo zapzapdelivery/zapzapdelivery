@@ -26,7 +26,6 @@ import {
   XCircle,
   AlertTriangle,
   ShoppingBag,
-  MoreVertical
 } from 'lucide-react';
 import { AdminHeader } from '../../components/Header/AdminHeader';
 import { OrderDetailsModal } from '../../components/Modal/OrderDetailsModal';
@@ -80,6 +79,105 @@ export default function PedidosPage() {
   const [isMobileView, setIsMobileView] = useState(false);
   const { role } = useUserRole();
   const { error: showError, success: showSuccess } = useToast();
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const [pendingAssignOrderId, setPendingAssignOrderId] = useState<string | null>(null);
+  const [pendingAssignNewStatus, setPendingAssignNewStatus] = useState<string | null>(null);
+  const [pendingAssignOrderLabel, setPendingAssignOrderLabel] = useState<string>('');
+  const [deliverersLoading, setDeliverersLoading] = useState(false);
+  const [deliverers, setDeliverers] = useState<any[]>([]);
+  const [delivererSearch, setDelivererSearch] = useState('');
+  const [selectedDelivererId, setSelectedDelivererId] = useState<string>('');
+  const [selectedDelivererName, setSelectedDelivererName] = useState<string>('');
+
+  const fetchDeliverers = async () => {
+    try {
+      setDeliverersLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setDeliverers([]);
+        return;
+      }
+      const resp = await fetch('/api/entregadores', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        cache: 'no-store'
+      });
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        throw new Error(body?.error || `HTTP ${resp.status}`);
+      }
+      const data = await resp.json();
+      setDeliverers(Array.isArray(data) ? data : []);
+    } catch (e: any) {
+      showError(e?.message || 'Erro ao carregar entregadores.');
+      setDeliverers([]);
+    } finally {
+      setDeliverersLoading(false);
+    }
+  };
+
+  const closeAssignModal = () => {
+    if (assigning) return;
+    setAssignModalOpen(false);
+    setPendingAssignOrderId(null);
+    setPendingAssignNewStatus(null);
+    setPendingAssignOrderLabel('');
+    setDelivererSearch('');
+    setSelectedDelivererId('');
+  };
+
+  const updateOrderStatus = async (
+    orderId: string,
+    newStatus: string,
+    entregadorId?: string | null,
+    entregadorNameHint?: string | null
+  ) => {
+    let delivererName = null as string | null;
+    if (entregadorId) {
+      const found = deliverers.find(d => String(d?.id) === String(entregadorId));
+      delivererName = (found?.nome as string) || entregadorNameHint || null;
+    }
+
+    setOrdersData(prev => prev.map(order => {
+      if (order.real_id !== orderId) return order;
+      const nextOriginal = order?.original ? { ...order.original } : order.original;
+      if (nextOriginal && entregadorId !== undefined) {
+        nextOriginal.entregador_id = entregadorId;
+      }
+      return {
+        ...order,
+        status: newStatus,
+        entregadorNome: delivererName ?? order.entregadorNome,
+        original: nextOriginal
+      };
+    }));
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Sessão expirada');
+
+      const payload: any = { id: orderId, status: newStatus };
+      if (entregadorId !== undefined) payload.entregador_id = entregadorId;
+
+      const resp = await fetch('/api/pedidos/status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        throw new Error(body?.error || `HTTP ${resp.status}`);
+      }
+    } catch (error: any) {
+      console.error('Error updating status:', error?.message || error);
+      showError(error?.message || 'Erro ao atualizar status do pedido.');
+      fetchOrders();
+      throw error;
+    }
+  };
 
   const fetchOrders = async (opts?: { silent?: boolean }) => {
     try {
@@ -123,6 +221,21 @@ export default function PedidosPage() {
           'dinheiro': 'Dinheiro'
         };
 
+        const rawEntrega = String(order?.forma_entrega ?? '');
+        const rawObservacao = String(order?.observacao_cliente ?? '');
+        const entregaKey = rawEntrega.trim().toLowerCase();
+        const observacaoKey = rawObservacao.trim().toLowerCase();
+        const entregaLabel =
+          entregaKey === 'delivery' || entregaKey === 'entrega' || entregaKey === 'entregar' || entregaKey === 'del' || entregaKey === 'd'
+            ? 'Delivery'
+              : entregaKey === 'consumo' || entregaKey === 'consumir' || entregaKey === 'local' || entregaKey === 'c'
+                ? 'Consumir no Local'
+              : (entregaKey === 'retirada' || entregaKey === 'retirar' || entregaKey === 'pickup' || entregaKey === 'ret' || entregaKey === 'r')
+                ? (observacaoKey.includes('consumo') ? 'Consumir no Local' : 'Retirar no Local')
+                : rawEntrega
+                  ? rawEntrega
+                  : null;
+
         // Normalizar status para garantir compatibilidade com versões antigas ou inconsistências
         let normalizedStatus = order.status_pedido || OrderStatus.PEDINDO;
         
@@ -156,6 +269,8 @@ export default function PedidosPage() {
           pagamento: paymentMap[order.forma_pagamento] || order.forma_pagamento,
           pagamentoTipo: order.forma_pagamento,
           total: `R$ ${order.total_pedido?.toFixed(2).replace('.', ',') || '0,00'}`,
+          formaEntrega: rawEntrega || null,
+          formaEntregaLabel: entregaLabel,
           status: normalizedStatus,
           original: order
         };
@@ -254,32 +369,34 @@ export default function PedidosPage() {
     }
     if (previousStatus === newStatus) return;
 
-    // Optimistic update
-    setOrdersData(prev => prev.map(order => 
-      order.real_id === orderId ? { ...order, status: newStatus } : order
-    ));
+    const needsDelivererAssign =
+      previousStatus === OrderStatus.PRONTO
+      && newStatus === OrderStatus.SAIU_ENTREGA
+      && (role === 'admin' || role === 'estabelecimento');
+
+    if (needsDelivererAssign) {
+      const preselected = String(currentOrder?.original?.entregador_id || '');
+      setPendingAssignOrderId(orderId);
+      setPendingAssignNewStatus(newStatus);
+      setPendingAssignOrderLabel(String(currentOrder?.id || ''));
+      setSelectedDelivererId(preselected);
+      if (preselected) {
+        const found = deliverers.find(d => String(d?.id) === preselected);
+        setSelectedDelivererName(found?.nome || '');
+      } else {
+        setSelectedDelivererName('');
+      }
+      setAssignModalOpen(true);
+      if (deliverers.length === 0 && !deliverersLoading) {
+        fetchDeliverers();
+      }
+      return;
+    }
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('Sessão expirada');
-      }
-      const resp = await fetch('/api/pedidos/status', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ id: orderId, status: newStatus })
-      });
-      if (!resp.ok) {
-        const body = await resp.json().catch(() => ({}));
-        throw new Error(body?.error || `HTTP ${resp.status}`);
-      }
-    } catch (error: any) {
-      console.error('Error updating status:', error?.message || error);
-      showError(error?.message || 'Erro ao atualizar status do pedido.');
-      fetchOrders(); // Revert/Refresh on error
+      await updateOrderStatus(orderId, newStatus);
+    } catch {
+      return;
     }
   };
 
@@ -596,15 +713,13 @@ export default function PedidosPage() {
                             </div>
                             <div className={styles.cardBottom}>
                               <div className={styles.cardBottomTop}>
-                                <span className={styles.cardPrice}>{order.total}</span>
+                                <div className={styles.cardBottomLeft}>
+                                  <span className={styles.cardPrice}>{order.total}</span>
+                                  {order.formaEntregaLabel ? (
+                                    <span className={styles.deliveryTypeBadge}>{order.formaEntregaLabel}</span>
+                                  ) : null}
+                                </div>
                                 <div className={styles.cardActions} onDragStart={(e) => e.stopPropagation()} draggable="false">
-                                  <button 
-                                    className={styles.actionIconButton} 
-                                    onDragStart={(e) => e.stopPropagation()} 
-                                    draggable="false"
-                                  >
-                                    <MoreVertical size={16} />
-                                  </button>
                                   <button 
                                     className={`${styles.actionIconButton} ${styles.actionIconButtonView}`} 
                                     onDragStart={(e) => e.stopPropagation()} 
@@ -766,6 +881,9 @@ export default function PedidosPage() {
                   <h3 className={styles.mobileOrderId}>{order.id}</h3>
                   <span className={styles.mobilePrice}>{order.total}</span>
                 </div>
+                {order.formaEntregaLabel ? (
+                  <div className={styles.mobileDeliveryType}>{order.formaEntregaLabel}</div>
+                ) : null}
 
                 <div className={styles.mobileClientRow}>
                   <img src={order.cliente.avatar} alt={order.cliente.nome} className={styles.cardAvatar} />
@@ -844,6 +962,129 @@ export default function PedidosPage() {
             </>
           }
         />
+
+        {assignModalOpen ? (
+          <div
+            className={styles.assignOverlay}
+            role="dialog"
+            aria-modal="true"
+            onMouseDown={(e) => {
+              if (e.currentTarget === e.target) closeAssignModal();
+            }}
+          >
+            <div className={styles.assignModal}>
+              <div className={styles.assignHeader}>
+                <div className={styles.assignHeaderLeft}>
+                  <div className={styles.assignTitle}>Selecionar entregador</div>
+                  {pendingAssignOrderLabel ? (
+                    <div className={styles.assignSubtitle}>Pedido {pendingAssignOrderLabel}</div>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  className={styles.assignClose}
+                  onClick={closeAssignModal}
+                  disabled={assigning}
+                  aria-label="Fechar"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className={styles.assignBody}>
+                <label className={styles.assignLabel} htmlFor="delivererSearch">
+                  Pesquisar
+                </label>
+                <input
+                  id="delivererSearch"
+                  className={styles.assignInput}
+                  value={delivererSearch}
+                  onChange={(e) => setDelivererSearch(e.target.value)}
+                  placeholder="Digite o nome do entregador"
+                  disabled={deliverersLoading || assigning}
+                />
+
+                <label className={styles.assignLabel} htmlFor="delivererSelect">
+                  Entregador
+                </label>
+                <select
+                  id="delivererSelect"
+                  className={styles.assignSelect}
+                  value={selectedDelivererId}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedDelivererId(val);
+                    const found = (deliverers || []).find((d: any) => String(d?.id) === String(val));
+                    if (found?.nome) {
+                      setSelectedDelivererName(String(found.nome));
+                    } else {
+                      const label = e.target.options[e.target.selectedIndex]?.text || '';
+                      setSelectedDelivererName(label);
+                    }
+                  }}
+                  disabled={deliverersLoading || assigning}
+                >
+                  <option value="">
+                    {deliverersLoading ? 'Carregando entregadores...' : 'Selecione um entregador'}
+                  </option>
+                  {(deliverers || [])
+                    .filter((d: any) => {
+                      const nome = String(d?.nome || '').toLowerCase();
+                      const q = String(delivererSearch || '').toLowerCase().trim();
+                      if (!q) return true;
+                      return nome.includes(q);
+                    })
+                    .sort((a: any, b: any) => String(a?.nome || '').localeCompare(String(b?.nome || ''), 'pt-BR'))
+                    .map((d: any) => (
+                      <option key={String(d?.id)} value={String(d?.id)}>
+                        {String(d?.nome || 'Entregador')}
+                        {d?.telefone ? ` • ${String(d.telefone)}` : ''}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div className={styles.assignFooter}>
+                <button
+                  type="button"
+                  className={styles.assignBtnSecondary}
+                  onClick={closeAssignModal}
+                  disabled={assigning}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className={styles.assignBtnPrimary}
+                  disabled={assigning || deliverersLoading || !pendingAssignOrderId || !pendingAssignNewStatus || !selectedDelivererId}
+                  onClick={async () => {
+                    if (!pendingAssignOrderId || !pendingAssignNewStatus) return;
+                    if (!selectedDelivererId) {
+                      showError('Selecione um entregador.');
+                      return;
+                    }
+                    try {
+                      setAssigning(true);
+                      await updateOrderStatus(
+                        pendingAssignOrderId,
+                        pendingAssignNewStatus,
+                        selectedDelivererId,
+                        selectedDelivererName || null
+                      );
+                      closeAssignModal();
+                    } catch {
+                      return;
+                    } finally {
+                      setAssigning(false);
+                    }
+                  }}
+                >
+                  {assigning ? 'Salvando...' : 'Confirmar e enviar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

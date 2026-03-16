@@ -541,6 +541,20 @@
     margin-bottom: 0.4rem;
   }
 
+  .mobileDeliveryType {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid #e5e7eb;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.7rem;
+    font-weight: 800;
+    margin-bottom: 0.65rem;
+  }
+
   .mobileOrderId {
     font-size: 1rem;
     font-weight: 800;
@@ -950,10 +964,29 @@
   align-items: center;
 }
 
+.cardBottomLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
 .cardPrice {
   font-size: 0.875rem;
   font-weight: 800;
   color: #059669;
+}
+
+.deliveryTypeBadge {
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  white-space: nowrap;
 }
 
 .cardDelivererRow {
@@ -1094,6 +1127,155 @@
 .statCard.stat_pronto { border-top-color: #0d9488; }
 .statCard.stat_entrega { border-top-color: #6366f1; }
 .statCard.stat_entregue { border-top-color: #94a3b8; }
+
+.assignOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 60;
+}
+
+.assignModal {
+  width: 100%;
+  max-width: 560px;
+  background: #ffffff;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.assignHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.assignHeaderLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.assignTitle {
+  font-size: 1rem;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.assignSubtitle {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.assignClose {
+  width: 36px;
+  height: 36px;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.assignClose:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.assignBody {
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.assignLabel {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 0.5rem;
+}
+
+.assignInput,
+.assignSelect {
+  width: 100%;
+  padding: 0.75rem 0.875rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  outline: none;
+  font-size: 0.9rem;
+  color: #0f172a;
+}
+
+.assignInput:focus,
+.assignSelect:focus {
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.2);
+}
+
+.assignInput:disabled,
+.assignSelect:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.assignFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid #eef2f7;
+  background: #ffffff;
+}
+
+.assignBtnSecondary {
+  padding: 0.7rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #334155;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.assignBtnPrimary {
+  padding: 0.7rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid #22c55e;
+  background: #22c55e;
+  color: #ffffff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.assignBtnPrimary:disabled,
+.assignBtnSecondary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .assignModal {
+    max-width: 520px;
+  }
+}
 .statCard.stat_cancelado_cliente { border-top-color: #f87171; }
 .statCard.stat_cancelado_loja { border-top-color: #ef4444; }
 

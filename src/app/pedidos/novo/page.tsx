@@ -309,7 +309,7 @@ export default function NovoPedido() {
       const deliveryMap: Record<string, string> = {
         'retirar': 'retirada',
         'delivery': 'delivery',
-        'consumir': 'retirada'
+        'consumir': 'consumo'
       };
       const mappedDelivery = deliveryMap[deliveryMethod] || 'retirada';
       

@@ -17,6 +17,7 @@ import { CustomerSidebar } from '@/components/CustomerSidebar/CustomerSidebar';
 import { CustomerBottomNav } from '@/components/CustomerBottomNav/CustomerBottomNav';
 import { OrderTrackingModal } from '@/components/OrderTrackingModal/OrderTrackingModal';
 import { PixModal } from '@/components/PixModal/PixModal';
+import { Loading } from '@/components/Loading/Loading';
 import { supabase } from '@/lib/supabase';
 import styles from './pedidos.module.css';
 import { OrderStatus, LEGACY_STATUS_MAP } from '@/types/orderStatus';
@@ -259,7 +260,7 @@ function CustomerOrdersContent() {
     setIsModalOpen(true);
   };
 
-  if (loading) return null; // Or a loading spinner
+  if (loading) return <Loading message="Carregando minha conta..." fullScreen />;
 
   return (
     <div className={styles.container}>
@@ -488,7 +489,7 @@ function CustomerOrdersContent() {
 
 export default function CustomerOrdersPage() {
   return (
-    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Carregando pedidos...</div>}>
+    <Suspense fallback={<Loading message="Carregando minha conta..." fullScreen />}>
       <CustomerOrdersContent />
     </Suspense>
   );

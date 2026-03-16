@@ -441,7 +441,11 @@ export function OrderDetailsModal({ isOpen, onClose, order, onCancel }: OrderDet
                 <MapPin size={18} className={styles.addressIcon} />
                 <div>
                   <p style={{ fontWeight: 600, color: '#1e293b' }}>
-                    {details?.forma_entrega === 'delivery' ? 'Delivery' : 'Retirada no local'}
+                    {details?.forma_entrega === 'delivery'
+                      ? 'Delivery'
+                      : details?.forma_entrega === 'consumo'
+                        ? 'Consumir no local'
+                        : 'Retirada no local'}
                   </p>
                   {details?.forma_entrega === 'delivery' && (
                     <div style={{ marginTop: '4px', fontSize: '14px', color: '#64748b' }}>

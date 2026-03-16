@@ -71,6 +71,7 @@ export default function CardapioPage() {
   const { items, addItem, totalItems, removeItem, updateQuantity, totalPrice } = useCart();
   const { success } = useToast();
   const [loading, setLoading] = useState(true);
+  const [navigationMessage, setNavigationMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [estabelecimento, setEstabelecimento] = useState<Estabelecimento | null>(null);
@@ -285,6 +286,25 @@ export default function CardapioPage() {
     };
   }, [selectedProduct]);
 
+  const startNavigation = (path: string) => {
+    const lower = String(path || '').toLowerCase();
+    const message = lower.includes('/carrinho')
+      ? 'Carregando carrinho...'
+      : lower.startsWith('/minhaconta')
+        ? 'Carregando minha conta...'
+        : lower.startsWith('/checkout')
+          ? 'Carregando checkout...'
+          : 'Carregando...';
+
+    setNavigationMessage(message);
+    setTimeout(() => {
+      router.push(path);
+    }, 0);
+  };
+
+  const goToCart = () => startNavigation(`/estabelecimentos/cardapio/${slug}/carrinho`);
+
+  if (navigationMessage) return <Loading message={navigationMessage} fullScreen />;
   if (loading) return <Loading message="Carregando cardápio..." fullScreen />;
 
   if (error || !estabelecimento) {
@@ -407,7 +427,15 @@ export default function CardapioPage() {
       {/* Header */}
       <header className={styles.header}>
         <div className={styles.headerContent}>
-          <Link href="/" className={styles.logo} style={{ textDecoration: 'none' }}>
+          <Link
+            href="/"
+            className={styles.logo}
+            style={{ textDecoration: 'none' }}
+            onClick={(e) => {
+              e.preventDefault();
+              startNavigation('/');
+            }}
+          >
             <div className={styles.logoIcon}><MessageSquare size={24} fill="#22c55e" color="#22c55e" /></div>
             <span className={styles.logoText}>ZAPZAP<span className={styles.logoTextGreen}>DELIVERY</span></span>
           </Link>
@@ -448,7 +476,7 @@ export default function CardapioPage() {
               className={`${styles.cartIcon} ${totalItems > 0 ? styles.cartPulse : ''}`} 
               onClick={() => {
                 if (isMobile) {
-                  router.push(`/estabelecimentos/cardapio/${slug}/carrinho`);
+                  goToCart();
                 } else {
                   setShowCart(true);
                 }
@@ -460,7 +488,7 @@ export default function CardapioPage() {
             </div>
             <button 
               className={styles.accountButton}
-              onClick={() => router.push('/minhaconta')}
+              onClick={() => startNavigation('/minhaconta')}
             >
               <User size={20} />
               <span>Minha Conta</span>
@@ -812,7 +840,7 @@ export default function CardapioPage() {
                 </div>
                 <button 
                   className={styles.btnCheckout}
-                  onClick={() => router.push(`/estabelecimentos/cardapio/${slug}/carrinho`)}
+                  onClick={goToCart}
                 >
                   <span>FINALIZAR PEDIDO</span>
                   <ChevronRight size={20} />

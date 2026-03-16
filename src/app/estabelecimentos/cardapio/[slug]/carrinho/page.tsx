@@ -706,7 +706,7 @@ export default function CarrinhoPage() {
       const deliveryMap: Record<string, string> = {
         'DELIVERY': 'delivery',
         'RETIRADA': 'retirada',
-        'CONSUMO': 'retirada'
+        'CONSUMO': 'consumo'
       };
 
       const paymentMap: Record<string, string> = {
@@ -721,7 +721,7 @@ export default function CarrinhoPage() {
 
       const fullAddress = deliveryOption === 'DELIVERY' 
         ? `${addressDetails.rua}, ${addressDetails.numero}${addressDetails.complemento ? ` - ${addressDetails.complemento}` : ''}, ${selectedNeighborhood}, ${addressDetails.cidade} - ${addressDetails.uf} (CEP: ${cep})`
-        : 'Retirada no Local';
+        : (deliveryOption === 'CONSUMO' ? 'Consumir no Local' : 'Retirada no Local');
 
       let observacaoExtra = deliveryOption === 'CONSUMO' ? ' (Consumo no local)' : '';
       if (deliveryOption === 'DELIVERY') {
@@ -856,7 +856,7 @@ export default function CarrinhoPage() {
     }
   };
 
-  if (loading) return <div className={styles.loading}>Carregando carrinho...</div>;
+  if (loading) return <Loading message="Carregando carrinho..." fullScreen />;
 
   if (errorMsg) {
     return (
@@ -1053,7 +1053,7 @@ export default function CarrinhoPage() {
                 <h3 className={styles.sideCardTitle}><CreditCard size={16} /> Forma de Pagamento</h3>
                 <div className={styles.paymentGrid}>
                   <button 
-                    className={`${styles.paymentOption} ${paymentMethod === 'MERCADO_PAGO' ? styles.paymentOptionActive : ''} ${styles.desktopOnly}`}
+                    className={`${styles.paymentOption} ${paymentMethod === 'MERCADO_PAGO' ? styles.paymentOptionActive : ''}`}
                     onClick={() => setPaymentMethod('MERCADO_PAGO')}
                   >
                     <CreditCard size={20} className={paymentMethod === 'MERCADO_PAGO' ? styles.iconActive : ''} />
@@ -1344,6 +1344,63 @@ export default function CarrinhoPage() {
                     Cupom aplicado: {appliedCoupon.codigo} (-R$ {calculateDiscount().toFixed(2)})
                   </div>
                 )}
+              </section>
+
+              <section className={styles.mobileSection}>
+                <h2 className={styles.mobileSectionTitle}>FORMA DE PAGAMENTO</h2>
+                <div className={styles.mobilePaymentList}>
+                  <div 
+                    className={`${styles.mobilePaymentCard} ${paymentMethod === 'PIX' ? styles.mobilePaymentCardActive : ''}`}
+                    onClick={() => setPaymentMethod('PIX')}
+                  >
+                    <div className={styles.paymentInfo}>
+                      <QrCode size={20} color="#22c55e" />
+                      <span>Pix (Online)</span>
+                    </div>
+                    <div className={`${styles.mobileRadioCircle} ${paymentMethod === 'PIX' ? styles.mobileRadioActive : ''}`}>
+                      {paymentMethod === 'PIX' && <div className={styles.mobileRadioInner} />}
+                    </div>
+                  </div>
+
+                  <div 
+                    className={`${styles.mobilePaymentCard} ${paymentMethod === 'DINHEIRO' ? styles.mobilePaymentCardActive : ''}`}
+                    onClick={() => setPaymentMethod('DINHEIRO')}
+                  >
+                    <div className={styles.paymentInfo}>
+                      <Banknote size={20} color="#22c55e" />
+                      <span>Dinheiro (Na Entrega)</span>
+                    </div>
+                    <div className={`${styles.mobileRadioCircle} ${paymentMethod === 'DINHEIRO' ? styles.mobileRadioActive : ''}`}>
+                      {paymentMethod === 'DINHEIRO' && <div className={styles.mobileRadioInner} />}
+                    </div>
+                  </div>
+
+                  <div 
+                    className={`${styles.mobilePaymentCard} ${paymentMethod === 'CARTÃO' ? styles.mobilePaymentCardActive : ''}`}
+                    onClick={() => setPaymentMethod('CARTÃO')}
+                  >
+                    <div className={styles.paymentInfo}>
+                      <CreditCard size={20} color="#22c55e" />
+                      <span>Cartão (Na Entrega)</span>
+                    </div>
+                    <div className={`${styles.mobileRadioCircle} ${paymentMethod === 'CARTÃO' ? styles.mobileRadioActive : ''}`}>
+                      {paymentMethod === 'CARTÃO' && <div className={styles.mobileRadioInner} />}
+                    </div>
+                  </div>
+
+                  <div 
+                    className={`${styles.mobilePaymentCard} ${paymentMethod === 'MERCADO_PAGO' ? styles.mobilePaymentCardActive : ''}`}
+                    onClick={() => setPaymentMethod('MERCADO_PAGO')}
+                  >
+                    <div className={styles.paymentInfo}>
+                      <CreditCard size={20} color="#22c55e" />
+                      <span>Cartão de Crédito (Online)</span>
+                    </div>
+                    <div className={`${styles.mobileRadioCircle} ${paymentMethod === 'MERCADO_PAGO' ? styles.mobileRadioActive : ''}`}>
+                      {paymentMethod === 'MERCADO_PAGO' && <div className={styles.mobileRadioInner} />}
+                    </div>
+                  </div>
+                </div>
               </section>
 
               <section className={styles.mobileSummarySection}>

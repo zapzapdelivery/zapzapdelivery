@@ -1,6 +1,6 @@
 "use client";
 
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { Sidebar } from '../Sidebar/Sidebar';
 import { SidebarProvider, useSidebar } from '@/context/SidebarContext';
@@ -50,6 +50,12 @@ function SidebarContent({ children }: { children: ReactNode }) {
 }
 
 export function AdminLayout({ children }: { children: ReactNode }) {
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
+  }, []);
+
   return (
     <SidebarProvider>
       <SidebarContent>{children}</SidebarContent>

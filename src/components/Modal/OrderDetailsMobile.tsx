@@ -310,7 +310,11 @@ export function OrderDetailsMobile({ isOpen, onClose, order, onCancel }: Props) 
             </div>
             <div className={styles.deliveryInfo}>
               <p className={styles.deliveryType}>
-                {details?.forma_entrega === 'delivery' ? 'Delivery' : 'Retirada no local'}
+                {details?.forma_entrega === 'delivery'
+                  ? 'Delivery'
+                  : details?.forma_entrega === 'consumo'
+                    ? 'Consumir no local'
+                    : 'Retirada no local'}
               </p>
               {details?.forma_entrega === 'delivery' && (
                 <p className={styles.deliveryAddress}>

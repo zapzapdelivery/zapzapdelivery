@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin, getAuthContext } from '@/lib/server-auth';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: Request) {
   if (!supabaseAdmin) {
     return NextResponse.json({ error: 'Supabase Admin client not configured' }, { status: 500 });
@@ -27,7 +30,7 @@ export async function GET(request: Request) {
     let query = supabaseAdmin
       .from('pedidos')
       .select(`
-        id, numero_pedido, cliente_id, criado_em, forma_pagamento, total_pedido, status_pedido, estabelecimento_id, entregador_id,
+        id, numero_pedido, cliente_id, criado_em, forma_pagamento, forma_entrega, observacao_cliente, total_pedido, status_pedido, estabelecimento_id, entregador_id,
         clientes:cliente_id (
           nome_cliente,
           telefone,
@@ -81,7 +84,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: fetchError.message }, { status: 400 });
     }
 
-    return NextResponse.json(data || []);
+    return NextResponse.json(data || [], {
+      headers: {
+        'Cache-Control': 'no-store, max-age=0'
+      }
+    });
   } catch (e: any) {
     const message = e?.message || 'Internal Server Error';
     return NextResponse.json({ error: message }, { status: 500 });
