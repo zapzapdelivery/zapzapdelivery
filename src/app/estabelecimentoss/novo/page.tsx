@@ -1043,6 +1043,7 @@ function NovoEstabelecimentoContent() {
                   folder="estabelecimentos"
                   value={formData.logoUrl}
                   onChange={(url) => setFormData(prev => ({ ...prev, logoUrl: url }))}
+                  allowAnonymous
                 />
               </div>
             </div>

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
@@ -13,12 +13,15 @@ export const metadata: Metadata = {
   description: "Painel Administrativo",
   applicationName: "ZapZap Delivery",
   manifest: "/manifest.webmanifest",
-  themeColor: "#10b981",
   appleWebApp: {
     capable: true,
     title: "ZapZap Delivery",
     statusBarStyle: "default",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#10b981",
 };
 
 export default function RootLayout({

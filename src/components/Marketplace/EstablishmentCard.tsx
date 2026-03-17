@@ -56,7 +56,7 @@ export function EstablishmentCard({ establishment }: EstablishmentCardProps) {
             <span className="line-clamp-1">{establishment.address || 'Vila Rica - MT'}</span>
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs sm:text-sm">
+          <div className="flex items-center gap-1.5 text-xs sm:text-sm mb-2 sm:mb-4">
             <Star size={14} className="text-yellow-400 fill-yellow-400 flex-shrink-0" />
             <span className="font-bold text-gray-900">{rating}</span>
             <span className="text-gray-400">({reviewCount}+)</span>
@@ -67,7 +67,7 @@ export function EstablishmentCard({ establishment }: EstablishmentCardProps) {
           <Link
             href={cardapioUrl}
             {...targetProps}
-            className="block w-full bg-green-500 hover:bg-green-600 text-white text-center font-bold py-2.5 rounded-lg transition-colors shadow-sm active:scale-[0.98]"
+            className="block w-full bg-green-500 hover:bg-green-600 text-white text-center font-bold text-sm py-2 rounded-lg transition-colors shadow-sm active:scale-[0.98]"
           >
             Acessar Cardápio
           </Link>

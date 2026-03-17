@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { role, error: authError, status, establishmentId } = await getAuthContext(request);
+    const { role, error: authError, status, establishmentId, isSuperAdmin } = await getAuthContext(request);
     
     if (authError) {
       return NextResponse.json({ error: authError }, { status: status || 401 });
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     // Para simplificar e manter a segurança, vamos permitir que estabelecimentos vejam apenas seus dados
     // mas a rota de listagem geralmente é para admin. 
     // Vamos restringir a superadmin e parceiro por enquanto.
-    if (role === 'estabelecimento' && !establishmentId) {
+    if (role === 'estabelecimento' && !establishmentId && !isSuperAdmin) {
       // Se for estabelecimento mas não tiver ID (?), nega
       return NextResponse.json({ error: 'Acesso negado para este tipo de usuário' }, { status: 403 });
     }
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
         .order('ordem', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: false });
 
-      if (role === 'estabelecimento' && establishmentId) {
+      if (role === 'estabelecimento' && establishmentId && !isSuperAdmin) {
         query = query.eq('id', establishmentId);
       }
 
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
           .order('ordem', { ascending: true, nullsFirst: false })
           .order('criado_em', { ascending: false });
 
-        if (role === 'estabelecimento' && establishmentId) {
+        if (role === 'estabelecimento' && establishmentId && !isSuperAdmin) {
           query2 = query2.eq('id', establishmentId);
         }
 

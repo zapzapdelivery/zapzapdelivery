@@ -65,7 +65,7 @@ export default function PlanosPage() {
 
   if (loadingRole) return null;
 
-  const fetchPlans = async () => {
+  async function fetchPlans() {
     try {
       setLoading(true);
       const response = await fetch('/api/planos');
@@ -85,7 +85,7 @@ export default function PlanosPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const filteredPlans = plans.filter(plan => {
     const matchesSearch = plan.nome_plano.toLowerCase().includes(searchTerm.toLowerCase());

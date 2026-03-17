@@ -139,7 +139,7 @@
 
 .timelineStep {
   display: flex;
-  gap: 0;
+  gap: 1rem;
   position: relative;
   padding-bottom: 1rem;
 }
@@ -157,7 +157,7 @@
   background-color: #f3f4f6;
   z-index: 0;
   transform: translateX(-50%);
-  display: none;
+  display: block;
 }
 
 .timelineStep:last-child .line {
@@ -177,7 +177,6 @@
   transition: all 0.3s;
   background-color: white;
   border: 2px solid transparent;
-  display: none;
 }
 
 /* Completed: Green bg, white check */

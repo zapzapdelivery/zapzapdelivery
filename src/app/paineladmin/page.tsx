@@ -34,7 +34,16 @@ function LoginContent() {
       });
 
       if (error) {
-        throw error;
+        const msg = error.message || '';
+
+        if (msg.includes('Invalid login credentials')) {
+          showError('E-mail ou senha incorretos. Tente novamente.');
+        } else if (msg.includes('fetch') || msg.includes('network')) {
+          showError('Erro de conexão. Verifique sua internet ou se o serviço está disponível.');
+        } else {
+          showError('Falha ao autenticar. Verifique suas credenciais.');
+        }
+        return;
       }
 
       if (data.user) {
@@ -62,24 +71,14 @@ function LoginContent() {
               }
             }
           } catch (roleErr) {
-            console.error('Error checking role during login:', roleErr);
           }
         }
         
         // Default redirection for admin/establishment
         router.push('/dashboard');
       }
-    } catch (err: any) {
-      console.error('Erro ao fazer login:', err);
-      const msg = err.message || '';
-      
-      if (msg.includes('Invalid login credentials')) {
-        showError('E-mail ou senha incorretos. Tente novamente.');
-      } else if (msg.includes('fetch') || msg.includes('network')) {
-        showError('Erro de conexão. Verifique sua internet ou se o serviço está disponível.');
-      } else {
-        showError('Falha ao autenticar. Verifique suas credenciais.');
-      }
+    } catch {
+      showError('Erro inesperado ao autenticar. Tente novamente.');
     } finally {
       setLoading(false);
     }

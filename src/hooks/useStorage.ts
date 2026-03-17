@@ -46,11 +46,6 @@ export const useStorage = (): UseStorageReturn => {
         return null;
       }
 
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      const folderPath = options.folder ? `${options.folder}/` : '';
-      const filePath = `${folderPath}${fileName}`;
-
       // Use backend API to upload (bypasses RLS issues)
       const formData = new FormData();
       formData.append('file', file);
@@ -59,11 +54,13 @@ export const useStorage = (): UseStorageReturn => {
         formData.append('folder', options.folder);
       }
 
-      // Get session token for auth
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session && !options.allowAnonymous) {
-        throw new Error('Usuário não autenticado');
+      let session: any = null;
+      if (!options.allowAnonymous) {
+        const { data } = await supabase.auth.getSession();
+        session = data?.session ?? null;
+        if (!session) {
+          throw new Error('Usuário não autenticado');
+        }
       }
 
       const headers: Record<string, string> = {};

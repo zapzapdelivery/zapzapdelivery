@@ -79,7 +79,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error }, { status: status || 401 });
     }
 
-    if (role === 'atendente' || role === 'estabelecimento') {
+    if (!isSuperAdmin && (role === 'atendente' || role === 'estabelecimento')) {
       return NextResponse.json({ error: 'Acesso negado: Este tipo de usuário não tem permissão para acessar este módulo.' }, { status: 403 });
     }
 
