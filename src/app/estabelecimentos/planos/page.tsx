@@ -144,7 +144,7 @@ export default function PlanosPage() {
   };
 
   const handleBack = () => {
-    router.push('/estabelecimentos');
+    router.push('/gerenciar/estabelecimento');
   };
 
   return (
@@ -170,7 +170,7 @@ export default function PlanosPage() {
         <div className={styles.desktopOnly}>
           <button onClick={handleBack} className={styles.backLink} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#6b7280' }}>
             <ArrowLeft size={18} />
-            Voltar para Dashboard
+            Voltar para Estabelecimentos
           </button>
 
           <div className={styles.pageHeader}>

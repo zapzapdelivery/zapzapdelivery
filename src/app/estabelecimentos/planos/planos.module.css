@@ -26,8 +26,6 @@
 .mainContent {
   flex: 1;
   padding: 2rem;
-  margin-left: 250px; /* Sidebar width */
-  transition: margin-left 0.3s ease;
 }
 
 /* ... existing styles ... */
@@ -79,6 +77,7 @@
   flex: 1;
   min-width: 300px;
   position: relative;
+  max-width: 640px;
 }
 
 .searchIcon {
@@ -259,6 +258,62 @@
 
 .table tr:last-child td {
   border-bottom: none;
+}
+
+/* Pagination */
+.pagination {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.paginationInfo {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.paginationControls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pageBtn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e5e7eb;
+  background: white;
+  border-radius: 6px;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.pageBtn:hover:not(:disabled):not(.pageBtnActive) {
+  background-color: #f9fafb;
+  color: #111827;
+}
+
+.pageBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pageBtnActive {
+  background-color: #10b981;
+  color: white;
+  border-color: #10b981;
+}
+
+.pageBtnActive:hover {
+  background-color: #059669;
 }
 
 .planName {
