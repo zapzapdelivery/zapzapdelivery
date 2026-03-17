@@ -53,7 +53,30 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!('serviceWorker' in navigator)) return;
-    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
+    let cancelled = false;
+
+    const register = async () => {
+      try {
+        const reg = await navigator.serviceWorker.register('/sw.js', {
+          scope: '/',
+          updateViaCache: 'none',
+        });
+        if (cancelled) return;
+        reg.update().catch(() => {});
+      } catch {}
+    };
+
+    const onFocus = () => {
+      navigator.serviceWorker.getRegistration('/').then((reg) => reg?.update().catch(() => {}));
+    };
+
+    register();
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
 
   return (
