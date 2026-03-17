@@ -2,6 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { OrderStatus } from '@/types/orderStatus';
+import { sendOrderStatusWebhook } from '@/app/api/webhooks/notificaclientestatusdopedido/route';
 
 // Initialize Supabase Admin Client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -25,6 +26,11 @@ export async function POST(request: Request) {
       observacao, 
       user_id 
     } = body;
+    const paymentKey = String(forma_pagamento || '').trim().toLowerCase();
+    const initialStatus =
+      paymentKey === 'dinheiro' || paymentKey === 'cartao_entrega'
+        ? OrderStatus.CONFIRMADO
+        : OrderStatus.PEDINDO;
 
     // 1. Basic Validation
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -210,7 +216,7 @@ export async function POST(request: Request) {
           cliente_id: user_id,
           estabelecimento_id,
           numero_pedido: numeroPedido,
-          status_pedido: OrderStatus.PEDINDO,
+          status_pedido: initialStatus,
           subtotal,
           taxa_entrega: deliveryFee,
           desconto: discount,
@@ -297,6 +303,14 @@ export async function POST(request: Request) {
     if (uiError) {
       console.error('Error registering UI stock movements:', uiError);
     }
+
+    const webhookResult = await sendOrderStatusWebhook({
+      orderId: order.id,
+      newStatus: initialStatus,
+      previousStatus: null,
+      establishmentId: estabelecimento_id,
+      isSuperAdmin: true
+    });
 
     return NextResponse.json({ success: true, order });
 

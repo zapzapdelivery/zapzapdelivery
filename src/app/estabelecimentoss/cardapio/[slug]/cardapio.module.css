@@ -10,6 +10,7 @@
   max-width: 1280px;
   margin: 0 auto;
   padding: 0 1rem;
+  padding-top: 180px;
 }
 
 .section {
@@ -19,8 +20,10 @@
 
 /* Header */
 .header {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 50;
   background-color: white;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -34,6 +37,14 @@
   align-items: center;
   justify-content: space-between;
   gap: 2rem;
+}
+
+.searchActionsRow {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .logo {
@@ -63,6 +74,8 @@
   position: relative;
   display: flex;
   align-items: center;
+  margin: 0 auto;
+  min-width: 0;
 }
 
 .searchIcon {
@@ -190,6 +203,102 @@
   transform: translateY(-1px);
 }
 
+@media (max-width: 768px) {
+  .headerContent {
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .logo {
+    font-size: 1.25rem;
+    margin-right: 0;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .logoIcon {
+    display: none;
+  }
+
+  .searchActionsRow {
+    width: 100%;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .headerActions {
+    margin-left: 0;
+    gap: 0.5rem;
+    flex: 0 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  .searchBar {
+    margin: 0;
+    max-width: none;
+  }
+
+  .cartIcon {
+    width: 44px;
+    height: 44px;
+    background-color: white;
+    border: 1px solid #e5e7eb;
+  }
+
+  .accountButton {
+    padding: 0;
+    width: 44px;
+    height: 44px;
+    justify-content: center;
+    border-radius: 50%;
+  }
+
+  .accountButton span {
+    display: none;
+  }
+
+  .navItem {
+    padding: 0.75rem 0.45rem;
+  }
+
+  .categoriesNav {
+    overflow: hidden;
+    justify-content: flex-start;
+  }
+
+  .categoriesTrack {
+    animation: categoriesMarquee 22s linear infinite;
+  }
+
+  .categoriesNav:hover .categoriesTrack,
+  .categoriesNav:focus-within .categoriesTrack {
+    animation-play-state: paused;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .categoriesNav {
+    overflow-x: auto;
+  }
+
+  .categoriesTrack {
+    animation: none;
+    transform: none;
+  }
+}
+
+@keyframes categoriesMarquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
 .categoriesNav {
   border-top: 1px solid #f3f4f6;
   padding: 0 1rem;
@@ -204,6 +313,12 @@
 
 .categoriesNav::-webkit-scrollbar {
   display: none;
+}
+
+.categoriesTrack {
+  display: flex;
+  width: max-content;
+  will-change: transform;
 }
 
 .navItem {

@@ -68,7 +68,7 @@ export default function CarrinhoPage() {
   const { items, totalItems, removeItem, updateQuantity, totalPrice, clearCart } = useCart();
   const [loading, setLoading] = useState(true);
   const [estabelecimento, setEstabelecimento] = useState<Estabelecimento | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'DINHEIRO' | 'CARTÃO' | 'MERCADO_PAGO'>('PIX');
+  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'DINHEIRO' | 'CARTÃO'>('PIX');
   const [deliveryOption, setDeliveryOption] = useState<'DELIVERY' | 'RETIRADA' | 'CONSUMO'>('DELIVERY');
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [cep, setCep] = useState('');
@@ -506,6 +506,21 @@ export default function CarrinhoPage() {
     setModalConfig(prev => ({ ...prev, isOpen: false }));
   };
 
+  const lastOfflineInfoRef = React.useRef<'DINHEIRO' | 'CARTÃO' | null>(null);
+  const handleSelectPaymentMethod = (method: 'PIX' | 'DINHEIRO' | 'CARTÃO') => {
+    setPaymentMethod(method);
+    if (method === 'DINHEIRO' || method === 'CARTÃO') {
+      if (lastOfflineInfoRef.current !== method) {
+        showModal(
+          'warning',
+          'Pagamento na entrega',
+          'Seu pedido será confirmado e o pagamento será realizado no ato da entrega.'
+        );
+        lastOfflineInfoRef.current = method;
+      }
+    }
+  };
+
   // Validate Cart against Stock (Real-time)
   useEffect(() => {
     if (Object.keys(stockMap).length === 0 || items.length === 0) return;
@@ -713,7 +728,6 @@ export default function CarrinhoPage() {
         'PIX': 'pix',
         'DINHEIRO': 'dinheiro',
         'CARTÃO': 'cartao_entrega',
-        'MERCADO_PAGO': 'mercado_pago'
       };
 
       const finalDeliveryOption = deliveryMap[deliveryOption] || 'delivery';
@@ -729,9 +743,6 @@ export default function CarrinhoPage() {
         if (addressDetails.referencia) {
           observacaoExtra += `\nReferência: ${addressDetails.referencia}`;
         }
-      }
-      if (finalPaymentMethod === 'mercado_pago') {
-        observacaoExtra += '\n(Pagamento Online - Pendente)';
       }
       
       const response = await fetch('/api/pedidos/criar', {
@@ -1053,35 +1064,28 @@ export default function CarrinhoPage() {
                 <h3 className={styles.sideCardTitle}><CreditCard size={16} /> Forma de Pagamento</h3>
                 <div className={styles.paymentGrid}>
                   <button 
-                    className={`${styles.paymentOption} ${paymentMethod === 'MERCADO_PAGO' ? styles.paymentOptionActive : ''}`}
-                    onClick={() => setPaymentMethod('MERCADO_PAGO')}
-                  >
-                    <CreditCard size={20} className={paymentMethod === 'MERCADO_PAGO' ? styles.iconActive : ''} />
-                    <span>Cartão de Crédito (Online)</span>
-                  </button>
-                  <button 
                     className={`${styles.paymentOption} ${paymentMethod === 'PIX' ? styles.paymentOptionActive : ''}`}
-                    onClick={() => setPaymentMethod('PIX')}
+                    onClick={() => handleSelectPaymentMethod('PIX')}
                   >
                     <QrCode size={20} className={paymentMethod === 'PIX' ? styles.iconActive : ''} />
                     <span>Pix (Online)</span>
                   </button>
                   <button 
                     className={`${styles.paymentOption} ${paymentMethod === 'DINHEIRO' ? styles.paymentOptionActive : ''}`}
-                    onClick={() => setPaymentMethod('DINHEIRO')}
+                    onClick={() => handleSelectPaymentMethod('DINHEIRO')}
                   >
                     <Banknote size={20} className={paymentMethod === 'DINHEIRO' ? styles.iconActive : ''} />
                     <span>Dinheiro (Na Entrega)</span>
                   </button>
                   <button 
                     className={`${styles.paymentOption} ${paymentMethod === 'CARTÃO' ? styles.paymentOptionActive : ''}`}
-                    onClick={() => setPaymentMethod('CARTÃO')}
+                    onClick={() => handleSelectPaymentMethod('CARTÃO')}
                   >
                     <CreditCard size={20} className={paymentMethod === 'CARTÃO' ? styles.iconActive : ''} />
                     <span>Cartão (Na Entrega)</span>
                   </button>
                 </div>
-                {(paymentMethod === 'MERCADO_PAGO' || paymentMethod === 'PIX') && (
+                {paymentMethod === 'PIX' && (
                   <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#f0fdf4', color: '#166534', borderRadius: '0.5rem', fontSize: '0.875rem' }}>
                     Você será redirecionado para o pagamento seguro após confirmar.
                   </div>
@@ -1351,7 +1355,7 @@ export default function CarrinhoPage() {
                 <div className={styles.mobilePaymentList}>
                   <div 
                     className={`${styles.mobilePaymentCard} ${paymentMethod === 'PIX' ? styles.mobilePaymentCardActive : ''}`}
-                    onClick={() => setPaymentMethod('PIX')}
+                    onClick={() => handleSelectPaymentMethod('PIX')}
                   >
                     <div className={styles.paymentInfo}>
                       <QrCode size={20} color="#22c55e" />
@@ -1364,7 +1368,7 @@ export default function CarrinhoPage() {
 
                   <div 
                     className={`${styles.mobilePaymentCard} ${paymentMethod === 'DINHEIRO' ? styles.mobilePaymentCardActive : ''}`}
-                    onClick={() => setPaymentMethod('DINHEIRO')}
+                    onClick={() => handleSelectPaymentMethod('DINHEIRO')}
                   >
                     <div className={styles.paymentInfo}>
                       <Banknote size={20} color="#22c55e" />
@@ -1377,7 +1381,7 @@ export default function CarrinhoPage() {
 
                   <div 
                     className={`${styles.mobilePaymentCard} ${paymentMethod === 'CARTÃO' ? styles.mobilePaymentCardActive : ''}`}
-                    onClick={() => setPaymentMethod('CARTÃO')}
+                    onClick={() => handleSelectPaymentMethod('CARTÃO')}
                   >
                     <div className={styles.paymentInfo}>
                       <CreditCard size={20} color="#22c55e" />
@@ -1385,19 +1389,6 @@ export default function CarrinhoPage() {
                     </div>
                     <div className={`${styles.mobileRadioCircle} ${paymentMethod === 'CARTÃO' ? styles.mobileRadioActive : ''}`}>
                       {paymentMethod === 'CARTÃO' && <div className={styles.mobileRadioInner} />}
-                    </div>
-                  </div>
-
-                  <div 
-                    className={`${styles.mobilePaymentCard} ${paymentMethod === 'MERCADO_PAGO' ? styles.mobilePaymentCardActive : ''}`}
-                    onClick={() => setPaymentMethod('MERCADO_PAGO')}
-                  >
-                    <div className={styles.paymentInfo}>
-                      <CreditCard size={20} color="#22c55e" />
-                      <span>Cartão de Crédito (Online)</span>
-                    </div>
-                    <div className={`${styles.mobileRadioCircle} ${paymentMethod === 'MERCADO_PAGO' ? styles.mobileRadioActive : ''}`}>
-                      {paymentMethod === 'MERCADO_PAGO' && <div className={styles.mobileRadioInner} />}
                     </div>
                   </div>
                 </div>
@@ -1621,31 +1612,24 @@ export default function CarrinhoPage() {
               <div className={styles.paymentGrid}>
                 <button 
                   className={`${styles.paymentOption} ${paymentMethod === 'PIX' ? styles.paymentOptionActive : ''}`}
-                  onClick={() => setPaymentMethod('PIX')}
+                  onClick={() => handleSelectPaymentMethod('PIX')}
                 >
                   <QrCode size={20} className={paymentMethod === 'PIX' ? styles.iconActive : ''} />
                   <span>PIX (Online)</span>
                 </button>
                 <button 
                   className={`${styles.paymentOption} ${paymentMethod === 'DINHEIRO' ? styles.paymentOptionActive : ''}`}
-                  onClick={() => setPaymentMethod('DINHEIRO')}
+                  onClick={() => handleSelectPaymentMethod('DINHEIRO')}
                 >
                   <Banknote size={20} className={paymentMethod === 'DINHEIRO' ? styles.iconActive : ''} />
                   <span>DINHEIRO (Na Entrega)</span>
                 </button>
                 <button 
                   className={`${styles.paymentOption} ${paymentMethod === 'CARTÃO' ? styles.paymentOptionActive : ''}`}
-                  onClick={() => setPaymentMethod('CARTÃO')}
+                  onClick={() => handleSelectPaymentMethod('CARTÃO')}
                 >
                   <CreditCard size={20} className={paymentMethod === 'CARTÃO' ? styles.iconActive : ''} />
                   <span>Cartão (Na Entrega)</span>
-                </button>
-                <button 
-                  className={`${styles.paymentOption} ${paymentMethod === 'MERCADO_PAGO' ? styles.paymentOptionActive : ''}`}
-                  onClick={() => setPaymentMethod('MERCADO_PAGO')}
-                >
-                  <CreditCard size={20} className={paymentMethod === 'MERCADO_PAGO' ? styles.iconActive : ''} />
-                  <span>Cartão de Crédito (Online)</span>
                 </button>
               </div>
             </div>

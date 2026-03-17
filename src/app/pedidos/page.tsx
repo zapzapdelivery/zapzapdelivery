@@ -870,6 +870,26 @@ export default function PedidosPage() {
           <div className={styles.mobileList}>
             {filteredOrders.map((order) => (
               <div key={order.real_id} className={styles.mobileCard}>
+                {(() => {
+                  const isCancelled =
+                    order.status === OrderStatus.CANCELADO_CLIENTE ||
+                    order.status === OrderStatus.CANCELADO_ESTABELECIMENTO;
+                  const canEdit = canEditOrderByRole(role) && (!isCancelled || role === 'admin' || role === 'estabelecimento');
+                  return (
+                    <select
+                      className={styles.statusSelector}
+                      value={order.status}
+                      onChange={(e) => handleStatusChange(order.real_id, e.target.value)}
+                      disabled={!canEdit}
+                    >
+                      {STATUS_OPTIONS.map((opt) => (
+                        <option key={opt.id} value={opt.id}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  );
+                })()}
                 <div className={styles.mobileHeader}>
                   <span className={styles.mobileLabel}>Pedido</span>
                   <span className={`${styles.statusBadge} ${getStatusClass(order.status, true)}`}>

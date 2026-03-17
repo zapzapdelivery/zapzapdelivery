@@ -65,6 +65,7 @@ interface Estabelecimento {
 }
 
 export default function CardapioPage() {
+  const TODOS_ID = '__all__';
   const params = useParams();
   const router = useRouter();
   const slug = params.slug as string;
@@ -131,24 +132,43 @@ export default function CardapioPage() {
 
   useEffect(() => {
     const handleScroll = () => {
-      const categorySections = categorias.map(cat => ({
-        id: cat.id,
-        offset: document.getElementById(cat.id)?.offsetTop || 0
-      }));
+      const normalized = searchTerm.trim().toLowerCase();
+      const searching = normalized.length >= 2;
+      const visible = categorias.filter((cat) =>
+        produtos.some(
+          (p) =>
+            p.categoria_id === cat.id &&
+            (!searching || p.nome_produto.toLowerCase().includes(normalized))
+        )
+      );
 
-      const scrollPosition = window.scrollY + 160; // Compensação do header
+      const categorySections = visible
+        .map((cat) => {
+          const el = document.getElementById(cat.id);
+          if (!el) return null;
+          return { id: cat.id, offset: el.offsetTop };
+        })
+        .filter((v): v is { id: string; offset: number } => Boolean(v));
+
+      const scrollPosition = window.scrollY + 160;
+
+      const firstOffset = categorySections[0]?.offset;
+      if (firstOffset == null || scrollPosition < firstOffset) {
+        setActiveCategory(TODOS_ID);
+        return;
+      }
 
       for (let i = categorySections.length - 1; i >= 0; i--) {
         if (scrollPosition >= categorySections[i].offset) {
           setActiveCategory(categorySections[i].id);
-          break;
+          return;
         }
       }
     };
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [categorias]);
+  }, [categorias, produtos, searchTerm]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -191,6 +211,10 @@ export default function CardapioPage() {
 
   const handleCategoryClick = (categoryId: string) => {
     setActiveCategory(categoryId);
+    if (categoryId === TODOS_ID) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     const element = document.getElementById(categoryId);
     if (element) {
       const headerOffset = 140; // Altura do header fixo + margem
@@ -221,7 +245,7 @@ export default function CardapioPage() {
         setEstabelecimento(dados.estabelecimento);
         setCategorias(dados.categorias || []);
         if (Array.isArray(dados.categorias) && dados.categorias.length > 0) {
-          setActiveCategory(dados.categorias[0].id);
+          setActiveCategory(TODOS_ID);
         }
 
         // Assim que os dados básicos chegam, já liberamos a tela
@@ -322,6 +346,15 @@ export default function CardapioPage() {
 
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const isSearching = normalizedSearch.length >= 2;
+  const visibleCategorias = categorias.filter((cat) =>
+    produtos.some(
+      (p) =>
+        p.categoria_id === cat.id &&
+        (!isSearching || p.nome_produto.toLowerCase().includes(normalizedSearch))
+    )
+  );
+  const navCategorias = [{ id: TODOS_ID, nome_categoria: 'Todos' }, ...visibleCategorias];
+  const marqueeCategorias = [...navCategorias, ...navCategorias];
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -440,73 +473,75 @@ export default function CardapioPage() {
             <span className={styles.logoText}>ZAPZAP<span className={styles.logoTextGreen}>DELIVERY</span></span>
           </Link>
           
-          <div className={styles.searchBar}>
-            <Search size={20} className={styles.searchIcon} />
-            <input
-              type="text"
-              placeholder="O que você quer comer hoje?"
-              value={searchTerm}
-              onChange={handleSearchChange}
-              onFocus={() => {
-                if (searchResults.length > 0) setShowSearchResults(true);
-              }}
-              onBlur={handleSearchBlur}
-            />
-            {showSearchResults && searchResults.length > 0 && (
-              <div className={styles.searchResults}>
-                {searchResults.map((product) => (
-                  <button
-                    key={product.id}
-                    type="button"
-                    className={styles.searchResultItem}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      handleSelectFromSearch(product);
-                    }}
-                  >
-                    {product.nome_produto}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className={styles.headerActions}>
-            <div 
-              className={`${styles.cartIcon} ${totalItems > 0 ? styles.cartPulse : ''}`} 
-              onClick={() => {
-                if (isMobile) {
-                  goToCart();
-                } else {
-                  setShowCart(true);
-                }
-              }} 
-              style={{ cursor: 'pointer' }}
-            >
-              <ShoppingCart size={24} />
-              {totalItems > 0 && <span className={styles.cartBadge}>{totalItems}</span>}
+          <div className={styles.searchActionsRow}>
+            <div className={styles.searchBar}>
+              <Search size={20} className={styles.searchIcon} />
+              <input
+                type="text"
+                placeholder="O que você quer comer hoje?"
+                value={searchTerm}
+                onChange={handleSearchChange}
+                onFocus={() => {
+                  if (searchResults.length > 0) setShowSearchResults(true);
+                }}
+                onBlur={handleSearchBlur}
+              />
+              {showSearchResults && searchResults.length > 0 && (
+                <div className={styles.searchResults}>
+                  {searchResults.map((product) => (
+                    <button
+                      key={product.id}
+                      type="button"
+                      className={styles.searchResultItem}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelectFromSearch(product);
+                      }}
+                    >
+                      {product.nome_produto}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-            <button 
-              className={styles.accountButton}
-              onClick={() => startNavigation('/minhaconta')}
-            >
-              <User size={20} />
-              <span>Minha Conta</span>
-            </button>
+
+            <div className={styles.headerActions}>
+              <div
+                className={`${styles.cartIcon} ${totalItems > 0 ? styles.cartPulse : ''}`}
+                onClick={() => {
+                  if (isMobile) {
+                    goToCart();
+                  } else {
+                    setShowCart(true);
+                  }
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                <ShoppingCart size={24} />
+                {totalItems > 0 && <span className={styles.cartBadge}>{totalItems}</span>}
+              </div>
+              <button className={styles.accountButton} onClick={() => startNavigation('/minhaconta')}>
+                <User size={20} />
+                <span>Minha Conta</span>
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Categories Nav */}
         <nav className={styles.categoriesNav}>
-          {categorias.map(cat => (
-            <button 
-              key={cat.id} 
-              className={`${styles.navItem} ${activeCategory === cat.id ? styles.activeNav : ''}`}
-              onClick={() => handleCategoryClick(cat.id)}
-            >
-              {cat.nome_categoria}
-            </button>
-          ))}
+          <div className={styles.categoriesTrack}>
+            {marqueeCategorias.map((cat, idx) => (
+              <button
+                key={`${cat.id}-${idx}`}
+                className={`${styles.navItem} ${activeCategory === cat.id ? styles.activeNav : ''}`}
+                onClick={() => handleCategoryClick(cat.id)}
+                type="button"
+              >
+                {cat.nome_categoria}
+              </button>
+            ))}
+          </div>
         </nav>
       </header>
 
@@ -533,7 +568,7 @@ export default function CardapioPage() {
         </section> */}
 
         {/* Products Sections */}
-        {categorias.map(categoria => {
+        {visibleCategorias.map(categoria => {
           const categoryProducts = produtos.filter(p => {
             if (p.categoria_id !== categoria.id) return false;
             if (!isSearching) return true;
