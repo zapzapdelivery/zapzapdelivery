@@ -14,7 +14,6 @@ import {
   QrCode
 } from 'lucide-react';
 import { CustomerSidebar } from '@/components/CustomerSidebar/CustomerSidebar';
-import { CustomerBottomNav } from '@/components/CustomerBottomNav/CustomerBottomNav';
 import { OrderTrackingModal } from '@/components/OrderTrackingModal/OrderTrackingModal';
 import { PixModal } from '@/components/PixModal/PixModal';
 import { Loading } from '@/components/Loading/Loading';
@@ -481,8 +480,6 @@ function CustomerOrdersContent() {
           )}
         </div>
       </main>
-
-      <CustomerBottomNav />
     </div>
   );
 }

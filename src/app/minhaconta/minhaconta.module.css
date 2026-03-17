@@ -380,8 +380,17 @@
   display: flex;
   justify-content: space-between; /* Mantém espaço entre conteúdo e botão */
   align-items: center;
+  position: relative;
+  padding-right: 3.75rem;
   cursor: pointer;
   transition: all 0.2s;
+}
+
+.orderCardActionBtn {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 1;
 }
 
 .orderCard:hover {
@@ -662,6 +671,5 @@
   
   .mainContent {
     padding: 1rem;
-    padding-bottom: 5rem; /* Space for bottom nav */
   }
 }

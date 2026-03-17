@@ -18,7 +18,6 @@ import {
   Menu
 } from 'lucide-react';
 import { CustomerSidebar } from '@/components/CustomerSidebar/CustomerSidebar';
-import { CustomerBottomNav } from '@/components/CustomerBottomNav/CustomerBottomNav';
 import { OrderTrackingModal } from '@/components/OrderTrackingModal/OrderTrackingModal';
 import { Loading } from '@/components/Loading/Loading';
 import { supabase } from '@/lib/supabase';
@@ -675,7 +674,7 @@ export default function CustomerDashboard() {
                       {order.status.toUpperCase()}
                     </div>
                   </div>
-                  <button className={styles.actionBtn}>
+                  <button className={`${styles.actionBtn} ${styles.orderCardActionBtn}`}>
                     <Eye size={20} />
                   </button>
                 </div>
@@ -726,8 +725,6 @@ export default function CustomerDashboard() {
           © 2026 ZapZap Delivery. Todos os direitos reservados.
         </footer>
       </main>
-
-      <CustomerBottomNav />
     </div>
   );
 }

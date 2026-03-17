@@ -43,7 +43,7 @@ const STEPS = [
   {
     key: 'preparo',
     label: ORDER_STATUS_LABEL[OrderStatus.PREPARACAO],
-    description: 'O restaurante está preparando seu prato com carinho.',
+    description: 'O estabelecimento está preparando o seu pedido com carinho.',
     icon: <Clock size={18} strokeWidth={2.5} />,
     match: [OrderStatus.PREPARACAO]
   },
@@ -190,35 +190,26 @@ export function OrderTrackingModal({ isOpen, onClose, order }: OrderTrackingModa
             );
           })}
 
-          {/* Cancellation Steps */}
-          <div className={styles.timelineStep}>
-             <div className={styles.line} />
-             <div className={`${styles.iconWrapper} ${isCancelled && cancelledByClient ? styles.cancelled : styles.pendingCancel}`}>
-                <X size={18} />
-             </div>
-             <div className={styles.stepContent}>
-               <h4 className={`${styles.stepTitle} ${isCancelled && cancelledByClient ? styles.cancelledText : styles.pendingText}`}>
-                 {ORDER_STATUS_LABEL[OrderStatus.CANCELADO_CLIENTE]}
-               </h4>
-               <p className={`${styles.stepDescription} ${isCancelled && cancelledByClient ? '' : styles.pendingText}`}>
-                 Solicitação do usuário
-               </p>
-             </div>
-          </div>
-
-          <div className={styles.timelineStep}>
-             <div className={`${styles.iconWrapper} ${isCancelled && cancelledByStore ? styles.cancelled : styles.pendingCancel}`}>
-                <AlertTriangle size={18} />
-             </div>
-             <div className={styles.stepContent}>
-               <h4 className={`${styles.stepTitle} ${isCancelled && cancelledByStore ? styles.cancelledText : styles.pendingText}`}>
-                 {ORDER_STATUS_LABEL[OrderStatus.CANCELADO_ESTABELECIMENTO]}
-               </h4>
-               <p className={`${styles.stepDescription} ${isCancelled && cancelledByStore ? '' : styles.pendingText}`}>
-                 Indisponibilidade ou imprevisto
-               </p>
-             </div>
-          </div>
+          {isCancelled ? (
+            <div className={styles.timelineStep}>
+              <div className={styles.line} />
+              <div className={`${styles.iconWrapper} ${styles.cancelled}`}>
+                {cancelledByClient ? <X size={18} /> : cancelledByStore ? <AlertTriangle size={18} /> : <X size={18} />}
+              </div>
+              <div className={styles.stepContent}>
+                <h4 className={`${styles.stepTitle} ${styles.cancelledText}`}>
+                  {cancelledByClient
+                    ? ORDER_STATUS_LABEL[OrderStatus.CANCELADO_CLIENTE]
+                    : cancelledByStore
+                      ? ORDER_STATUS_LABEL[OrderStatus.CANCELADO_ESTABELECIMENTO]
+                      : 'Cancelado'}
+                </h4>
+                <p className={styles.stepDescription}>
+                  {cancelledByClient ? 'Solicitação do usuário' : cancelledByStore ? 'Indisponibilidade ou imprevisto' : 'Cancelado'}
+                </p>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         {/* Footer */}
