@@ -44,10 +44,14 @@ export async function GET(request: Request) {
           desconto,
           observacao_cliente,
           estabelecimento_id,
+          entregador_id,
           estabelecimentos (
             id,
             nome_estabelecimento,
             url_cardapio
+          ),
+          entregadores (
+            nome_entregador
           ),
           itens_pedidos (
             id,
@@ -66,6 +70,7 @@ export async function GET(request: Request) {
         `
       )
       .eq('cliente_id', clientId)
+      .eq('status_pedido', 'Pedido Entregue')
       .order('criado_em', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -79,4 +84,3 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: err?.message || 'Internal Server Error' }, { status: 500 });
   }
 }
-

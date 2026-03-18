@@ -20,12 +20,15 @@ import {
 import { CustomerSidebar } from '@/components/CustomerSidebar/CustomerSidebar';
 import { OrderTrackingModal } from '@/components/OrderTrackingModal/OrderTrackingModal';
 import { Loading } from '@/components/Loading/Loading';
+import { AvaliacaoPedidoModal } from '@/components/Modal/AvaliacaoPedidoModal';
+import { useToast } from '@/components/Toast/ToastProvider';
 import { supabase } from '@/lib/supabase';
 import styles from './minhaconta.module.css';
 import { OrderStatus, LEGACY_STATUS_MAP } from '@/types/orderStatus';
 
 export default function CustomerDashboard() {
   const router = useRouter();
+  const { error: toastError } = useToast();
   const [userName, setUserName] = useState('');
   const [userAvatar, setUserAvatar] = useState('');
   const [userId, setUserId] = useState<string | null>(null);
@@ -36,12 +39,36 @@ export default function CustomerDashboard() {
   const [reordering, setReordering] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [avaliacaoOrder, setAvaliacaoOrder] = useState<any>(null);
+  const [avaliacaoOpen, setAvaliacaoOpen] = useState(false);
+  const [pedidosAvaliados, setPedidosAvaliados] = useState<Record<string, boolean>>({});
   const [statsData, setStatsData] = useState({
     active: 0,
     total: 0,
     addresses: 0,
     coupons: 0
   });
+
+  const fetchAvaliacaoFlags = async (uid: string, pedidoIds: string[]) => {
+    const ids = (pedidoIds || []).map((x) => String(x || '').trim()).filter(Boolean);
+    if (!uid || ids.length === 0) return;
+    try {
+      const { data: pedidosRows } = await supabase
+        .from('avaliacoes_pedidos')
+        .select('pedido_id')
+        .eq('cliente_id', uid)
+        .in('pedido_id', ids);
+
+      const pedidosMap: Record<string, boolean> = {};
+      (pedidosRows || []).forEach((r: any) => {
+        const pid = String(r?.pedido_id || '').trim();
+        if (pid) pedidosMap[pid] = true;
+      });
+      setPedidosAvaliados(pedidosMap);
+    } catch {
+      setPedidosAvaliados({});
+    }
+  };
 
   const fetchStats = async () => {
     try {
@@ -77,9 +104,14 @@ export default function CustomerDashboard() {
         total_pedido,
         status_pedido,
         forma_pagamento,
+        estabelecimento_id,
+        entregador_id,
         estabelecimentos (
           nome_estabelecimento,
           url_cardapio
+        ),
+        entregadores (
+          nome_entregador
         )
       `)
       .eq('cliente_id', uid)
@@ -96,7 +128,9 @@ export default function CustomerDashboard() {
             criado_em,
             total_pedido,
             status_pedido,
-            forma_pagamento
+            forma_pagamento,
+            estabelecimento_id,
+            entregador_id
           `)
         .eq('cliente_id', uid)
         .order('criado_em', { ascending: false });
@@ -107,10 +141,15 @@ export default function CustomerDashboard() {
 
     if (ordersData) {
       setOrders(ordersData);
+      const orderIds = (ordersData || [])
+        .map((o: any) => String(o?.id || '').trim())
+        .filter(Boolean);
+      fetchAvaliacaoFlags(uid, orderIds);
     }
 
     if (error) {
       console.error('Error fetching orders:', JSON.stringify(error, null, 2));
+      toastError('Erro ao carregar pedidos.');
     }
   };
 
@@ -124,7 +163,12 @@ export default function CustomerDashboard() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return;
-      setLastOrder(data?.pedido || null);
+      const pedido = data?.pedido || null;
+      if (pedido && String(pedido.status_pedido || '') !== String(OrderStatus.ENTREGUE)) {
+        setLastOrder(null);
+        return;
+      }
+      setLastOrder(pedido);
     } catch {}
   };
 
@@ -242,6 +286,19 @@ export default function CustomerDashboard() {
     ).length;
     setStatsData(prev => ({ ...prev, active, total }));
   }, [orders]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const deliveredCandidate = orders.find((o) => String(o?.status_pedido || '') === String(OrderStatus.ENTREGUE));
+    const deliveredId = deliveredCandidate?.id ? String(deliveredCandidate.id) : '';
+    const currentId = lastOrder?.id ? String(lastOrder.id) : '';
+    if (deliveredId && deliveredId !== currentId) {
+      fetchLastOrder();
+    }
+    if (!deliveredId && currentId) {
+      setLastOrder(null);
+    }
+  }, [orders, userId]);
 
   // Realtime subscription for order updates
   useEffect(() => {
@@ -372,6 +429,13 @@ export default function CustomerDashboard() {
     setIsModalOpen(true);
   };
 
+  const handleOpenAvaliacao = (orderData: any) => {
+    const pid = String(orderData?.id || '').trim();
+    if (pid && pedidosAvaliados[pid]) return;
+    setAvaliacaoOrder(orderData);
+    setAvaliacaoOpen(true);
+  };
+
   const lastOrderNumberRaw = lastOrder?.numero_pedido ? `#${lastOrder.numero_pedido}` : (lastOrder?.id ? `#${String(lastOrder.id).slice(0, 8)}` : '');
   const lastOrderDate = lastOrder?.criado_em
     ? new Date(lastOrder.criado_em).toLocaleDateString('pt-BR') +
@@ -429,6 +493,31 @@ export default function CustomerDashboard() {
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         order={selectedOrder} 
+      />
+      <AvaliacaoPedidoModal
+        isOpen={avaliacaoOpen}
+        onClose={() => setAvaliacaoOpen(false)}
+        pedidoId={avaliacaoOrder?.id ? String(avaliacaoOrder.id) : null}
+        estabelecimentoId={avaliacaoOrder?.estabelecimento_id ? String(avaliacaoOrder.estabelecimento_id) : null}
+        entregadorId={avaliacaoOrder?.entregador_id ? String(avaliacaoOrder.entregador_id) : null}
+        estabelecimentoNome={
+          avaliacaoOrder?.estabelecimentos?.nome_estabelecimento
+            ? String(avaliacaoOrder.estabelecimentos.nome_estabelecimento)
+            : null
+        }
+        entregadorNome={
+          avaliacaoOrder?.entregadores?.nome_entregador
+            ? String(avaliacaoOrder.entregadores.nome_entregador)
+            : null
+        }
+        onSubmitted={(pedidoId) => setPedidosAvaliados((prev) => ({ ...prev, [pedidoId]: true }))}
+        titulo={
+          avaliacaoOrder?.numero_pedido
+            ? `Pedido #${String(avaliacaoOrder.numero_pedido)}`
+            : avaliacaoOrder?.id
+              ? `Pedido #${String(avaliacaoOrder.id).slice(0, 8)}`
+              : ''
+        }
       />
       <CustomerSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       
@@ -526,6 +615,16 @@ export default function CustomerDashboard() {
                 <span className={`${styles.lastOrderStatus} ${styles[lastOrderStatusClass]}`}>
                   {lastOrderStatus.toUpperCase()}
                 </span>
+                {lastOrderStatusClass === 'entregue' && (
+                  <button
+                    className={styles.avaliarBtn}
+                    onClick={() => handleOpenAvaliacao(lastOrder)}
+                    disabled={Boolean(lastOrder?.id) && Boolean(pedidosAvaliados[String(lastOrder.id)])}
+                    type="button"
+                  >
+                    Avaliar o Pedido
+                  </button>
+                )}
                 <button
                   className={styles.reorderBtn}
                   onClick={handleReorder}
@@ -624,6 +723,16 @@ export default function CustomerDashboard() {
                         >
                           <Eye size={20} />
                         </button>
+                        {order.statusClass === 'entregue' && (
+                          <button
+                            className={styles.avaliarBtnSmall}
+                            onClick={() => handleOpenAvaliacao(order.originalData)}
+                            disabled={Boolean(order?.originalData?.id) && Boolean(pedidosAvaliados[String(order.originalData.id)])}
+                            type="button"
+                          >
+                            Avaliar o Pedido
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -670,13 +779,36 @@ export default function CustomerDashboard() {
                         </p>
                       </div>
                     </div>
+                  </div>
+                  <div className={styles.orderCardRight}>
                     <div className={`${styles.orderStatusBadge} ${styles[order.statusClass]}`}>
                       {order.status.toUpperCase()}
                     </div>
+                    <button
+                      className={`${styles.actionBtn} ${styles.orderCardActionBtn}`.trim()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenModal(order.originalData);
+                      }}
+                      type="button"
+                      aria-label="Ver pedido"
+                    >
+                      <Eye size={20} />
+                    </button>
+                    {order.statusClass === 'entregue' && (
+                      <button
+                        className={styles.avaliarBtn}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenAvaliacao(order.originalData);
+                        }}
+                        disabled={Boolean(order?.originalData?.id) && Boolean(pedidosAvaliados[String(order.originalData.id)])}
+                        type="button"
+                      >
+                        Avaliar o Pedido
+                      </button>
+                    )}
                   </div>
-                  <button className={`${styles.actionBtn} ${styles.orderCardActionBtn}`}>
-                    <Eye size={20} />
-                  </button>
                 </div>
               ))
             ) : (

@@ -83,6 +83,8 @@ function CustomerOrdersContent() {
           total_pedido,
           status_pedido,
           forma_pagamento,
+          estabelecimento_id,
+          entregador_id,
           observacao_cliente,
           estabelecimentos (
             nome_estabelecimento,
@@ -104,6 +106,8 @@ function CustomerOrdersContent() {
             total_pedido,
             status_pedido,
             forma_pagamento,
+            estabelecimento_id,
+            entregador_id,
             observacao_cliente
           `)
         .eq('cliente_id', uid)
