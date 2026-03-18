@@ -66,6 +66,7 @@ export default function MarketplaceHome() {
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
 
   useEffect(() => {
+    document.title = 'ZapZap Delivery - Estabelecimentos';
     // Check if location is already saved
     const savedUF = localStorage.getItem('user_uf');
     const savedCity = localStorage.getItem('user_city');

@@ -14,7 +14,8 @@ export async function GET() {
     const { data, error } = await supabaseAdmin
       .from('estabelecimentos')
       .select('uf, cidade')
-      .eq('status_estabelecimento', 'ativo');
+      .eq('status_estabelecimento', 'ativo')
+      .eq('is_open', true);
 
     if (error) {
       console.error('Error fetching locations:', error);

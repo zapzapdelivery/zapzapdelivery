@@ -38,6 +38,10 @@ export default function CustomerDashboard() {
   const [lastOrder, setLastOrder] = useState<any>(null);
   const [reordering, setReordering] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+
+  useEffect(() => {
+    document.title = 'ZapZap Delivery - Minha Conta';
+  }, []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [avaliacaoOrder, setAvaliacaoOrder] = useState<any>(null);
   const [avaliacaoOpen, setAvaliacaoOpen] = useState(false);
@@ -678,141 +682,74 @@ export default function CustomerDashboard() {
             <h2 className={styles.sectionTitle}>Meus Pedidos Recentes</h2>
             <a href="/minhaconta/pedidos" className={styles.viewAll}>Ver todos</a>
           </div>
-
-          {/* Desktop Table */}
-          <div className={styles.tableContainer}>
-            {recentOrders.length > 0 ? (
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>NÚMERO DO PEDIDO</th>
-                    <th>DATA</th>
-                    <th>ESTABELECIMENTO</th>
-                    <th>TOTAL</th>
-                    <th>STATUS</th>
-                    <th>Status do Pedido</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentOrders.map((order) => (
-                    <tr key={order.id}>
-                      <td className={styles.orderId}>{order.id}</td>
-                    <td>{order.date}</td>
-                    <td>
-                      {order.establishmentUrl ? (
-                        <Link 
-                          href={order.establishmentUrl.startsWith('http') ? order.establishmentUrl : `/estabelecimentos/cardapio/${order.establishmentUrl}`}
-                          style={{ color: '#111827', textDecoration: 'none', fontWeight: 600 }}
-                        >
-                          {order.establishment}
-                        </Link>
-                      ) : (
-                        order.establishment
-                      )}
-                    </td>
-                    <td>{order.total}</td>
-                      <td>
-                        <span className={`${styles.status} ${styles[order.statusClass]}`}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td className={styles.actions}>
-                        <button 
-                          className={styles.actionBtn}
-                          onClick={() => handleOpenModal(order.originalData)}
-                        >
-                          <Eye size={20} />
-                        </button>
-                        {order.statusClass === 'entregue' && (
-                          <button
-                            className={styles.avaliarBtnSmall}
-                            onClick={() => handleOpenAvaliacao(order.originalData)}
-                            disabled={Boolean(order?.originalData?.id) && Boolean(pedidosAvaliados[String(order.originalData.id)])}
-                            type="button"
-                          >
-                            Avaliar o Pedido
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <p style={{ padding: '1rem', color: '#6b7280' }}>Você ainda não tem pedidos.</p>
-            )}
-          </div>
-
-          {/* Mobile Order Cards */}
-          <div className={styles.mobileOrderList}>
+          <div className={styles.recentOrdersGrid}>
             {recentOrders.length > 0 ? (
               recentOrders.map((order) => (
-                <div 
-                  key={order.id} 
-                  className={styles.orderCard}
-                  onClick={() => handleOpenModal(order.originalData)}
-                >
-                  <div className={styles.orderContentWrapper}>
-                    <div className={styles.orderMainInfo}>
-                      <div className={styles.orderIcon}>
-                        <Utensils size={24} />
+                <div key={order.id} className={styles.orderCard}>
+                  <div className={styles.orderTop}>
+                    <div className={styles.orderIcon}>
+                      <Utensils size={24} />
+                    </div>
+                    <div className={styles.orderText}>
+                      <div className={styles.orderHeader}>
+                        <span className={styles.orderHeaderLabel}>Pedido</span>
+                        <span className={styles.orderHeaderNumber}>{order.id}</span>
                       </div>
-                      <div className={styles.orderText}>
-                        <h4>Pedido {order.id}</h4>
-                        <p>{order.total} • {order.date}</p>
-                        <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                          {order.establishmentUrl ? (
-                            <Link
-                              href={
-                                order.establishmentUrl.startsWith('http')
-                                  ? order.establishmentUrl
-                                  : `/estabelecimentos/cardapio/${order.establishmentUrl}`
-                              }
-                              className={styles.establishmentLinkMobile}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {order.establishment}
-                            </Link>
-                          ) : (
-                            order.establishment
-                          )}
-                        </p>
+                      <div className={styles.orderMeta}>
+                        {order.total} • {order.date}
+                      </div>
+                      <div className={styles.orderEstablishment}>
+                        {order.establishmentUrl ? (
+                          <Link
+                            href={
+                              order.establishmentUrl.startsWith('http')
+                                ? order.establishmentUrl
+                                : `/estabelecimentos/cardapio/${order.establishmentUrl}`
+                            }
+                            className={styles.establishmentLinkMobile}
+                          >
+                            {order.establishment}
+                          </Link>
+                        ) : (
+                          <span>{order.establishment}</span>
+                        )}
                       </div>
                     </div>
                   </div>
-                  <div className={styles.orderCardRight}>
+
+                  <div className={styles.orderActionsGrid}>
                     <div className={`${styles.orderStatusBadge} ${styles[order.statusClass]}`}>
-                      {order.status.toUpperCase()}
+                      {String(order.status || '').toUpperCase()}
                     </div>
+
+                    <div className={styles.orderActionsLeft}>
+                      {order.statusClass === 'entregue' ? (
+                        <button
+                          className={styles.orderEvaluateBtn}
+                          onClick={() => handleOpenAvaliacao(order.originalData)}
+                          disabled={Boolean(order?.originalData?.id) && Boolean(pedidosAvaliados[String(order.originalData.id)])}
+                          type="button"
+                        >
+                          Avaliar o Pedido
+                        </button>
+                      ) : (
+                        <div />
+                      )}
+                    </div>
+
                     <button
-                      className={`${styles.actionBtn} ${styles.orderCardActionBtn}`.trim()}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenModal(order.originalData);
-                      }}
+                      className={`${styles.actionBtn} ${styles.orderViewBtn}`.trim()}
+                      onClick={() => handleOpenModal(order.originalData)}
                       type="button"
                       aria-label="Ver pedido"
                     >
                       <Eye size={20} />
                     </button>
-                    {order.statusClass === 'entregue' && (
-                      <button
-                        className={styles.avaliarBtn}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenAvaliacao(order.originalData);
-                        }}
-                        disabled={Boolean(order?.originalData?.id) && Boolean(pedidosAvaliados[String(order.originalData.id)])}
-                        type="button"
-                      >
-                        Avaliar o Pedido
-                      </button>
-                    )}
                   </div>
                 </div>
               ))
             ) : (
-              <p style={{ padding: '1rem', color: '#6b7280', textAlign: 'center' }}>Você ainda não tem pedidos.</p>
+              <p style={{ padding: '1rem', color: '#6b7280' }}>Você ainda não tem pedidos.</p>
             )}
           </div>
         </section>

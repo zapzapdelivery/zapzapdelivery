@@ -88,6 +88,10 @@ export default function CardapioPage() {
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
 
   useEffect(() => {
+    document.title = 'ZapZap Delivery - Cardapio';
+  }, []);
+
+  useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 1024);
     };

@@ -39,6 +39,9 @@ export default function PainelEntregador() {
   const [activeSection, setActiveSection] = useState<'inicio' | 'minhas_entregas'>('inicio');
   const [alertsMode, setAlertsMode] = useState<'off' | 'som' | 'push'>('som');
   const [isMobileViewport, setIsMobileViewport] = useState(false);
+  useEffect(() => {
+    document.title = 'ZapZap Delivery - Entregador';
+  }, []);
   const [stats, setStats] = useState({
     entregasHoje: 0,
     faturamentoTotal: 0,

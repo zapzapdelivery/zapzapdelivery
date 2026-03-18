@@ -77,6 +77,10 @@ export default function CarrinhoPage() {
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   
+  useEffect(() => {
+    document.title = 'ZapZap Delivery - Carrinho';
+  }, []);
+
   const [loadingCep, setLoadingCep] = useState(false);
   const [distance, setDistance] = useState<number | null>(null);
   const [deliveryError, setDeliveryError] = useState<string | null>(null);

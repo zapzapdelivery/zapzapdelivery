@@ -156,6 +156,24 @@
   flex-shrink: 0;
 }
 
+.lastOrderCard .lastOrderRight {
+  gap: 0.5rem;
+}
+
+.lastOrderCard .lastOrderStatus {
+  font-size: 0.68rem;
+  height: 32px;
+  padding: 0 0.7rem;
+}
+
+.lastOrderCard .avaliarBtn,
+.lastOrderCard .reorderBtn {
+  height: 32px;
+  padding: 0 0.7rem;
+  font-size: 0.8rem;
+  border-radius: 9px;
+}
+
 .lastOrderStatus {
   display: inline-flex;
   align-items: center;
@@ -190,6 +208,54 @@
 }
 
 .reorderBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.avaliarBtn {
+  height: 38px;
+  background: #10b981;
+  color: white;
+  border: 1px solid #10b981;
+  border-radius: 10px;
+  padding: 0 0.85rem;
+  font-size: 0.875rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.avaliarBtn:hover:not(:disabled) {
+  background: #059669;
+  border-color: #059669;
+}
+
+.avaliarBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.avaliarBtnSmall {
+  height: 36px;
+  background: #10b981;
+  color: white;
+  border: 1px solid #10b981;
+  border-radius: 10px;
+  padding: 0 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.avaliarBtnSmall:hover:not(:disabled) {
+  background: #059669;
+  border-color: #059669;
+}
+
+.avaliarBtnSmall:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
@@ -288,62 +354,6 @@
   text-decoration: underline;
 }
 
-.tableContainer {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.table th {
-  background-color: #f9fafb;
-  padding: 1rem;
-  text-align: left;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: #6b7280;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.table td {
-  padding: 1rem;
-  border-bottom: 1px solid #e5e7eb;
-  color: #374151;
-  font-size: 0.875rem;
-}
-
-.table tr:last-child td {
-  border-bottom: none;
-}
-
-.orderId {
-  font-family: monospace;
-  font-weight: 600;
-  color: #111827;
-}
-
-.status {
-  display: inline-flex;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  align-items: center;
-}
-
 /* Updated Action Button Style */
 .actionBtn {
   background: #ffffff;
@@ -365,87 +375,32 @@
   color: #2563eb;
 }
 
-/* Mobile List Styles */
-.mobileOrderList {
-  display: none; /* Default hidden on desktop */
-  flex-direction: column;
+/* Recent Orders Cards */
+.recentOrdersGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 1rem;
 }
 
 .orderCard {
   background: white;
   padding: 1rem;
-  border-radius: 12px;
+  border-radius: 14px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   border: 1px solid #cbd5e1; /* Stronger border */
   border-left: 5px solid #3b82f6; /* Accent line */
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  position: relative;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.orderCardActionBtn {
-  width: 40px;
-  height: 40px;
-}
-
-.orderCardRight {
-  display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-
-.avaliarBtn {
-  height: 38px;
-  background: #10b981;
-  color: white;
-  border: 1px solid #10b981;
-  border-radius: 10px;
-  padding: 0 0.85rem;
-  font-size: 0.875rem;
-  font-weight: 800;
-  cursor: pointer;
+  gap: 1rem;
+  position: relative;
   transition: all 0.2s;
-  white-space: nowrap;
 }
 
-.avaliarBtn:hover:not(:disabled) {
-  background: #059669;
-  border-color: #059669;
-}
-
-.avaliarBtn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.avaliarBtnSmall {
-  height: 36px;
-  background: #10b981;
-  color: white;
-  border: 1px solid #10b981;
-  border-radius: 10px;
-  padding: 0 0.75rem;
-  font-size: 0.8125rem;
-  font-weight: 800;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.avaliarBtnSmall:hover:not(:disabled) {
-  background: #059669;
-  border-color: #059669;
-}
-
-.avaliarBtnSmall:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
+.orderTop {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  min-width: 0;
 }
 
 .orderCard:hover {
@@ -454,41 +409,58 @@
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
-.orderContentWrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  flex: 1; /* Ocupa o espaço restante */
-}
-
-.orderMainInfo {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
 .orderIcon {
-  width: 40px;
-  height: 40px;
+  width: 46px;
+  height: 46px;
   background-color: #f3f4f6;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #6b7280;
+  flex-shrink: 0;
 }
 
-.orderText h4 {
-  font-size: 0.95rem;
-  font-weight: 600;
+.orderText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.orderHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.orderHeaderLabel,
+.orderHeaderNumber {
+  font-size: 1.05rem;
+  font-weight: 900;
   color: #111827;
-  margin: 0 0 0.25rem 0;
+  line-height: 1.1;
 }
 
-.orderText p {
+.orderHeaderNumber {
+  white-space: nowrap;
+}
+
+.orderMeta {
+  font-size: 0.82rem;
+  color: #6b7280;
+  line-height: 1.2;
+}
+
+.orderEstablishment {
   font-size: 0.85rem;
   color: #6b7280;
-  margin: 0;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .establishmentLinkMobile {
@@ -503,12 +475,57 @@
 }
 
 .orderStatusBadge {
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.25rem 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.45rem 0.75rem;
   border-radius: 9999px;
   white-space: nowrap;
-  align-self: flex-start; /* Alinha à esquerda dentro do wrapper */
+  letter-spacing: 0.02em;
+}
+
+.orderActionsGrid {
+  display: grid;
+  grid-template-columns: auto 1fr 44px;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.orderActionsLeft {
+  min-width: 0;
+}
+
+.orderEvaluateBtn {
+  height: 36px;
+  width: 100%;
+  background: #10b981;
+  color: white;
+  border: 1px solid #10b981;
+  border-radius: 9999px;
+  padding: 0 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.orderEvaluateBtn:hover:not(:disabled) {
+  background: #059669;
+  border-color: #059669;
+}
+
+.orderEvaluateBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.orderViewBtn {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  padding: 0;
 }
 
 /* Status colors */
@@ -655,7 +672,32 @@
   }
 
   .lastOrderRight {
-    justify-content: space-between;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .lastOrderCard .lastOrderStatus,
+  .lastOrderCard .avaliarBtn,
+  .lastOrderCard .reorderBtn {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .lastOrderCard .lastOrderStatus {
+    font-size: 0.62rem;
+    height: 30px;
+    padding: 0 0.6rem;
+  }
+
+  .lastOrderCard .avaliarBtn,
+  .lastOrderCard .reorderBtn {
+    height: 30px;
+    padding: 0 0.6rem;
+    font-size: 0.72rem;
+    border-radius: 9px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .lastOrderIcon {
@@ -716,8 +758,9 @@
     display: none; /* Hide table on mobile */
   }
 
-  .mobileOrderList {
-    display: flex; /* Show list on mobile */
+  .recentOrdersGrid {
+    display: flex;
+    flex-direction: column;
   }
 
   .settingsSection {

@@ -70,6 +70,10 @@ export default function EnderecosPage() {
   });
 
   useEffect(() => {
+    document.title = 'ZapZap Delivery - Minha Conta';
+  }, []);
+
+  useEffect(() => {
     async function loadEnderecos() {
       try {
         setLoading(true);

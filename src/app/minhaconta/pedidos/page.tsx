@@ -34,6 +34,10 @@ function CustomerOrdersContent() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  useEffect(() => {
+    document.title = 'ZapZap Delivery - Minha Conta';
+  }, []);
+
   // PIX Modal States
   const [pixModalOpen, setPixModalOpen] = useState(false);
   const [pixData, setPixData] = useState<any>(null);

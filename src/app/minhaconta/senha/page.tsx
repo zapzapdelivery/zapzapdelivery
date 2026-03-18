@@ -31,6 +31,10 @@ export default function SenhaPage() {
     hasSpecialChar: false
   });
 
+  useEffect(() => {
+    document.title = 'ZapZap Delivery - Minha Conta';
+  }, []);
+
   // Verificar requisitos da senha em tempo real
   useEffect(() => {
     setPasswordRequirements({

@@ -28,6 +28,10 @@ export default function PerfilPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  useEffect(() => {
+    document.title = 'ZapZap Delivery - Minha Conta';
+  }, []);
+
   // Form State
   const [formData, setFormData] = useState({
     // Informações Pessoais

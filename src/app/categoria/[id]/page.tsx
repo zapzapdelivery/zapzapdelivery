@@ -33,6 +33,10 @@ export default function CategoryPage() {
   };
 
   useEffect(() => {
+    document.title = 'ZapZap Delivery - Estabelecimentos';
+  }, []);
+
+  useEffect(() => {
     async function loadData() {
       try {
         setLoading(true);

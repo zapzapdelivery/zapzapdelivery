@@ -815,12 +815,12 @@
 }
 
 .modalButton.warning {
-  background-color: #f59e0b;
+  background-color: #22c55e;
 }
 
 .modalButton.warning:hover {
-  background-color: #d97706;
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+  background-color: #16a34a;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
 }
 
 @keyframes modalFadeIn {
