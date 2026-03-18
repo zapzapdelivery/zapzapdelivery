@@ -11,13 +11,11 @@ import {
   Instagram, 
   Facebook, 
   Twitter,
-  ChevronRight,
   MessageSquare,
   X,
   Minus,
   AlertCircle,
   ArrowLeft,
-  Trash2,
   Calculator,
   Ticket,
   CreditCard,
@@ -83,7 +81,6 @@ export default function CardapioPage() {
   const [quantity, setQuantity] = useState(1);
   const [selectedByGroup, setSelectedByGroup] = useState<Record<string, string[]>>({});
   const [observation, setObservation] = useState('');
-  const [showCart, setShowCart] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<Produto[]>([]);
@@ -509,11 +506,7 @@ export default function CardapioPage() {
               <div
                 className={`${styles.cartIcon} ${totalItems > 0 ? styles.cartPulse : ''}`}
                 onClick={() => {
-                  if (isMobile) {
-                    goToCart();
-                  } else {
-                    setShowCart(true);
-                  }
+                  goToCart();
                 }}
                 style={{ cursor: 'pointer' }}
               >
@@ -812,79 +805,6 @@ export default function CardapioPage() {
           <p>© {new Date().getFullYear()} ZapZap Delivery. Todos os direitos reservados.</p>
         </div>
       </footer>
-
-      {/* Cart Sidebar (Desktop) */}
-      {!isMobile && showCart && (
-        <div className={styles.cartOverlay} onClick={() => setShowCart(false)}>
-          <div className={styles.cartSidebar} onClick={e => e.stopPropagation()}>
-            <div className={styles.cartSidebarHeader}>
-              <div className={styles.cartSidebarTitle}>
-                <ShoppingCart size={24} />
-                <span>Seu Pedido</span>
-              </div>
-              <button className={styles.closeSidebar} onClick={() => setShowCart(false)}>
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className={styles.cartSidebarContent}>
-              {items.length === 0 ? (
-                <div className={styles.emptySidebar}>
-                  <ShoppingCart size={48} color="#e5e7eb" />
-                  <p>Seu carrinho está vazio</p>
-                  <button className={styles.btnPrimary} onClick={() => setShowCart(false)}>
-                    Ver Cardápio
-                  </button>
-                </div>
-              ) : (
-                <div className={styles.sidebarItems}>
-                  {items.map(item => (
-                    <div key={item.id} className={styles.sidebarItem}>
-                      <div className={styles.sidebarItemInfo}>
-                        <h4>{item.nome_produto}</h4>
-                        <p>R$ {item.valor_base.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                        <div className={styles.sidebarItemActions}>
-                          <div className={styles.quantitySelectorMini}>
-                            <button onClick={() => updateQuantity(item.id, item.quantidade - 1)} disabled={item.quantidade <= 1}>
-                              <Minus size={14} />
-                            </button>
-                            <span>{item.quantidade}</span>
-                            <button onClick={() => updateQuantity(item.id, item.quantidade + 1)}>
-                              <Plus size={14} />
-                            </button>
-                          </div>
-                          <button className={styles.removeSmall} onClick={() => removeItem(item.id)}>
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                      <div className={styles.sidebarItemTotal}>
-                        R$ {(item.valor_base * item.quantidade).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {items.length > 0 && (
-              <div className={styles.cartSidebarFooter}>
-                <div className={styles.sidebarTotal}>
-                  <span>Subtotal</span>
-                  <span>R$ {totalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                </div>
-                <button 
-                  className={styles.btnCheckout}
-                  onClick={goToCart}
-                >
-                  <span>FINALIZAR PEDIDO</span>
-                  <ChevronRight size={20} />
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Product Modal */}
       {selectedProduct && (
