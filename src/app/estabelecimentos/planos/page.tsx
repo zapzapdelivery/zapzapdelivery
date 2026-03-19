@@ -209,11 +209,11 @@ export default function PlanosPage() {
           </div>
 
           <div className={styles.actionButtons}>
-            <button className={`${styles.btn} ${styles.btnImport} ${styles.desktopOnly}`}>
+            <button className={`${styles.btn} ${styles.btnImport} ${styles.desktopActionOnly}`}>
               <Upload size={18} />
               Importar
             </button>
-            <button className={`${styles.btn} ${styles.btnExport} ${styles.desktopOnly}`}>
+            <button className={`${styles.btn} ${styles.btnExport} ${styles.desktopActionOnly}`}>
               <Download size={18} />
               Exportar
             </button>

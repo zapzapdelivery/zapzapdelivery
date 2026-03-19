@@ -92,9 +92,9 @@ export default function TiposEstabelecimentosPage() {
          const enriched: TipoEstabelecimento[] = (Array.isArray(data) ? data : []).map((t: any) => ({
            id: t.id,
            nome: t.nome,
-           status: 'ativo',
+          status: typeof t.status === 'string' ? t.status : (typeof t.ativo === 'boolean' ? (t.ativo ? 'ativo' : 'inativo') : 'ativo'),
            lojas: 0,
-           descricao: ''
+          descricao: t.descricao ?? ''
          }));
          setTypes(enriched);
        } catch (e: any) {
@@ -205,7 +205,7 @@ export default function TiposEstabelecimentosPage() {
           </div>
         </div>
  
-        <div className={`${styles.toolbar} ${styles.desktopOnly}`}>
+        <div className={`${styles.toolbar} ${styles.desktopRowOnly}`}>
           <div className={styles.searchContainer}>
             <Search className={styles.searchIcon} size={20} />
             <input
@@ -228,12 +228,12 @@ export default function TiposEstabelecimentosPage() {
              </button>
              <Link href="/estabelecimentos/tipos/novo" className={styles.btn + ' ' + styles.btnNew}>
                <Plus size={18} />
-               + Novo Tipo
+               Novo Tipo
              </Link>
            </div>
          </div>
  
-        <div className={`${styles.filtersBar} ${styles.desktopOnly}`}>
+        <div className={`${styles.filtersBar} ${styles.desktopRowOnly}`}>
            <div className={styles.tabs}>
              <button
                className={`${styles.tab} ${filterStatus === 'todos' ? styles.tabActive : ''}`}

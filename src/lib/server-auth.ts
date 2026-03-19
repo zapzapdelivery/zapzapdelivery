@@ -44,7 +44,16 @@ export async function getAuthContext(request: Request | NextRequest): Promise<Au
     }
 
     // 2. Check Super Admin
-    const isSuperAdmin = user.email === 'everaldozs@gmail.com' || user.email === 'everaldozszap@gmail.com';
+    const email = String(user.email || '').toLowerCase();
+    const isSuperAdmin = email === 'everaldozs@gmail.com' || email === 'everaldozszap@gmail.com';
+    if (isSuperAdmin) {
+      return {
+        user,
+        establishmentId: null,
+        role: 'admin',
+        isSuperAdmin: true
+      };
+    }
     
     // 3. Get Establishment ID and Role
     // We try to find the user in public.usuarios to get their establishment_id and internal ID

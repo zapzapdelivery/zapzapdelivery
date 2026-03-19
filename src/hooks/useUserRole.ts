@@ -26,9 +26,12 @@ export function useUserRole() {
 
         const user = session.user;
         // Super admin check
-        if (user?.email === 'everaldozs@gmail.com') {
+        const email = String(user?.email || '').toLowerCase();
+        if (email === 'everaldozs@gmail.com' || email === 'everaldozszap@gmail.com') {
           if (mounted) {
             setRole('admin');
+            setEstablishmentId(null);
+            setEstablishmentName(null);
             setLoading(false);
           }
           return;

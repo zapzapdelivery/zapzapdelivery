@@ -341,7 +341,7 @@ export default function AdicionaisPage() {
             />
           </div>
           <div className={styles.actionButtons}>
-            <Link href="/adicionais/novo-grupo" className={styles.primaryButton}>
+            <Link href="/adicionais/novo-grupo" className={`${styles.primaryButton} ${styles.newGroupButton}`}>
               <Plus size={18} />
               <span>Novo Grupo</span>
             </Link>

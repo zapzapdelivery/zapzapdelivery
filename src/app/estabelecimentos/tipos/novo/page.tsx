@@ -54,7 +54,7 @@ export default function NovoTipoEstabelecimentoPage() {
       const res = await fetch('/api/estabelecimentos/tipos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: formData.nome })
+        body: JSON.stringify({ nome: formData.nome, descricao: formData.descricao, ativo: formData.ativo })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -158,39 +158,64 @@ export default function NovoTipoEstabelecimentoPage() {
               Voltar para Tipos de Estabelecimentos
             </Link>
             <h1 className={styles.mobileTitle}>Novo Tipo de Estabelecimento</h1>
-            <div className={styles.mobileStatusCard}>
-              <div className={styles.mobileStatusText}>
-                <span className={styles.statusLabel}>Ativo</span>
-                <span className={styles.statusDesc}>Habilitar ou desabilitar este tipo</span>
+
+            <div className={styles.card}>
+              <div className={styles.cardHeader}>
+                <Settings2 className={styles.sectionIcon} size={20} />
+                <h2 className={styles.sectionTitle}>Configurações</h2>
               </div>
-              <label className={styles.switch}>
-                <input 
-                  type="checkbox" 
-                  name="ativo"
-                  checked={formData.ativo}
-                  onChange={handleToggleActive}
-                />
-                <span className={styles.slider}></span>
-              </label>
+              <div className={styles.statusContainer}>
+                <div className={styles.statusInfo}>
+                  <span className={styles.statusLabel}>Ativo</span>
+                  <span className={styles.statusDesc}>Define se este tipo está visível para seleção</span>
+                </div>
+                <label className={styles.switch}>
+                  <input
+                    type="checkbox"
+                    name="ativo"
+                    checked={formData.ativo}
+                    onChange={handleToggleActive}
+                  />
+                  <span className={styles.slider}></span>
+                </label>
+              </div>
             </div>
-            <label className={styles.label}>Nome</label>
-            <input
-              name="nome"
-              type="text"
-              className={styles.input}
-              placeholder="Ex: Restaurante, Farmácia..."
-              value={formData.nome}
-              onChange={handleChange}
-            />
-            <label className={styles.label}>Descrição</label>
-            <textarea
-              name="descricao"
-              className={styles.textarea}
-              placeholder="Descreva brevemente este tipo de estabelecimento..."
-              value={formData.descricao}
-              onChange={handleChange}
-            />
-            <div className={styles.mobileActions}>
+
+            <div className={styles.card}>
+              <div className={styles.cardHeader}>
+                <Info className={styles.sectionIcon} size={20} />
+                <h2 className={styles.sectionTitle}>Informações Básicas</h2>
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Nome</label>
+                <input
+                  name="nome"
+                  type="text"
+                  className={styles.input}
+                  placeholder="Ex: Restaurante, Pizzaria, Farmácia"
+                  value={formData.nome}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <div className={styles.card}>
+              <div className={styles.cardHeader}>
+                <FileText className={styles.sectionIcon} size={20} />
+                <h2 className={styles.sectionTitle}>Descrição</h2>
+              </div>
+              <div className={styles.formGroup}>
+                <textarea
+                  name="descricao"
+                  className={styles.textarea}
+                  placeholder="Descreva brevemente as características deste tipo de estabelecimento..."
+                  value={formData.descricao}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <div className={styles.mobileStickyFooter}>
               <button 
                 type="button" 
                 className={styles.btnCancel}

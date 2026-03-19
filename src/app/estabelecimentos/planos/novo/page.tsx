@@ -15,6 +15,16 @@ export default function NovoPlanoPage() {
   const [loading, setLoading] = useState(false);
   const [loadingRole, setLoadingRole] = useState(true);
   const { success, error: showError } = useToast();
+  
+  // Form State
+  const [formData, setFormData] = useState({
+    nome_plano: '',
+    valor_mensal: '',
+    limite_pedidos: '',
+    limite_produtos: '',
+    limite_usuarios: '',
+    status_plano: true // true = ativo, false = inativo
+  });
 
   useEffect(() => {
     const loadRole = async () => {
@@ -44,18 +54,6 @@ export default function NovoPlanoPage() {
     loadRole();
   }, [router]);
 
-  if (loadingRole) return null;
-
-  // Form State
-  const [formData, setFormData] = useState({
-    nome_plano: '',
-    valor_mensal: '',
-    limite_pedidos: '',
-    limite_produtos: '',
-    limite_usuarios: '',
-    status_plano: true // true = ativo, false = inativo
-  });
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -74,6 +72,8 @@ export default function NovoPlanoPage() {
   const handleBack = () => {
     router.push('/estabelecimentos/planos');
   };
+
+  if (loadingRole) return null;
 
   const handleSubmit = async () => {
     if (!formData.nome_plano) {

@@ -34,7 +34,12 @@ export default function EditarTipoEstabelecimentoPage() {
         const res = await fetch(`/api/estabelecimentos/tipos/${id}`, { signal: controller.signal });
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error || 'Falha ao carregar tipo');
-        setFormData(prev => ({ ...prev, nome: data?.nome || '' }));
+        setFormData(prev => ({
+          ...prev,
+          nome: data?.nome || '',
+          descricao: data?.descricao || '',
+          ativo: typeof data?.ativo === 'boolean' ? data.ativo : (String(data?.status || '').toLowerCase() === 'inativo' ? false : true)
+        }));
       } catch (err: any) {
         if (err.name !== 'AbortError') {
           showError(err?.message || 'Erro ao carregar tipo');
@@ -67,7 +72,7 @@ export default function EditarTipoEstabelecimentoPage() {
       const res = await fetch(`/api/estabelecimentos/tipos/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: formData.nome })
+        body: JSON.stringify({ nome: formData.nome, descricao: formData.descricao, ativo: formData.ativo })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Erro ao atualizar tipo');

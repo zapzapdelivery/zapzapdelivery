@@ -18,6 +18,13 @@ export async function GET(request: Request) {
       return NextResponse.json({ role: null }, { status: 200 });
     }
     const userId = auth.user.id;
+    const email = String(auth.user.email || '').toLowerCase();
+    if (email === 'everaldozs@gmail.com' || email === 'everaldozszap@gmail.com') {
+      return NextResponse.json(
+        { role: 'admin', establishment_id: null, establishment_name: null },
+        { status: 200 }
+      );
+    }
     // console.log('[API/me/role] User identified:', userId);
 
     // 1. Check user_roles table (primary source for system roles)

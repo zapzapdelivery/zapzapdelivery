@@ -94,6 +94,14 @@
   background-color: #059669;
 }
 
+.newGroupButton {
+  background-color: #EC6824;
+}
+
+.newGroupButton:hover {
+  background-color: #d85f21;
+}
+
 .filtersBar {
   display: flex;
   justify-content: flex-end;

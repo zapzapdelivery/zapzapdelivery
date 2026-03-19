@@ -96,9 +96,9 @@ export default function TiposEstabelecimentosPage() {
          const enriched: TipoEstabelecimento[] = (Array.isArray(data) ? data : []).map((t: any) => ({
            id: t.id,
            nome: t.nome,
-           status: 'ativo',
+         status: typeof t.status === 'string' ? t.status : (typeof t.ativo === 'boolean' ? (t.ativo ? 'ativo' : 'inativo') : 'ativo'),
            lojas: 0,
-           descricao: ''
+         descricao: t.descricao ?? ''
          }));
          setTypes(enriched);
        } catch (e: any) {

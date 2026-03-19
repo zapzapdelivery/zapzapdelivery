@@ -7,11 +7,15 @@
  .mainContent {
    flex: 1;
    padding: 2rem;
-   margin-left: 250px;
+  margin-left: 0;
  }
  
 .desktopOnly { display: block !important; }
 .mobileOnly { display: none !important; }
+
+.desktopRowOnly {
+  display: flex;
+}
 
  .backLink {
    display: flex;
@@ -185,6 +189,7 @@
   }
   .desktopOnly { display: none !important; }
   .mobileOnly { display: block !important; }
+  .desktopRowOnly { display: none !important; }
 }
 
 .mobileHeaderBar {
