@@ -164,7 +164,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       items = menuItems;
     } else if (!role) {
       items = [];
-    } else if (role === 'estabelecimento' || role === 'parceiro') {
+    } else if (role?.includes('estabelecimento') || role?.includes('parceiro')) {
       items = menuItems.filter((m) => !['Estabelecimentos', 'Parceiros'].includes(m.label));
     } else if (role === 'atendente') {
       const restricted = ['Estabelecimentos', 'Estoque', 'Entregadores', 'Cupons', 'Relatórios', 'Configurações', 'Parceiros', 'Usuários'];
@@ -173,8 +173,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       const allowed = ['Dashboard', 'Pedidos', 'Usuários']; 
       if (role === 'entregador') allowed.push('Entregadores');
       items = menuItems.filter((m) => allowed.includes(m.label));
-    } else {
+    } else if (role === 'admin' || role === 'superadmin' || role?.includes('admin')) {
       items = menuItems;
+    } else {
+      // Fail-safe: Qualquer role não reconhecido explicitamente restringe o acesso aos menus super-restritos
+      items = menuItems.filter((m) => !['Estabelecimentos', 'Parceiros'].includes(m.label));
     }
     
     return items;

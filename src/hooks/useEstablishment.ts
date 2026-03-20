@@ -26,7 +26,7 @@ export function useEstablishment() {
         }
 
         const email = String(user.email || '').toLowerCase();
-        const isSuper = email === 'everaldozs@gmail.com' || email === 'everaldozszap@gmail.com';
+        const isSuper = email === 'everaldozs@gmail.com';
         setIsSuperAdmin(isSuper);
 
         const roleRes = await fetch('/api/me/role', {

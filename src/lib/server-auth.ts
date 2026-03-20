@@ -45,7 +45,7 @@ export async function getAuthContext(request: Request | NextRequest): Promise<Au
 
     // 2. Check Super Admin
     const email = String(user.email || '').toLowerCase();
-    const isSuperAdmin = email === 'everaldozs@gmail.com' || email === 'everaldozszap@gmail.com';
+    const isSuperAdmin = email === 'everaldozs@gmail.com';
     if (isSuperAdmin) {
       return {
         user,

@@ -98,12 +98,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         const now = ctx.currentTime;
         const isOrderSound = repeats >= 2;
         for (let i = 0; i < repeats; i++) {
-            const base = now + i * (isOrderSound ? 0.55 : 0.4);
+            const base = now + i * (isOrderSound ? 0.9 : 0.4);
             if (isOrderSound) {
-              playTone(base, 1175, 784, 0.18, 0.32, 'triangle');
-              playTone(base + 0.22, 988, 659, 0.22, 0.28, 'triangle');
+              // Som de "alerta/campainha" forte
+              playTone(base, 1200, 1150, 0.2, 0.9, 'triangle');
+              playTone(base + 0.15, 1200, 1150, 0.2, 0.9, 'triangle');
+              playTone(base + 0.3, 1500, 1400, 0.5, 1.0, 'triangle');
             } else {
-              playTone(base, 880, 440, 0.15, 0.16, 'sine');
+              playTone(base, 880, 440, 0.15, 0.3, 'sine'); // Aumentado um pouco o volume do som de cancelamento/pagamento (era 0.16)
             }
         }
     } catch (e) {
@@ -121,9 +123,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     setNotifications(prev => [newNotification, ...prev]);
     
-    // Repeat 1 time for new orders, 1 time for others
+    // Toca som forte e prolongado (3 repetições) para novos pedidos
     if (notification.type === 'order') {
-      playNotificationSound(1);
+      playNotificationSound(3);
     } else {
       playNotificationSound(1);
     }

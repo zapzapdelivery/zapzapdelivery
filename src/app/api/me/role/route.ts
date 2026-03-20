@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     }
     const userId = auth.user.id;
     const email = String(auth.user.email || '').toLowerCase();
-    if (email === 'everaldozs@gmail.com' || email === 'everaldozszap@gmail.com') {
+    if (email === 'everaldozs@gmail.com') {
       return NextResponse.json(
         { role: 'admin', establishment_id: null, establishment_name: null },
         { status: 200 }

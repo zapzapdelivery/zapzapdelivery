@@ -1,6 +1,6 @@
 export const canEditOrderByRole = (role?: string | null): boolean => {
   if (!role) return false;
-  return role === 'admin' || role === 'estabelecimento' || role === 'atendente';
+  return role === 'admin' || role.includes('estabelecimento') || role === 'atendente';
 };
 
 export const __devTestPermissions = () => {
