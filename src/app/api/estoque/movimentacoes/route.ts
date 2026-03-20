@@ -143,6 +143,42 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Quantidade inválida' }, { status: 400 });
     }
 
+    // Update or Create the Stock in `estoque_produtos` first
+    const { data: stockRow } = await supabaseAdmin
+      .from('estoque_produtos')
+      .select('id, estoque_atual, estoque_minimo')
+      .eq('estabelecimento_id', estabId)
+      .eq('produto_id', produto_id)
+      .maybeSingle();
+
+    let newStock = 0;
+    if (stockRow) {
+      // Calculate based on existing stock
+      if (tipo_movimentacao === 'entrada') newStock = (stockRow.estoque_atual || 0) + qty;
+      else if (tipo_movimentacao === 'saida' || tipo_movimentacao === 'venda') newStock = (stockRow.estoque_atual || 0) - qty;
+      else if (tipo_movimentacao === 'ajuste') newStock = qty;
+    } else {
+      // New stock record
+      if (tipo_movimentacao === 'entrada' || tipo_movimentacao === 'ajuste') newStock = qty;
+      else if (tipo_movimentacao === 'saida' || tipo_movimentacao === 'venda') newStock = -qty;
+    }
+
+    if (stockRow?.id) {
+      await supabaseAdmin
+        .from('estoque_produtos')
+        .update({ estoque_atual: newStock })
+        .eq('id', stockRow.id);
+    } else {
+      await supabaseAdmin
+        .from('estoque_produtos')
+        .insert({
+          estabelecimento_id: estabId,
+          produto_id: produto_id,
+          estoque_atual: newStock,
+          estoque_minimo: 0
+        });
+    }
+
     const payload: any = {
       estabelecimento_id: estabId,
       produto_id,
@@ -157,13 +193,13 @@ export async function POST(request: Request) {
       payload.criado_em = criado_em;
     }
 
-    const { error } = await supabaseAdmin
+    const { error: movError } = await supabaseAdmin
       .from('movimentacoes_estoque')
       .insert(payload);
 
-    if (error) {
+    if (movError) {
       return NextResponse.json(
-        { error: error.message || 'Erro ao registrar movimentação de estoque' },
+        { error: movError.message || 'Erro ao registrar movimentação de estoque' },
         { status: 400 }
       );
     }

@@ -58,6 +58,7 @@ function NovoProdutoContent() {
   const [permiteObservacao, setPermiteObservacao] = useState(true);
   const [status, setStatus] = useState(true); // true = ativo
   const [imagemUrl, setImagemUrl] = useState('');
+  const [estoqueInicial, setEstoqueInicial] = useState('0');
   // const [categoriaId, setCategoriaId] = useState(''); // Deprecated in favor of multi-select
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [estabelecimentoId, setEstabelecimentoId] = useState('');
@@ -125,6 +126,7 @@ function NovoProdutoContent() {
             setPermiteObservacao(prod.permite_observacao);
             setStatus(prod.status_produto === 'ativo');
             setImagemUrl(prod.imagem_produto_url || '');
+            setEstoqueInicial(prod.estoque_inicial != null ? String(prod.estoque_inicial) : '0');
             // setCategoriaId(prod.categoria_id || ''); // Deprecated
             
             // Fetch categories (N:N)
@@ -192,6 +194,12 @@ function NovoProdutoContent() {
       return;
     }
 
+    const estoqueInicialNum = parseInt(estoqueInicial, 10);
+    if (isNaN(estoqueInicialNum) || estoqueInicialNum < 0) {
+      warning('O estoque inicial deve ser um número inteiro igual ou maior que zero.');
+      return;
+    }
+
     try {
       setSaving(true);
 
@@ -206,6 +214,7 @@ function NovoProdutoContent() {
         permite_observacao: permiteObservacao,
         status_produto: status ? 'ativo' : 'inativo',
         imagem_produto_url: imagemUrl || null,
+        estoque_inicial: estoqueInicialNum,
         atualizado_em: new Date().toISOString()
       };
 
@@ -263,7 +272,7 @@ function NovoProdutoContent() {
             body: JSON.stringify({
               estabelecimento_id: inserted.estabelecimento_id || estabelecimentoId,
               produto_id: inserted.id,
-              estoque_atual: 0,
+              estoque_atual: estoqueInicialNum,
               estoque_minimo: 0
             })
           });
@@ -382,18 +391,38 @@ function NovoProdutoContent() {
                 />
               </div>
 
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Valor Base (R$)</label>
-                <div style={{ position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: '1rem', top: '0.75rem', color: '#6b7280', fontSize: '0.875rem' }}>R$</span>
-                    <input 
-                        type="text" 
-                        className={styles.input} 
-                        style={{ paddingLeft: '2.5rem' }}
-                        placeholder="0,00"
-                        value={valor}
-                        onChange={handlePriceChange}
-                    />
+              <div className={styles.grid2Cols} style={{ marginBottom: '1.5rem' }}>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <label className={styles.label}>Valor Base (R$)</label>
+                  <div style={{ position: 'relative' }}>
+                      <span style={{ position: 'absolute', left: '1rem', top: '0.75rem', color: '#6b7280', fontSize: '0.875rem' }}>R$</span>
+                      <input 
+                          type="text" 
+                          className={styles.input} 
+                          style={{ paddingLeft: '2.5rem' }}
+                          placeholder="0,00"
+                          value={valor}
+                          onChange={handlePriceChange}
+                      />
+                  </div>
+                </div>
+
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <label className={styles.label}>Estoque Inicial</label>
+                  <input 
+                    type="number" 
+                    min="0"
+                    step="1"
+                    className={styles.input} 
+                    placeholder="0"
+                    value={estoqueInicial}
+                    onChange={(e) => setEstoqueInicial(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (!/[0-9]/.test(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                  />
                 </div>
               </div>
 

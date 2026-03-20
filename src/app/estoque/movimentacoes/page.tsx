@@ -318,6 +318,10 @@ export default function StockMovementsPage() {
   };
 
   const handleDelete = async (movement: StockMovement) => {
+    if (movement.type === 'venda') {
+      warning('Movimentações de vendas são logadas nos pedidos e não podem ser excluídas por aqui.');
+      return;
+    }
     setMovementToDelete(movement);
     setDeleteModalOpen(true);
   };
@@ -640,12 +644,26 @@ export default function StockMovementsPage() {
             if (!movementToDelete) return;
             try {
               setDeleting(true);
-              success('Exclusão de estoque ainda será integrada ao banco.');
+              const { data: { session } } = await supabase.auth.getSession();
+              const response = await fetch(`/api/estoque/movimentacoes/${movementToDelete.id}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${session?.access_token}` }
+              });
+
+              if (!response.ok) {
+                 const errBody = await response.json().catch(() => ({}));
+                 throw new Error(errBody.error || 'Falha ao excluir a movimentação no servidor');
+              }
+
+              success('Registro excluído e saldo do item estornado com sucesso.');
               setDeleteModalOpen(false);
               setMovementToDelete(null);
-            } catch (err) {
+              if (estabId) {
+                await fetchStock(estabId);
+              }
+            } catch (err: any) {
               console.error('Erro ao excluir estoque:', err);
-              toastError('Erro ao excluir movimentação de estoque.');
+              toastError(err.message || 'Erro ao excluir movimentação de estoque.');
             } finally {
               setDeleting(false);
             }

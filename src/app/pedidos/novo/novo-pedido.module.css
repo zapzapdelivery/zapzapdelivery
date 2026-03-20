@@ -127,6 +127,7 @@
   padding-bottom: 2rem;
   padding-right: 0.5rem;
   scrollbar-width: thin;
+  align-content: start;
 }
 
 .productsGrid::-webkit-scrollbar {

@@ -216,6 +216,14 @@ export function NewCustomerModal({ isOpen, onClose, onSuccess, establishmentId }
         // Tratamento específico para CPF duplicado
         if (data.error && data.error.includes('Já existe um cliente cadastrado com este CPF')) {
           setErrors(prev => ({ ...prev, cpf: 'Este CPF já está em uso.' }));
+          toastError('Este CPF já está em uso.');
+          return;
+        }
+
+        // Tratamento específico para Telefone duplicado
+        if (data.error && data.error.includes('Já existe um cliente cadastrado com este Telefone')) {
+          setErrors(prev => ({ ...prev, telefone: 'Este telefone já está em uso.' }));
+          toastError('Já existe um cliente cadastrado com este Telefone');
           return;
         }
 
@@ -289,12 +297,13 @@ export function NewCustomerModal({ isOpen, onClose, onSuccess, establishmentId }
                     <label className={styles.label}>Telefone</label>
                     <input 
                       type="text" 
-                      className={styles.input}
+                      className={`${styles.input} ${errors.telefone ? styles.inputError : ''}`}
                       value={telefone}
                       onChange={handlePhoneChange}
                       maxLength={15}
                       placeholder="(00) 00000-0000"
                     />
+                    {errors.telefone && <div className={styles.errorText}>{errors.telefone}</div>}
                   </div>
                 </div>
 

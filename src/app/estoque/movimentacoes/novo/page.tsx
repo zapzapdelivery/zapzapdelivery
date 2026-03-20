@@ -251,85 +251,16 @@ function NovaMovimentacaoContent() {
 
       setSaving(true);
 
-      // Recarrega o estoque atual diretamente do banco para evitar desatualização
-      const { data: stockRow, error: stockError } = await supabase
-        .from('estoque_produtos')
-        .select('id, estoque_atual, estoque_minimo')
-        .eq('estabelecimento_id', establishmentId)
-        .eq('produto_id', selectedProductId)
-        .maybeSingle();
-
-      if (stockError) {
-        console.error('Erro ao buscar estoque atual antes da movimentação:', stockError);
-        toastError('Erro ao buscar estoque atual. Tente novamente.');
-        setSaving(false);
-        return;
-      }
-
-      const previousStock = stockRow?.estoque_atual ?? 0;
-      let newStock = previousStock;
-
-      if (movementType === 'entrada') {
-        newStock = previousStock + parsedQty;
-      } else if (movementType === 'saida') {
-        newStock = previousStock - parsedQty;
-      } else if (movementType === 'ajuste') {
-        newStock = parsedQty;
-      }
-
-      if (newStock < 0) {
-        warning('A operação resultaria em estoque negativo. Ajuste a quantidade.');
-        setSaving(false);
-        return;
-      }
+      setSaving(true);
 
       console.log('[Estoque] Movimentação solicitada', {
         movementType,
         quantity: parsedQty,
         establishmentId,
-        selectedProductId,
-        previousStock,
-        newStock
+        selectedProductId
       });
 
-      // Atualiza ou cria o registro em estoque_produtos
-      let estoqueProdutoId = stockRow?.id as string | undefined;
-      if (estoqueProdutoId) {
-        const { error: updateError } = await supabase
-          .from('estoque_produtos')
-          .update({ estoque_atual: newStock })
-          .eq('id', estoqueProdutoId)
-          .eq('estabelecimento_id', establishmentId);
-
-        if (updateError) {
-          console.error('Erro ao atualizar estoque_produtos:', updateError);
-          toastError('Erro ao atualizar o estoque. Nenhuma alteração foi aplicada.');
-          setSaving(false);
-          return;
-        }
-      } else {
-        const { data: inserted, error: insertError } = await supabase
-          .from('estoque_produtos')
-          .insert({
-            estabelecimento_id: establishmentId,
-            produto_id: selectedProductId,
-            estoque_atual: newStock,
-            estoque_minimo: minStock ?? 0
-          })
-          .select('id')
-          .maybeSingle();
-
-        if (insertError) {
-          console.error('Erro ao criar registro de estoque_produtos:', insertError);
-          toastError('Erro ao criar o registro de estoque. Operação não concluída.');
-          setSaving(false);
-          return;
-        }
-
-        estoqueProdutoId = inserted?.id as string | undefined;
-      }
-
-      // Tenta registrar auditoria na tabela de movimentações (via API com supabaseAdmin)
+      // Envia a movimentação para registrar auditoria e recalcular estoque via Supabase Admin (Bypassing RLS do frontend)
       try {
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData.session?.access_token;
@@ -353,24 +284,22 @@ function NovaMovimentacaoContent() {
 
           if (!resp.ok) {
             const errBody = await resp.json().catch(() => ({}));
-            console.error(
-              'Erro ao registrar movimentação de auditoria (API):',
-              errBody?.error || resp.status
-            );
+            toastError(errBody?.error || 'Erro ao registrar a movimentação e abater no estoque.');
+            setSaving(false);
+            return;
           }
         } else {
-          console.warn('Sessão não encontrada ao registrar movimentação de auditoria.');
+          toastError('Sessão não encontrada ao processar operação');
+          setSaving(false);
+          return;
         }
       } catch (auditErr: any) {
-        console.error('Erro inesperado ao registrar log de movimentação:', auditErr);
+        toastError('Falha crônica de conexão com o banco de dados. Tente novamente mais tarde.');
+        setSaving(false);
+        return;
       }
 
-      console.log('[Estoque] Movimentação concluída com sucesso', {
-        movementType,
-        quantity: parsedQty,
-        previousStock,
-        newStock
-      });
+      console.log('[Estoque] Movimentação concluída com sucesso');
 
       success('Movimentação de estoque registrada com sucesso.');
       router.push('/estoque/movimentacoes');
