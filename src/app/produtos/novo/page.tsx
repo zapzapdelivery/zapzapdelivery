@@ -36,6 +36,13 @@ interface GrupoAdicional {
   categoria_id?: string | null;
 }
 
+interface ProdutoTamanho {
+  id?: string;
+  nome_tamanho: string;
+  preco: number;
+  ordem: number;
+}
+
 function NovoProdutoContent() {
   const router = useRouter();
   const { role, loading: loadingRole } = useUserRole();
@@ -56,12 +63,17 @@ function NovoProdutoContent() {
   const [descricao, setDescricao] = useState('');
   const [valor, setValor] = useState('');
   const [permiteObservacao, setPermiteObservacao] = useState(true);
+  const [permiteVendaSemEstoque, setPermiteVendaSemEstoque] = useState(false);
   const [status, setStatus] = useState(true); // true = ativo
   const [imagemUrl, setImagemUrl] = useState('');
   const [estoqueInicial, setEstoqueInicial] = useState('0');
   // const [categoriaId, setCategoriaId] = useState(''); // Deprecated in favor of multi-select
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [estabelecimentoId, setEstabelecimentoId] = useState('');
+  
+  // Pizzaria Specials
+  const [isPizzaria, setIsPizzaria] = useState(false);
+  const [tamanhos, setTamanhos] = useState<ProdutoTamanho[]>([]);
   
   // Data States
   const [categories, setCategories] = useState<Category[]>([]);
@@ -109,6 +121,18 @@ function NovoProdutoContent() {
         
         setCategories(cats || []);
 
+        // Fetch estab type to check if Pizzaria
+        const { data: estabData } = await supabase
+          .from('estabelecimentos')
+          .select('tipo_estabelecimento_id, tipo_estabelecimentos (nome)')
+          .eq('id', estabId)
+          .single();
+
+        if (estabData?.tipo_estabelecimentos) {
+            const nomeTipo = String((estabData.tipo_estabelecimentos as any).nome || '').toLowerCase();
+            setIsPizzaria(nomeTipo.includes('pizzaria'));
+        }
+
         // If editing, fetch product details
         if (id) {
           const { data: prod, error: prodError } = await supabase
@@ -124,6 +148,7 @@ function NovoProdutoContent() {
             setDescricao(prod.descricao || '');
             setValor(prod.valor_base.toString().replace('.', ','));
             setPermiteObservacao(prod.permite_observacao);
+            setPermiteVendaSemEstoque(prod.permite_venda_sem_estoque === true);
             setStatus(prod.status_produto === 'ativo');
             setImagemUrl(prod.imagem_produto_url || '');
             setEstoqueInicial(prod.estoque_inicial != null ? String(prod.estoque_inicial) : '0');
@@ -140,6 +165,17 @@ function NovoProdutoContent() {
             } else if (prod.categoria_id) {
                 // Fallback for legacy data
                 setSelectedCategoryIds([prod.categoria_id]);
+            }
+            
+            // Fetch tamanhos
+            const { data: prodsTam } = await supabase
+                .from('produtos_tamanhos')
+                .select('*')
+                .eq('produto_id', id)
+                .order('ordem', { ascending: true });
+                
+            if (prodsTam && prodsTam.length > 0) {
+                setTamanhos(prodsTam);
             }
           }
         }
@@ -212,6 +248,7 @@ function NovoProdutoContent() {
         descricao: descricao,
         valor_base: valorNumerico,
         permite_observacao: permiteObservacao,
+        permite_venda_sem_estoque: permiteVendaSemEstoque,
         status_produto: status ? 'ativo' : 'inativo',
         imagem_produto_url: imagemUrl || null,
         estoque_inicial: estoqueInicialNum,
@@ -245,6 +282,21 @@ function NovoProdutoContent() {
           const { error: relErr } = await supabase.from('produtos_grupos_adicionais').insert(rows);
           if (relErr) throw relErr;
         }
+
+        if (isPizzaria) {
+            await supabase.from('produtos_tamanhos').delete().eq('produto_id', id);
+            if (tamanhos.length > 0) {
+               const tamRows = tamanhos.map((t, idx) => ({
+                   produto_id: id,
+                   nome_tamanho: t.nome_tamanho,
+                   preco: t.preco,
+                   ordem: t.ordem || idx
+               }));
+               const { error: tamErr } = await supabase.from('produtos_tamanhos').insert(tamRows);
+               if (tamErr) console.warn('Erro ao salvar tamanhos da pizza:', tamErr);
+            }
+        }
+
         success('Produto atualizado com sucesso!');
       } else {
         const { data: inserted, error } = await supabase
@@ -289,6 +341,17 @@ function NovoProdutoContent() {
             }));
             const { error: relErr } = await supabase.from('produtos_grupos_adicionais').insert(rows);
             if (relErr) throw relErr;
+          }
+
+          if (isPizzaria && tamanhos.length > 0) {
+               const tamRows = tamanhos.map((t, idx) => ({
+                   produto_id: inserted.id,
+                   nome_tamanho: t.nome_tamanho,
+                   preco: t.preco,
+                   ordem: t.ordem || idx
+               }));
+               const { error: tamErr } = await supabase.from('produtos_tamanhos').insert(tamRows);
+               if (tamErr) console.warn('Erro ao salvar tamanhos da pizza em novo produto:', tamErr);
           }
         }
 
@@ -342,7 +405,9 @@ function NovoProdutoContent() {
           </div>
             <div className={styles.card}>
               <div className={styles.switchContainer}>
-                  <span className={styles.switchTitle}>Status do Produto</span>
+                  <div className={styles.switchLabel}>
+                    <span className={styles.switchTitle}>Status do Produto</span>
+                  </div>
                   <label className={styles.switch}>
                       <input 
                           type="checkbox" 
@@ -351,6 +416,21 @@ function NovoProdutoContent() {
                       />
                       <span className={styles.slider}></span>
                   </label>
+              </div>
+
+              <div className={styles.switchContainer} style={{ borderTop: '1px solid #f3f4f6', paddingTop: '1.5rem', marginTop: '1.5rem' }}>
+                <div className={styles.switchLabel}>
+                  <span className={styles.switchTitle}>Venda sem Estoque</span>
+                  <span className={styles.switchDescription}>Permitir a venda deste produto mesmo quando o estoque for zero ou negativo</span>
+                </div>
+                <label className={styles.switch}>
+                  <input 
+                    type="checkbox" 
+                    checked={permiteVendaSemEstoque}
+                    onChange={(e) => setPermiteVendaSemEstoque(e.target.checked)}
+                  />
+                  <span className={styles.slider}></span>
+                </label>
               </div>
             </div>
 
@@ -469,6 +549,66 @@ function NovoProdutoContent() {
                 </label>
               </div>
             </div>
+
+            {isPizzaria && (
+                <div className={styles.card}>
+                  <h2 className={styles.cardTitle}>Tamanhos da Pizza</h2>
+                  <p style={{fontSize: '0.875rem', color: '#6b7280', marginBottom: '1.5rem', marginTop: '-1rem'}}>
+                    Se o produto for uma pizza com tamanhos, adicione-os aqui. O sistema habilitará a escolha de tamanho na hora do pedido.
+                  </p>
+                  
+                  {tamanhos.map((t, index) => (
+                    <div key={index} style={{display: 'flex', gap: '1rem', marginBottom: '1rem', alignItems: 'center'}}>
+                      <input 
+                        type="text" 
+                        placeholder="Tamanho (Ex: P, M, G, Família)" 
+                        className={styles.input}
+                        value={t.nome_tamanho}
+                        onChange={(e) => {
+                            const nt = [...tamanhos];
+                            nt[index].nome_tamanho = e.target.value;
+                            setTamanhos(nt);
+                        }}
+                      />
+                      <div style={{ position: 'relative', width: '150px' }}>
+                          <span style={{ position: 'absolute', left: '1rem', top: '0.75rem', color: '#6b7280', fontSize: '0.875rem' }}>R$</span>
+                          <input 
+                              type="number" 
+                              step="0.01"
+                              className={styles.input} 
+                              style={{ paddingLeft: '2.5rem' }}
+                              placeholder="0.00"
+                              value={t.preco || ''}
+                              onChange={(e) => {
+                                  const nt = [...tamanhos];
+                                  nt[index].preco = parseFloat(e.target.value) || 0;
+                                  setTamanhos(nt);
+                              }}
+                          />
+                      </div>
+                      <button 
+                        type="button" 
+                        style={{background: '#ef4444', color: 'white', border: 'none', width: '36px', height: '36px', borderRadius: '4px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center'}}
+                        onClick={() => {
+                            setTamanhos(tamanhos.filter((_, i) => i !== index));
+                        }}
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  
+                  <button 
+                    type="button"
+                    style={{background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db', padding: '0.75rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.875rem', marginTop: '0.5rem', width: '100%', fontWeight: 500}}
+                    onClick={() => {
+                        setTamanhos([...tamanhos, { nome_tamanho: '', preco: 0, ordem: tamanhos.length }]);
+                    }}
+                  >
+                    + Adicionar Novo Tamanho
+                  </button>
+                </div>
+            )}
 
             <div className={styles.card}>
               <h2 className={styles.cardTitle}>Adicionais (Grupos)</h2>

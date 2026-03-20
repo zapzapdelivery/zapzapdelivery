@@ -115,8 +115,8 @@ function NovoGrupoContent() {
       max = 1;
     } else {
       if (min < 0) min = 0;
-      if (max <= 0) max = 1;
-      if (max < min) {
+      if (max < 0) max = 0;
+      if (max !== 0 && max < min) {
         warning('O máximo de opções não pode ser menor que o mínimo.');
         return;
       }
@@ -189,8 +189,8 @@ function NovoGrupoContent() {
       <main className={styles.content}>
         <AdminHeader />
 
-        <div className={styles.header}>
-          <Link href="/adicionais" className={styles.backLink}>
+        <div className={styles.header} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+          <Link href="/adicionais" className={styles.backLink} style={{ margin: '0 auto 1rem auto' }}>
             <ArrowLeft size={16} />
             Voltar para Adicionais
           </Link>
@@ -282,10 +282,11 @@ function NovoGrupoContent() {
                     type="number"
                     className={styles.input}
                     value={maxOpcoes}
-                    onChange={(e) => setMaxOpcoes(parseInt(e.target.value) || 0)}
-                    min={1}
+                    onChange={(e) => setMaxOpcoes(e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
+                    min={0}
                     disabled={tipoSelecao === 'unico'}
                   />
+                  <div style={{fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem'}}>Use 0 para sem limite</div>
                 </div>
               </div>
             </div>

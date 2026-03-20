@@ -98,7 +98,7 @@ export async function GET(request: Request, props: { params: Promise<{ slug: str
     // Buscar produtos ativos do estabelecimento
     const { data: prods, error: prodsError } = await supabaseAdmin
       .from('produtos')
-      .select('id, categoria_id, nome_produto, descricao, valor_base, imagem_produto_url, status_produto, permite_observacao')
+      .select('id, categoria_id, nome_produto, descricao, valor_base, imagem_produto_url, status_produto, permite_observacao, permite_venda_sem_estoque')
       .eq('estabelecimento_id', estabId)
       .eq('status_produto', 'ativo');
 
@@ -145,17 +145,14 @@ export async function GET(request: Request, props: { params: Promise<{ slug: str
 
     const now = new Date();
     const filtered = (prods || []).filter((p: any) => {
-      // Remover filtro de estoque para exibir todos os produtos ativos
-      /*
-      const qty = stockMap.get(String(p.id));
-      if (!(typeof qty === 'number') || qty <= 0) return false;
-      // Se houver variações e nenhuma variação tem estoque > 0, excluir
-      if (variationsByProduct.size > 0) {
-        const countWithStock = variationsByProduct.get(String(p.id)) || 0;
-        if (countWithStock <= 0) return false;
-      }
-      */
+      const allowsZeroStock = p.permite_venda_sem_estoque === true;
+      const qty = stockMap.get(String(p.id)) || 0;
       
+      // Se NÃO permite vender sem estoque E o estoque é <= 0, filtramos para fora.
+      if (!allowsZeroStock && qty <= 0) {
+          return false;
+      }
+
       if (typeof p.pre_venda === 'boolean' && p.pre_venda === true) return false;
       if (p.disponivel_em) {
         const dt = new Date(p.disponivel_em);
@@ -232,6 +229,22 @@ export async function GET(request: Request, props: { params: Promise<{ slug: str
       relsByProduct.set(pid, list);
     });
 
+    // Buscar tamanhos (pizzas, etc)
+    const { data: tamanhosRows, error: tamError } = await supabaseAdmin
+      .from('produtos_tamanhos')
+      .select('*')
+      .in('produto_id', productIds);
+
+    const tamanhosByProduct = new Map<string, any[]>();
+    if (!tamError && tamanhosRows) {
+      tamanhosRows.forEach((t: any) => {
+        const pid = String(t.produto_id);
+        const list = tamanhosByProduct.get(pid) || [];
+        list.push(t);
+        tamanhosByProduct.set(pid, list);
+      });
+    }
+
     const enriched = filtered.map((p: any) => {
       const pid = String(p.id);
       const relList = (relsByProduct.get(pid) || []).sort(
@@ -259,7 +272,8 @@ export async function GET(request: Request, props: { params: Promise<{ slug: str
       return {
         ...p,
         estoque_atual: stockMap.get(String(p.id)) || 0,
-        grupos_adicionais: gruposDoProduto
+        grupos_adicionais: gruposDoProduto,
+        tamanhos: (tamanhosByProduct.get(String(p.id)) || []).sort((a: any, b: any) => Number(a.ordem) - Number(b.ordem))
       };
     });
 

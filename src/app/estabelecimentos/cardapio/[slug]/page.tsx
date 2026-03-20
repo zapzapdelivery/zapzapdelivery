@@ -46,8 +46,10 @@ interface Produto {
   descricao?: string;
   valor_base: number;
   imagem_produto_url?: string;
+  imagem_produto_url?: string;
   permite_observacao?: boolean;
   estoque_atual?: number;
+  tamanhos?: any[];
 }
 
 interface Estabelecimento {
@@ -81,6 +83,7 @@ export default function CardapioPage() {
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<Produto | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [selectedSize, setSelectedSize] = useState<any>(null);
   const [selectedByGroup, setSelectedByGroup] = useState<Record<string, string[]>>({});
   const [observation, setObservation] = useState('');
   const [isMobile, setIsMobile] = useState(false);
@@ -490,6 +493,7 @@ export default function CardapioPage() {
     });
 
     setSelectedProduct(product);
+    setSelectedSize(product.tamanhos && product.tamanhos.length > 0 ? product.tamanhos[0] : null);
     setQuantity(1);
     setSelectedByGroup(initialSelection);
     setObservation('');
@@ -497,10 +501,16 @@ export default function CardapioPage() {
 
   const closeProductModal = () => {
     setSelectedProduct(null);
+    setSelectedSize(null);
     setObservation('');
   };
 
   const handleAddToCart = (product: Produto, qty: number = 1) => {
+    if (product.tamanhos && product.tamanhos.length > 0 && !selectedSize) {
+        success('Por favor, selecione um tamanho', 2500);
+        return;
+    }
+
     const grupoList = (product as any).grupos_adicionais || [];
     for (const g of grupoList as any[]) {
       if (g.obrigatorio) {
@@ -531,8 +541,15 @@ export default function CardapioPage() {
         counts.set(sid, (counts.get(sid) || 0) + 1);
       });
     });
-    const unitPrice = Number(product.valor_base) + extraTotal;
+    
+    const unitPrice = (selectedSize ? Number(selectedSize.preco) : Number(product.valor_base)) + extraTotal;
     let descricaoCart = product.descricao || '';
+    
+    if (selectedSize) {
+        const sizeText = `Tamanho: ${selectedSize.nome_tamanho}`;
+        descricaoCart = descricaoCart ? `${descricaoCart} | ${sizeText}` : sizeText;
+    }
+    
     if (counts.size > 0) {
       const extrasList = Array.from(counts.entries())
         .map(([id, qtd]) => {
@@ -697,7 +714,15 @@ export default function CardapioPage() {
                       <h3>{product.nome_produto}</h3>
                       <p>{product.descricao || 'Sem descrição disponível.'}</p>
                       <div className={styles.productFooter}>
-                        <span className={styles.price}>R$ {product.valor_base.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                        <span className={styles.price}>
+                          {(() => {
+                            if (product.tamanhos && product.tamanhos.length > 0) {
+                              const min = Math.min(...product.tamanhos.map((t: any) => Number(t.preco)));
+                              return `A partir de R$ ${min.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+                            }
+                            return `R$ ${product.valor_base.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+                          })()}
+                        </span>
                         <div className={styles.actionButtons}>
                           {(product.estoque_atual !== undefined && product.estoque_atual <= 0) ? (
                             <span className={styles.outOfStock}>Esgotado</span>
@@ -938,6 +963,11 @@ export default function CardapioPage() {
                     <h2 className={styles.modalTitle}>{selectedProduct.nome_produto}</h2>
                     <span className={styles.modalPrice}>
                       {(() => {
+                        let basePrice = Number(selectedProduct.valor_base);
+                        if (selectedSize) {
+                           basePrice = Number(selectedSize.preco);
+                        }
+                        
                         let extra = 0;
                         const groups = (selectedProduct as any).grupos_adicionais || [];
                         const idx = new Map<string, number>();
@@ -951,7 +981,7 @@ export default function CardapioPage() {
                             extra += idx.get(String(id)) || 0;
                           })
                         );
-                        const price = Number(selectedProduct.valor_base) + extra;
+                        const price = basePrice + extra;
                         return `R$ ${price.toLocaleString('pt-BR', {
                           minimumFractionDigits: 2,
                         })}`;
@@ -963,13 +993,47 @@ export default function CardapioPage() {
                     {selectedProduct.descricao || 'Sem descrição disponível.'}
                   </p>
 
+                  {selectedProduct.tamanhos && selectedProduct.tamanhos.length > 0 && (
+                     <div style={{ marginBottom: '2rem' }}>
+                        <div className={styles.sectionTitle}>
+                           Escolha o Tamanho
+                           <span style={{ fontWeight: 'normal', color: '#9ca3af', marginLeft: 'auto', fontSize: '0.8rem' }}>
+                             Obrigatório • Escolha 1
+                           </span>
+                        </div>
+                        {selectedProduct.tamanhos.map((tamanho: any) => (
+                           <div 
+                             key={tamanho.id} 
+                             className={styles.itemRow} 
+                             onClick={() => setSelectedSize(tamanho)}
+                             style={{ cursor: 'pointer' }}
+                           >
+                              <div className={styles.itemInfo}>
+                                <span className={styles.itemName}>{tamanho.nome_tamanho}</span>
+                                <span className={styles.itemPrice}>
+                                   R$ {Number(tamanho.preco).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </span>
+                              </div>
+                              <input
+                                type="radio"
+                                name="tamanho-pizza"
+                                checked={selectedSize?.id === tamanho.id}
+                                onChange={() => setSelectedSize(tamanho)}
+                                style={{ width: '20px', height: '20px', accentColor: '#22c55e' }}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                           </div>
+                        ))}
+                     </div>
+                  )}
+
                   <div className={styles.additionalItems}>
                     {Array.isArray((selectedProduct as any).grupos_adicionais) &&
                       (selectedProduct as any).grupos_adicionais.length > 0 && (
                         <>
                           {(selectedProduct as any).grupos_adicionais.map((grupo: any) => {
                             const current = selectedByGroup[grupo.grupo_id] || [];
-                            const max = Number(grupo.max_opcoes_resolvido) || 1;
+                            const max = typeof grupo.max_opcoes_resolvido === 'number' ? grupo.max_opcoes_resolvido : (Number(grupo.max_opcoes_resolvido) || 0);
                             const min = Number(grupo.min_opcoes) || 0;
                             const isUnico = String(grupo.tipo_selecao) === 'unico';
                             const totalSelecionado = current.length;
@@ -987,7 +1051,7 @@ export default function CardapioPage() {
                                 }
                                 const next = arr.filter((id) => id !== aid);
                                 if (next.length === arr.length) {
-                                  if (arr.length >= max) return prev;
+                                  if (max > 0 && arr.length >= max) return prev;
                                   next.push(aid);
                                 }
                                 return { ...prev, [grupo.grupo_id]: next };
@@ -999,7 +1063,7 @@ export default function CardapioPage() {
                                 const arr = prev[grupo.grupo_id]
                                   ? [...prev[grupo.grupo_id]]
                                   : [];
-                                if (arr.length >= max) return prev;
+                                if (max > 0 && arr.length >= max) return prev;
                                 arr.push(aid);
                                 return { ...prev, [grupo.grupo_id]: arr };
                               });
@@ -1023,7 +1087,7 @@ export default function CardapioPage() {
                                   {grupo.nome}
                                   <span style={{ fontWeight: 'normal', color: '#9ca3af', marginLeft: 'auto', fontSize: '0.8rem' }}>
                                     {grupo.obrigatorio ? 'Obrigatório • ' : ''}
-                                    {isUnico ? 'Escolha 1' : `Escolha até ${max}`}
+                                    {isUnico ? 'Escolha 1' : (max === 0 ? 'Sem limite' : `Escolha até ${max}`)}
                                   </span>
                                 </div>
                                 
@@ -1105,7 +1169,7 @@ export default function CardapioPage() {
                                           <button 
                                             className={styles.btnQty}
                                             onClick={() => handleIncrement(String(a.id))}
-                                            disabled={totalSelecionado >= max && count === 0}
+                                            disabled={(max > 0 && totalSelecionado >= max) && count === 0}
                                           >
                                             <Plus size={14} />
                                           </button>
@@ -1146,27 +1210,39 @@ export default function CardapioPage() {
                     </div>
                   )}
 
-                  <div style={{ marginBottom: '1rem' }}>
-                    <div className={styles.sectionTitle}>Quantidade</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '1rem', justifyContent: 'center' }}>
+                  <div style={{ 
+                    marginBottom: '1rem', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    paddingBottom: '1rem',
+                    borderBottom: '1px solid #f3f4f6'
+                  }}>
+                    <div style={{ fontWeight: 600, color: '#111827', fontSize: '1rem' }}>
+                      Quantidade
+                    </div>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <button
                         onClick={() => setQuantity(Math.max(1, quantity - 1))}
                         disabled={quantity <= 1}
                         className={styles.btnQty}
-                        style={{ width: '48px', height: '48px' }}
+                        style={{ width: '36px', height: '36px' }}
                       >
-                        <Minus size={20} />
+                        <Minus size={16} />
                       </button>
-                      <span style={{ fontSize: '1.5rem', fontWeight: '700', minWidth: '3rem', textAlign: 'center' }}>{quantity}</span>
+                      <span style={{ fontSize: '1.125rem', fontWeight: '600', minWidth: '2rem', textAlign: 'center' }}>
+                        {quantity}
+                      </span>
                       <button 
                         onClick={() => {
                           const max = selectedProduct.estoque_atual ?? 999;
                           setQuantity(Math.min(max, quantity + 1));
                         }}
                         className={styles.btnQty}
-                        style={{ width: '48px', height: '48px' }}
+                        style={{ width: '36px', height: '36px' }}
                       >
-                        <Plus size={20} />
+                        <Plus size={16} />
                       </button>
                     </div>
                   </div>
@@ -1185,6 +1261,11 @@ export default function CardapioPage() {
                     onClick={() => handleAddToCart(selectedProduct, quantity)}
                   >
                     ADICIONAR + {(() => {
+                      let basePrice = Number(selectedProduct.valor_base);
+                      if (selectedSize) {
+                         basePrice = Number(selectedSize.preco);
+                      }
+                      
                       let extra = 0;
                       const groups =
                         (selectedProduct as any).grupos_adicionais || [];
@@ -1199,7 +1280,7 @@ export default function CardapioPage() {
                           extra += idx.get(String(id)) || 0;
                         })
                       );
-                      const unitPrice = Number(selectedProduct.valor_base) + extra;
+                      const unitPrice = basePrice + extra;
                       const total = unitPrice * quantity;
                       return `R$ ${total.toLocaleString('pt-BR', {
                         minimumFractionDigits: 2,

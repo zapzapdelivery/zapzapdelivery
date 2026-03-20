@@ -44,6 +44,7 @@ export default function EditarProdutoPage() {
   const [descricao, setDescricao] = useState('');
   const [valor, setValor] = useState('');
   const [permiteObservacao, setPermiteObservacao] = useState(true);
+  const [permiteVendaSemEstoque, setPermiteVendaSemEstoque] = useState(false);
   const [status, setStatus] = useState(true); // true = ativo
   const [imagemUrl, setImagemUrl] = useState('');
   // const [categoriaId, setCategoriaId] = useState(''); // Deprecated
@@ -111,6 +112,7 @@ export default function EditarProdutoPage() {
             setDescricao(prod.descricao || '');
             setValor(prod.valor_base.toString().replace('.', ','));
             setPermiteObservacao(prod.permite_observacao);
+            setPermiteVendaSemEstoque(prod.permite_venda_sem_estoque === true);
             setStatus(prod.status_produto === 'ativo');
             setImagemUrl(prod.imagem_produto_url || '');
             // setCategoriaId(prod.categoria_id || ''); // Deprecated
@@ -191,6 +193,7 @@ export default function EditarProdutoPage() {
         descricao: descricao,
         valor_base: valorNumerico,
         permite_observacao: permiteObservacao,
+        permite_venda_sem_estoque: permiteVendaSemEstoque,
         status_produto: status ? 'ativo' : 'inativo',
         imagem_produto_url: imagemUrl || null,
         atualizado_em: new Date().toISOString()
@@ -271,7 +274,9 @@ export default function EditarProdutoPage() {
             {/* Status do Produto */}
           <div className={styles.card}>
             <div className={styles.switchContainer}>
-                  <span className={styles.switchTitle}>Status do Produto</span>
+                  <div className={styles.switchLabel}>
+                    <span className={styles.switchTitle}>Status do Produto</span>
+                  </div>
                   <label className={styles.switch}>
                       <input 
                           type="checkbox" 
@@ -280,6 +285,21 @@ export default function EditarProdutoPage() {
                       />
                       <span className={styles.slider}></span>
                   </label>
+              </div>
+
+              <div className={styles.switchContainer} style={{ borderTop: '1px solid #f3f4f6', paddingTop: '1.5rem', marginTop: '1.5rem' }}>
+                <div className={styles.switchLabel}>
+                  <span className={styles.switchTitle}>Venda sem Estoque</span>
+                  <span className={styles.switchDescription}>Permitir a venda deste produto mesmo quando o estoque for zero ou negativo</span>
+                </div>
+                <label className={styles.switch}>
+                  <input 
+                    type="checkbox" 
+                    checked={permiteVendaSemEstoque}
+                    onChange={(e) => setPermiteVendaSemEstoque(e.target.checked)}
+                  />
+                  <span className={styles.slider}></span>
+                </label>
               </div>
             </div>
 

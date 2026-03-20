@@ -55,7 +55,9 @@ interface Address {
 }
 
 interface CartItem extends Product {
+  cartItemId: string;
   quantity: number;
+  tamanho_selecionado?: string;
 }
 
 interface Category {
@@ -90,6 +92,12 @@ export default function NovoPedido() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [cart, setCart] = useState<CartItem[]>([]);
+  
+  // Sizes state
+  const [productSizes, setProductSizes] = useState<any[]>([]);
+  const [isSizeModalOpen, setIsSizeModalOpen] = useState(false);
+  const [productToSelectSize, setProductToSelectSize] = useState<Product | null>(null);
+  const [productToSelectSizeOptions, setProductToSelectSizeOptions] = useState<any[]>([]);
 
   // Initialize
   useEffect(() => {
@@ -126,7 +134,16 @@ export default function NovoPedido() {
           fetch('/api/categorias', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
         ]);
 
-        if (prodRes.data) setProducts(prodRes.data);
+        if (prodRes.data) {
+            setProducts(prodRes.data);
+            const prodIds = prodRes.data.map(p => p.id);
+            if (prodIds.length > 0) {
+               const { data: fetchSizes, error: tamErr } = await supabase.from('produtos_tamanhos').select('*').in('produto_id', prodIds);
+               if (!tamErr && fetchSizes) {
+                   setProductSizes(fetchSizes);
+               }
+            }
+        }
         if (custRes.data) setCustomers(custRes.data);
         if (catResp.ok) {
           const catData = await catResp.json();
@@ -175,19 +192,48 @@ export default function NovoPedido() {
   const total = subtotal + deliveryFee - discount;
 
   const handleAddToCart = (product: Product) => {
+    const pSizes = productSizes.filter(s => s.produto_id === product.id).sort((a,b) => a.ordem - b.ordem);
+    if (pSizes.length > 0) {
+        setProductToSelectSize(product);
+        setProductToSelectSizeOptions(pSizes);
+        setIsSizeModalOpen(true);
+        return;
+    }
+
     setCart(prev => {
-      const existing = prev.find(item => item.id === product.id);
+      const existing = prev.find(item => item.cartItemId === product.id);
       if (existing) {
-        return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+        return prev.map(item => item.cartItemId === product.id ? { ...item, quantity: item.quantity + 1 } : item);
       }
-      return [...prev, { ...product, quantity: 1 }];
+      return [...prev, { ...product, cartItemId: product.id, quantity: 1 }];
     });
     toast.success('Produto adicionado');
   };
 
-  const updateQuantity = (id: string, delta: number) => {
+  const confirmSizeSelection = (size: any) => {
+      if (!productToSelectSize) return;
+      setCart(prev => {
+          const itemKey = `${productToSelectSize.id}-${size.id}`;
+          const existing = prev.find(item => item.cartItemId === itemKey);
+          if (existing) {
+             return prev.map(item => item.cartItemId === itemKey ? { ...item, quantity: item.quantity + 1 } : item);
+          }
+          return [...prev, { 
+              ...productToSelectSize, 
+              cartItemId: itemKey, 
+              quantity: 1, 
+              valor_base: size.preco, 
+              tamanho_selecionado: size.nome_tamanho 
+          }];
+      });
+      setIsSizeModalOpen(false);
+      setProductToSelectSize(null);
+      toast.success('Pizza adicionada!');
+  };
+
+  const updateQuantity = (cartItemId: string, delta: number) => {
     setCart(prev => prev.map(item => {
-      if (item.id === id) {
+      if (item.cartItemId === cartItemId) {
         const newQty = Math.max(0, item.quantity + delta);
         return { ...item, quantity: newQty };
       }
@@ -346,7 +392,8 @@ export default function NovoPedido() {
         items: cart.map(item => ({
           produto_id: item.id,
           quantidade: item.quantity,
-          valor_unitario: item.valor_base
+          valor_unitario: item.valor_base,
+          observacao: item.tamanho_selecionado ? `Tamanho: ${item.tamanho_selecionado}` : null
         }))
       };
 
@@ -420,20 +467,29 @@ export default function NovoPedido() {
         </div>
 
         <div className={styles.productsGrid}>
-          {filteredProducts.map(product => (
-            <div key={product.id} className={styles.productCard} onClick={() => handleAddToCart(product)}>
-              <div className={styles.productThumb}>
-                <img src={product.imagem_produto_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=300&auto=format&fit=crop'} alt={product.nome_produto} className={styles.productThumbImg} />
+          {filteredProducts.map(product => {
+            const prodSiz = productSizes.filter(s => s.produto_id === product.id);
+            let displayPrice = `R$ ${product.valor_base.toFixed(2).replace('.', ',')}`;
+            if (prodSiz.length > 0) {
+               const minP = Math.min(...prodSiz.map(s => s.preco));
+               displayPrice = `A partir de R$ ${minP.toFixed(2).replace('.', ',')}`;
+            }
+
+            return (
+              <div key={product.id} className={styles.productCard} onClick={() => handleAddToCart(product)}>
+                <div className={styles.productThumb}>
+                  <img src={product.imagem_produto_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=300&auto=format&fit=crop'} alt={product.nome_produto} className={styles.productThumbImg} />
+                </div>
+                <div className={styles.productInfo}>
+                  <span className={styles.productName}>{product.nome_produto}</span>
+                  <span className={styles.productPrice}>{displayPrice}</span>
+                </div>
+                <button className={styles.addButton}>
+                  <Plus size={18} />
+                </button>
               </div>
-              <div className={styles.productInfo}>
-                <span className={styles.productName}>{product.nome_produto}</span>
-                <span className={styles.productPrice}>R$ {product.valor_base.toFixed(2).replace('.', ',')}</span>
-              </div>
-              <button className={styles.addButton}>
-                <Plus size={18} />
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -447,18 +503,21 @@ export default function NovoPedido() {
             <div className={styles.emptySelected}>Nenhum produto selecionado</div>
           ) : (
             cart.map(item => (
-              <div key={item.id} className={styles.cartItem}>
+              <div key={item.cartItemId} className={styles.cartItem}>
                 <img src={item.imagem_produto_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=300&auto=format&fit=crop'} alt={item.nome_produto} className={styles.cartItemImage} />
                 <div className={styles.cartItemInfo}>
-                  <p className={styles.cartItemName}>{item.nome_produto}</p>
+                  <p className={styles.cartItemName}>
+                    {item.nome_produto}
+                    {item.tamanho_selecionado && <span style={{display:'block', fontSize:'0.75rem', color:'#6b7280', marginTop:'2px'}}>(Tamanho: {item.tamanho_selecionado})</span>}
+                  </p>
                   <p className={styles.cartItemPrice}>R$ {item.valor_base.toFixed(2).replace('.', ',')}</p>
                 </div>
                 <div className={styles.quantitySelector}>
-                  <button className={styles.qtyBtn} onClick={() => updateQuantity(item.id, -1)}>
+                  <button className={styles.qtyBtn} onClick={() => updateQuantity(item.cartItemId, -1)}>
                     <Minus size={16} />
                   </button>
                   <span className={styles.qtyValue}>{item.quantity}</span>
-                  <button className={styles.qtyBtn} onClick={() => updateQuantity(item.id, 1)}>
+                  <button className={styles.qtyBtn} onClick={() => updateQuantity(item.cartItemId, 1)}>
                     <Plus size={16} />
                   </button>
                 </div>
@@ -671,6 +730,31 @@ export default function NovoPedido() {
         onSuccess={handleNewCustomerSuccess}
         establishmentId={establishmentId || ''}
       />
+
+      {isSizeModalOpen && productToSelectSize && (
+        <div className={styles.sizeModalOverlay}>
+          <div className={styles.sizeModalContent}>
+            <div className={styles.sizeModalHeader}>
+                <h3 className={styles.sizeModalTitle}>Escolha o Tamanho</h3>
+                <button type="button" onClick={() => setIsSizeModalOpen(false)} className={styles.closeBtn}>×</button>
+            </div>
+            <p className={styles.sizeModalSubtitle}>{productToSelectSize.nome_produto}</p>
+            
+            <div className={styles.sizeOptionsGrid}>
+              {productToSelectSizeOptions.map(sz => (
+                <button 
+                    key={sz.id} 
+                    className={styles.sizeOptionBtn}
+                    onClick={() => confirmSizeSelection(sz)}
+                >
+                  <span className={styles.sizeOptionName}>{sz.nome_tamanho}</span>
+                  <span className={styles.sizeOptionPrice}>R$ {sz.preco.toFixed(2).replace('.', ',')}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
