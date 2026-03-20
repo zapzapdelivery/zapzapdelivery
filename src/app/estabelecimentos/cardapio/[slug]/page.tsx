@@ -463,7 +463,6 @@ export default function CardapioPage() {
     )
   );
   const navCategorias = [{ id: TODOS_ID, nome_categoria: 'Todos' }, ...visibleCategorias];
-  const marqueeCategorias = [...navCategorias, ...navCategorias];
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -650,9 +649,9 @@ export default function CardapioPage() {
         {/* Categories Nav */}
         <nav className={styles.categoriesNav}>
           <div className={styles.categoriesTrack}>
-            {marqueeCategorias.map((cat, idx) => (
+            {navCategorias.map((cat) => (
               <button
-                key={`${cat.id}-${idx}`}
+                key={cat.id}
                 className={`${styles.navItem} ${activeCategory === cat.id ? styles.activeNav : ''}`}
                 onClick={() => handleCategoryClick(cat.id)}
                 type="button"
