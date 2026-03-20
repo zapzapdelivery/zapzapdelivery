@@ -46,7 +46,6 @@ interface Produto {
   descricao?: string;
   valor_base: number;
   imagem_produto_url?: string;
-  imagem_produto_url?: string;
   permite_observacao?: boolean;
   estoque_atual?: number;
   tamanhos?: any[];

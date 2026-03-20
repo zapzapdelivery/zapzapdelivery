@@ -58,6 +58,8 @@ interface CartItem extends Product {
   cartItemId: string;
   quantity: number;
   tamanho_selecionado?: string;
+  observacao_item?: string;
+  subitens?: { nome: string, preco: number, quantidade: number }[];
 }
 
 interface Category {
@@ -99,6 +101,12 @@ export default function NovoPedido() {
   const [productToSelectSize, setProductToSelectSize] = useState<Product | null>(null);
   const [productToSelectSizeOptions, setProductToSelectSizeOptions] = useState<any[]>([]);
 
+  // Advanced Modal State
+  const [selectedSizeId, setSelectedSizeId] = useState<string | null>(null);
+  const [selectedByGroup, setSelectedByGroup] = useState<Record<string, string[]>>({});
+  const [observation, setObservation] = useState('');
+  const [quantity, setQuantity] = useState(1);
+
   // Initialize
   useEffect(() => {
     async function init() {
@@ -135,13 +143,34 @@ export default function NovoPedido() {
         ]);
 
         if (prodRes.data) {
-            setProducts(prodRes.data);
             const prodIds = prodRes.data.map(p => p.id);
             if (prodIds.length > 0) {
-               const { data: fetchSizes, error: tamErr } = await supabase.from('produtos_tamanhos').select('*').in('produto_id', prodIds);
-               if (!tamErr && fetchSizes) {
-                   setProductSizes(fetchSizes);
-               }
+               const [tamRes, relRes, grpRes, addRes] = await Promise.all([
+                   supabase.from('produtos_tamanhos').select('*').in('produto_id', prodIds),
+                   supabase.from('produtos_grupos_adicionais').select('*').in('produto_id', prodIds),
+                   supabase.from('grupos_adicionais').select('*').eq('estabelecimento_id', estabId),
+                   supabase.from('adicionais').select('*').in('grupo_id', (await supabase.from('grupos_adicionais').select('id').eq('estabelecimento_id', estabId)).data?.map(g => g.id) || [])
+               ]);
+
+               if (tamRes.data) setProductSizes(tamRes.data);
+
+               const mappedProducts = prodRes.data.map(p => {
+                    const relations = (relRes.data || []).filter(r => r.produto_id === p.id).sort((a,b) => a.ordem_exibicao - b.ordem_exibicao);
+                    const pGrupos = relations.map(r => {
+                        const g = (grpRes.data || []).find(xg => xg.id === r.grupo_id);
+                        if (!g) return null;
+                        return {
+                            ...g,
+                            grupo_id: g.id,
+                            max_opcoes_resolvido: r.max_opcoes !== null ? r.max_opcoes : g.max_opcoes,
+                            adicionais: (addRes.data || []).filter(a => a.grupo_id === g.id && a.ativo).sort((a,b) => a.ordem_exibicao - b.ordem_exibicao)
+                        };
+                    }).filter(Boolean);
+                    return { ...p, grupos_adicionais: pGrupos };
+               });
+               setProducts(mappedProducts);
+            } else {
+               setProducts(prodRes.data);
             }
         }
         if (custRes.data) setCustomers(custRes.data);
@@ -186,16 +215,89 @@ export default function NovoPedido() {
     customer.telefone.includes(customerSearch)
   );
 
-  const subtotal = cart.reduce((acc, item) => acc + (item.valor_base * item.quantity), 0);
-  const deliveryFee = deliveryMethod === 'delivery' ? 5.00 : 0; // Taxa fixa de exemplo
+  const parseMoney = (value: any) => {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : 0;
+    }
+    const raw = String(value ?? '').trim();
+    if (!raw) return 0;
+    let s = raw.replace(/[^\d,.-]/g, '');
+    if (s.includes(',') && s.includes('.')) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      s = s.replace(',', '.');
+    }
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const getSizePrice = (size: any) => {
+    return parseMoney(
+      size?.preco ??
+        size?.preco_tamanho ??
+        size?.valor ??
+        size?.price ??
+        size?.valor_base ??
+        0
+    );
+  };
+
+  const subtotal = cart.reduce((acc, item) => acc + parseMoney(item.valor_base) * (Number(item.quantity) || 0), 0);
+  const deliveryFee = deliveryMethod === 'delivery' ? 5.00 : 0;
   const discount = 0;
   const total = subtotal + deliveryFee - discount;
 
+  const closeProductModal = () => {
+      setIsSizeModalOpen(false);
+      setProductToSelectSize(null);
+      setSelectedSizeId(null);
+      setSelectedByGroup({});
+      setObservation('');
+      setQuantity(1);
+  };
+
   const handleAddToCart = (product: Product) => {
     const pSizes = productSizes.filter(s => s.produto_id === product.id).sort((a,b) => a.ordem - b.ordem);
-    if (pSizes.length > 0) {
+    const hasAddons = (product as any).grupos_adicionais && (product as any).grupos_adicionais.length > 0;
+    
+    if (pSizes.length > 0 || hasAddons) {
         setProductToSelectSize(product);
         setProductToSelectSizeOptions(pSizes);
+        if (pSizes.length > 0) setSelectedSizeId(String(pSizes[0].id));
+        else setSelectedSizeId(null);
+        const initialSelectedByGroup: Record<string, string[]> = {};
+        const groups = ((product as any).grupos_adicionais || []) as any[];
+        groups.forEach((g: any) => {
+          const groupId = String(g.grupo_id || g.id);
+          const items = Array.isArray(g.adicionais) ? g.adicionais : [];
+          const freeIds = items
+            .filter((a: any) => parseMoney(a.preco) <= 0)
+            .map((a: any) => String(a.id));
+
+          if (freeIds.length === 0) return;
+
+          const max =
+            typeof g.max_opcoes_resolvido === 'number'
+              ? g.max_opcoes_resolvido
+              : Number(g.max_opcoes_resolvido) || 0;
+          const isUnico = String(g.tipo_selecao) === 'unico';
+
+          if (isUnico) {
+            initialSelectedByGroup[groupId] = [freeIds[0]];
+            return;
+          }
+
+          if (max > 0) {
+            initialSelectedByGroup[groupId] = freeIds.slice(0, max);
+            return;
+          }
+
+          initialSelectedByGroup[groupId] = freeIds;
+        });
+
+        setSelectedByGroup(initialSelectedByGroup);
+        setObservation('');
+        setQuantity(1);
         setIsSizeModalOpen(true);
         return;
     }
@@ -205,30 +307,81 @@ export default function NovoPedido() {
       if (existing) {
         return prev.map(item => item.cartItemId === product.id ? { ...item, quantity: item.quantity + 1 } : item);
       }
-      return [...prev, { ...product, cartItemId: product.id, quantity: 1 }];
+      return [...prev, { ...product, cartItemId: product.id, quantity: 1, observacao_item: '' }];
     });
     toast.success('Produto adicionado');
   };
 
-  const confirmSizeSelection = (size: any) => {
+  const confirmModalSelection = (sizeOverrideId?: string | null) => {
       if (!productToSelectSize) return;
+      const pSizes = productSizes.filter(s => s.produto_id === productToSelectSize.id);
+      const chosenSizeId = sizeOverrideId ?? selectedSizeId;
+      const chosenSize = chosenSizeId
+        ? productToSelectSizeOptions.find((s) => String(s.id) === String(chosenSizeId)) || null
+        : null;
+
+      if (pSizes.length > 0 && !chosenSize) {
+          toast.error('Escolha um tamanho.');
+          return;
+      }
+
+      const groups = (productToSelectSize as any).grupos_adicionais || [];
+      for (const group of groups) {
+          const sels = selectedByGroup[group.grupo_id] || [];
+          if (group.obrigatorio && sels.length < Math.max(1, Number(group.min_opcoes) || 1)) {
+              toast.error(`A seleção em "${group.nome}" é obrigatória.`);
+              return;
+          }
+      }
+
+      let extraPrice = 0;
+      let subitensArr: { nome: string, preco: number, quantidade: number }[] = [];
+      const idx = new Map<string, any>();
+      groups.forEach((g: any) =>
+          (g.adicionais || []).forEach((a: any) =>
+              idx.set(String(a.id), a)
+          )
+      );
+      Object.values(selectedByGroup).forEach((ids) =>
+          ids.forEach((id) => {
+              const aDesc = idx.get(String(id));
+              if (aDesc) {
+                  const parsed = parseMoney(aDesc.preco);
+                  extraPrice += parsed;
+                  const eIdx = subitensArr.findIndex(x => x.nome === aDesc.nome);
+                  if (eIdx > -1) subitensArr[eIdx].quantidade += 1;
+                  else subitensArr.push({ nome: aDesc.nome, preco: parsed, quantidade: 1 });
+              }
+          })
+      );
+
+      const fallbackBase = parseMoney(productToSelectSize.valor_base);
+      const sizePrice = chosenSize ? getSizePrice(chosenSize) : 0;
+      const basePrice = chosenSize ? (sizePrice > 0 ? sizePrice : fallbackBase) : fallbackBase;
+      const computedBasePrice = basePrice + extraPrice;
+      const sizeNameStr = chosenSize ? String(chosenSize.nome_tamanho || '') : undefined;
+
+      // Unique cart key to stack strictly identical selections
+      const subItemStr = subitensArr.sort((a,b) => a.nome.localeCompare(b.nome)).map(x => `${x.quantidade}x${x.nome}`).join('|');
+      const itemKey = `${productToSelectSize.id}-${chosenSize?.id || 'nosize'}-${subItemStr}-${observation}`;
+
       setCart(prev => {
-          const itemKey = `${productToSelectSize.id}-${size.id}`;
           const existing = prev.find(item => item.cartItemId === itemKey);
           if (existing) {
-             return prev.map(item => item.cartItemId === itemKey ? { ...item, quantity: item.quantity + 1 } : item);
+             return prev.map(item => item.cartItemId === itemKey ? { ...item, quantity: item.quantity + quantity } : item);
           }
           return [...prev, { 
               ...productToSelectSize, 
               cartItemId: itemKey, 
-              quantity: 1, 
-              valor_base: size.preco, 
-              tamanho_selecionado: size.nome_tamanho 
+              quantity: quantity, 
+              valor_base: computedBasePrice, 
+              tamanho_selecionado: sizeNameStr,
+              observacao_item: observation,
+              subitens: subitensArr
           }];
       });
-      setIsSizeModalOpen(false);
-      setProductToSelectSize(null);
-      toast.success('Pizza adicionada!');
+      closeProductModal();
+      toast.success('Item adicionado!');
   };
 
   const updateQuantity = (cartItemId: string, delta: number) => {
@@ -389,12 +542,22 @@ export default function NovoPedido() {
         taxa_entrega: deliveryFee,
         desconto: discount,
         total,
-        items: cart.map(item => ({
-          produto_id: item.id,
-          quantidade: item.quantity,
-          valor_unitario: item.valor_base,
-          observacao: item.tamanho_selecionado ? `Tamanho: ${item.tamanho_selecionado}` : null
-        }))
+        items: cart.map(item => {
+          let addonsLine = item.subitens && item.subitens.length > 0 
+              ? item.subitens.map(s => `${s.quantidade > 1 ? s.quantidade+'x ' : ''}${s.nome}`).join(', ') 
+              : '';
+          let finalObsArr = [];
+          if (item.tamanho_selecionado) finalObsArr.push(`Tamanho: ${item.tamanho_selecionado}`);
+          if (addonsLine) finalObsArr.push(`+ ${addonsLine}`);
+          if (item.observacao_item) finalObsArr.push(`Obs: ${item.observacao_item}`);
+          
+          return {
+            produto_id: item.id,
+            quantidade: item.quantity,
+            valor_unitario: item.valor_base,
+            observacao: finalObsArr.length > 0 ? finalObsArr.join(' | ') : null
+          };
+        })
       };
 
       const resp = await fetch('/api/pedidos/novo', {
@@ -510,7 +673,7 @@ export default function NovoPedido() {
                     {item.nome_produto}
                     {item.tamanho_selecionado && <span style={{display:'block', fontSize:'0.75rem', color:'#6b7280', marginTop:'2px'}}>(Tamanho: {item.tamanho_selecionado})</span>}
                   </p>
-                  <p className={styles.cartItemPrice}>R$ {item.valor_base.toFixed(2).replace('.', ',')}</p>
+                  <p className={styles.cartItemPrice}>R$ {parseMoney(item.valor_base).toFixed(2).replace('.', ',')}</p>
                 </div>
                 <div className={styles.quantitySelector}>
                   <button className={styles.qtyBtn} onClick={() => updateQuantity(item.cartItemId, -1)}>
@@ -736,7 +899,7 @@ export default function NovoPedido() {
           <div className={styles.sizeModalContent}>
             <div className={styles.sizeModalHeader}>
                 <h3 className={styles.sizeModalTitle}>Escolha o Tamanho</h3>
-                <button type="button" onClick={() => setIsSizeModalOpen(false)} className={styles.closeBtn}>×</button>
+                <button type="button" onClick={closeProductModal} className={styles.closeBtn}>×</button>
             </div>
             <p className={styles.sizeModalSubtitle}>{productToSelectSize.nome_produto}</p>
             
@@ -744,14 +907,109 @@ export default function NovoPedido() {
               {productToSelectSizeOptions.map(sz => (
                 <button 
                     key={sz.id} 
-                    className={styles.sizeOptionBtn}
-                    onClick={() => confirmSizeSelection(sz)}
+                    className={`${styles.sizeOptionBtn} ${selectedSizeId === String(sz.id) ? styles.sizeOptionBtnSelected : ''}`}
+                    onClick={() => {
+                      const hasAddonGroups =
+                        Array.isArray((productToSelectSize as any).grupos_adicionais) &&
+                        (productToSelectSize as any).grupos_adicionais.length > 0;
+                      if (hasAddonGroups) {
+                        setSelectedSizeId(String(sz.id));
+                        return;
+                      }
+                      confirmModalSelection(String(sz.id));
+                    }}
+                    type="button"
                 >
                   <span className={styles.sizeOptionName}>{sz.nome_tamanho}</span>
-                  <span className={styles.sizeOptionPrice}>R$ {sz.preco.toFixed(2).replace('.', ',')}</span>
+                  <span className={styles.sizeOptionPrice}>R$ {getSizePrice(sz).toFixed(2).replace('.', ',')}</span>
                 </button>
               ))}
             </div>
+
+            {Array.isArray((productToSelectSize as any).grupos_adicionais) &&
+              (productToSelectSize as any).grupos_adicionais.length > 0 && (
+                <div className={styles.addonsSection}>
+                  {(productToSelectSize as any).grupos_adicionais.map((grupo: any) => {
+                    const groupId = String(grupo.grupo_id || grupo.id);
+                    const current = selectedByGroup[groupId] || [];
+                    const max =
+                      typeof grupo.max_opcoes_resolvido === 'number'
+                        ? grupo.max_opcoes_resolvido
+                        : Number(grupo.max_opcoes_resolvido) || 0;
+                    const isUnico = String(grupo.tipo_selecao) === 'unico';
+
+                    const toggle = (aid: string) => {
+                      setSelectedByGroup((prev) => {
+                        const arr = prev[groupId] ? [...prev[groupId]] : [];
+                        if (isUnico) {
+                          return { ...prev, [groupId]: [aid] };
+                        }
+                        const next = arr.filter((id) => id !== aid);
+                        if (next.length === arr.length) {
+                          if (max > 0 && arr.length >= max) return prev;
+                          next.push(aid);
+                        }
+                        return { ...prev, [groupId]: next };
+                      });
+                    };
+
+                    return (
+                      <div key={groupId} className={styles.addonGroup}>
+                        <div className={styles.addonGroupTitle}>
+                          <span>{grupo.nome}</span>
+                          <span className={styles.addonGroupHint}>
+                            {grupo.obrigatorio ? 'Obrigatório • ' : ''}
+                            {isUnico ? 'Escolha 1' : max === 0 ? 'Sem limite' : `Escolha até ${max}`}
+                          </span>
+                        </div>
+
+                        {(grupo.adicionais || []).map((a: any) => {
+                          const aid = String(a.id);
+                          const preco = parseMoney(a.preco);
+                          const checked = isUnico ? current[0] === aid : current.includes(aid);
+
+                          return (
+                            <button
+                              type="button"
+                              key={aid}
+                              className={styles.addonItemRow}
+                              onClick={() => toggle(aid)}
+                            >
+                              <span className={styles.addonItemName}>{a.nome}</span>
+                              <span className={styles.addonItemRight}>
+                                <span className={styles.addonItemPrice}>
+                                  {preco > 0 ? `+ R$ ${preco.toFixed(2).replace('.', ',')}` : 'Grátis'}
+                                </span>
+                                <input
+                                  type={isUnico ? 'radio' : 'checkbox'}
+                                  name={`grupo-${groupId}`}
+                                  checked={checked}
+                                  onChange={() => toggle(aid)}
+                                  style={{ width: '18px', height: '18px', accentColor: '#22c55e' }}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+
+                  <div className={styles.sizeModalFooter}>
+                    <button type="button" className={styles.sizeModalCancelBtn} onClick={closeProductModal}>
+                      Fechar
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.sizeModalConfirmBtn}
+                      onClick={() => confirmModalSelection()}
+                    >
+                      Adicionar
+                    </button>
+                  </div>
+                </div>
+              )}
           </div>
         </div>
       )}

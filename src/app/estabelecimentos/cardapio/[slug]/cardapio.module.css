@@ -790,13 +790,17 @@
 
 .modalHeader {
   margin-bottom: 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 .modalTitle {
   font-size: 1.5rem;
   font-weight: 700;
   color: #111827;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0;
   line-height: 1.2;
 }
 
@@ -804,7 +808,8 @@
   font-size: 1.25rem;
   font-weight: 600;
   color: #22c55e;
-  margin-bottom: 1rem;
+  margin-bottom: 0;
+  white-space: nowrap;
 }
 
 .modalDescription {

@@ -323,7 +323,7 @@ export default function AdicionaisPage() {
 
         <div className={styles.pageHeader}>
           <div>
-            <Link href="/" className={styles.backLink}>← Voltar para Dashboard</Link>
+            <Link href="/produtos" className={styles.backLink}>← Voltar para Produtos</Link>
             <h1 className={styles.title}>Adicionais</h1>
             <p className={styles.subtitle}>Gerencie grupos e itens de adicionais</p>
           </div>
