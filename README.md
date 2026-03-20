@@ -11,7 +11,7 @@ Sistema SaaS de delivery com painel administrativo (PDV), cardápio público e i
 
 1. Copie as variáveis de ambiente:
 
-   - Crie `.env.local` baseado em `.env.example`
+   - Crie `.env.local` com as variáveis descritas em `docs/DEPLOY.md` (não versionar arquivos `.env*`)
 
 2. Instale dependências e rode:
 
@@ -25,4 +25,3 @@ Abra `http://localhost:3000`.
 ## Deploy (GitHub + Vercel)
 
 Veja [DEPLOY.md](file:///c:/zapzapdelivery2/docs/DEPLOY.md).
-

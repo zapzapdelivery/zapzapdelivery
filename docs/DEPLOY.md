@@ -24,6 +24,7 @@ git push -u origin main
 2. Importe o repositório do GitHub
 3. Framework: **Next.js** (auto-detect)
 4. Configure as variáveis de ambiente (Project → Settings → Environment Variables):
+   - Não versionar arquivos `.env*` no GitHub
 
 ### Variáveis obrigatórias
 
@@ -47,4 +48,3 @@ git push -u origin main
 
 - Verificar status: `/api/debug-status` e `/api/version`
 - Validar login, PDV e cardápio público
-
