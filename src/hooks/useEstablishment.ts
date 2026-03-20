@@ -12,68 +12,51 @@ export function useEstablishment() {
     let mounted = true;
 
     async function fetchEstablishment() {
-      const establishmentSlug = window.location.pathname.split('/estabelecimentos/cardapio/')[1]?.split('/')[0];
       try {
         setLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token || null;
+        const user = session?.user || null;
 
         if (!mounted) return;
 
-        if (!user) {
+        if (!token || !user) {
           setLoading(false);
           return;
         }
 
-        // Check for Super Admin
-        const isSuper = user.email === 'everaldozs@gmail.com';
-        if (mounted) setIsSuperAdmin(isSuper);
+        const email = String(user.email || '').toLowerCase();
+        const isSuper = email === 'everaldozs@gmail.com' || email === 'everaldozszap@gmail.com';
+        setIsSuperAdmin(isSuper);
 
-        // Busca o perfil do usuário para obter o estabelecimento_id
-        const { data: profile, error: profileError } = await supabase
-          .from('usuarios')
-          .select('estabelecimento_id')
-          .eq('auth_user_id', user.id)
-          .maybeSingle();
+        const roleRes = await fetch('/api/me/role', {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store'
+        });
+        const roleData = await roleRes.json().catch(() => ({}));
 
         if (!mounted) return;
 
-        if (profileError) {
-          console.error('Erro ao buscar perfil do usuário:', profileError);
-          setError('Erro ao buscar perfil do usuário');
-          setLoading(false);
-          return;
-        }
+        const estabId = (roleData?.establishment_id as string | null) ?? null;
+        const estabName = String(roleData?.establishment_name || '').trim();
 
-        if (!profile?.estabelecimento_id) {
-          if (isSuper) {
-            // Super Admin without establishment: allow access
-            setEstablishmentName('Visão Super Admin');
-            setLoading(false);
+        if (!estabId) {
+          if (String(roleData?.role || '').toLowerCase() === 'admin' || isSuper) {
+            setEstablishmentId(null);
+            setEstablishmentName(estabName || 'Visão Super Admin');
+            setError(null);
             return;
           }
-          console.warn('Usuário logado sem estabelecimento vinculado. ID:', user.id);
+
           setError('Usuário sem estabelecimento vinculado');
-          setLoading(false);
+          setEstablishmentId(null);
+          setEstablishmentName('');
           return;
         }
 
-        setEstablishmentId(profile.estabelecimento_id);
-
-        // Busca o nome do estabelecimento via API para evitar erros de RLS
-        const { data: { session } } = await supabase.auth.getSession();
-        const response = await fetch(`/api/estabelecimentos/${profile.estabelecimento_id}`, {
-            headers: { Authorization: `Bearer ${session?.access_token}` }
-        });
-
-        if (!mounted) return;
-
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          console.error('Erro ao buscar dados do estabelecimento via API:', errData.error || response.statusText);
-        } else {
-          const estab = await response.json();
-          setEstablishmentName(estab.nome_estabelecimento || estab.name);
-        }
+        setEstablishmentId(estabId);
+        setEstablishmentName(estabName);
+        setError(null);
 
       } catch (err: any) {
         if (mounted) {

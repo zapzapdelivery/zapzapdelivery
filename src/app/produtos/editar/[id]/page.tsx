@@ -64,39 +64,27 @@ export default function EditarProdutoPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token || null;
+        if (!token) {
           router.push('/login');
           return;
         }
 
-        // Get User Profile to find Establishment
-        const { data: profile } = await supabase
-          .from('usuarios')
-          .select('estabelecimento_id')
-          .eq('auth_user_id', user.id)
-          .maybeSingle();
+        const roleRes = await fetch('/api/me/role', {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store'
+        });
+        const roleData = await roleRes.json().catch(() => ({}));
+        const estabId = (roleData?.establishment_id as string | null) ?? null;
 
-        const estabId = profile?.estabelecimento_id;
-        
         if (!estabId) {
           toastError('Estabelecimento não encontrado para este usuário.');
           return;
         }
 
         setEstabelecimentoId(estabId);
-
-        // Fetch Establishment Details from API to bypass RLS
-        const { data: { session } } = await supabase.auth.getSession();
-        const response = await fetch(`/api/estabelecimentos/${estabId}`, {
-            headers: { Authorization: `Bearer ${session?.access_token}` }
-        });
-        
-        if (response.ok) {
-          const estab = await response.json();
-          setEstablishmentName(estab.nome_estabelecimento || estab.name);
-        }
+        setEstablishmentName(roleData?.establishment_name || '');
 
         // Fetch Categories
         const { data: cats } = await supabase

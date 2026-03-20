@@ -112,14 +112,12 @@ export default function ProdutosPage() {
         // But since we are moving to API for products, let's get establishmentId from profile for client-side category filtering
         // OR rely on API for products.
         
-        // Let's keep categories logic as is for now, but fetch Products via API.
-        const { data: profile } = await supabase
-          .from('usuarios')
-          .select('estabelecimento_id')
-          .eq('auth_user_id', session.user.id)
-          .maybeSingle();
-        
-        const estabId = profile?.estabelecimento_id;
+        const roleRes = await fetch('/api/me/role', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          cache: 'no-store'
+        });
+        const roleData = await roleRes.json().catch(() => ({}));
+        const estabId = (roleData?.establishment_id as string | null) ?? null;
         setEstablishmentId(estabId);
 
         if (estabId) {
@@ -461,7 +459,6 @@ export default function ProdutosPage() {
                           </td>
                           <td className={styles.nameCell}>
                             <div className={styles.productName}>{product.nome_produto}</div>
-                            <div className={styles.productCode}>#{product.id.slice(0, 8).toUpperCase()}</div>
                           </td>
                           <td>{getCategoryName(product.categoria_id)}</td>
                           <td className={styles.priceCell}>{formatCurrency(product.valor_base)}</td>

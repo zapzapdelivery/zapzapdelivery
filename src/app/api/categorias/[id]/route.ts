@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin, getAuthContext } from '@/lib/server-auth';
 
-export async function GET(request: Request) {
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   if (!supabaseAdmin) {
     return NextResponse.json({ error: 'Supabase Admin client not configured' }, { status: 500 });
   }
@@ -12,34 +12,31 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: ctx.error }, { status: ctx.status || 401 });
     }
 
-    // Permitir apenas admin/estabelecimento/super admin
     const allowed = ctx.role === 'admin' || ctx.role === 'estabelecimento' || ctx.isSuperAdmin;
     if (!allowed) {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
 
-    let query = supabaseAdmin
-      .from('categorias')
-      .select('id, nome_categoria, estabelecimento_id, status_categoria')
-      .order('nome_categoria', { ascending: true });
+    const { id } = await context.params;
+    let query = (supabaseAdmin as any).from('categorias').select('*').eq('id', id);
 
     if (!ctx.isSuperAdmin && ctx.establishmentId) {
       query = query.eq('estabelecimento_id', ctx.establishmentId);
     }
 
-    const { data, error } = await query;
+    const { data, error } = await query.single();
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json(data || []);
+    return NextResponse.json(data, { status: 200 });
   } catch (e: any) {
     const message = e?.message || 'Internal Server Error';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
-export async function POST(request: Request) {
+export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   if (!supabaseAdmin) {
     return NextResponse.json({ error: 'Supabase Admin client not configured' }, { status: 500 });
   }
@@ -55,6 +52,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
 
+    const { id } = await context.params;
     const body = await request.json().catch(() => ({}));
 
     const nome = String(body?.nome_categoria || '').trim();
@@ -65,12 +63,11 @@ export async function POST(request: Request) {
     const estabFromBody = typeof body?.estabelecimento_id === 'string' ? body.estabelecimento_id : null;
     const estabelecimento_id = ctx.isSuperAdmin ? (estabFromBody ?? ctx.establishmentId) : ctx.establishmentId;
 
-    if (!estabelecimento_id) {
+    if (!estabelecimento_id && !ctx.isSuperAdmin) {
       return NextResponse.json({ error: 'Estabelecimento não identificado' }, { status: 400 });
     }
 
-    const payload = {
-      estabelecimento_id,
+    const payload: Record<string, any> = {
       nome_categoria: nome,
       descricao: typeof body?.descricao === 'string' ? body.descricao : '',
       status_categoria: String(body?.status_categoria || 'ativo') === 'inativo' ? 'inativo' : 'ativo',
@@ -80,19 +77,58 @@ export async function POST(request: Request) {
       ordem_exibicao: Number.isFinite(Number(body?.ordem_exibicao)) ? Number(body.ordem_exibicao) : 0
     };
 
-    const { data, error } = await (supabaseAdmin as any)
-      .from('categorias')
-      .insert([payload])
-      .select('*')
-      .single();
+    if (ctx.isSuperAdmin && estabelecimento_id) {
+      payload.estabelecimento_id = estabelecimento_id;
+    }
 
+    let query = (supabaseAdmin as any).from('categorias').update(payload).eq('id', id);
+    if (!ctx.isSuperAdmin && ctx.establishmentId) {
+      query = query.eq('estabelecimento_id', ctx.establishmentId);
+    }
+
+    const { error } = await query;
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json(data, { status: 201 });
+    return NextResponse.json({ ok: true }, { status: 200 });
   } catch (e: any) {
     const message = e?.message || 'Internal Server Error';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
+  if (!supabaseAdmin) {
+    return NextResponse.json({ error: 'Supabase Admin client not configured' }, { status: 500 });
+  }
+
+  try {
+    const ctx = await getAuthContext(request);
+    if (ctx.error) {
+      return NextResponse.json({ error: ctx.error }, { status: ctx.status || 401 });
+    }
+
+    const allowed = ctx.role === 'admin' || ctx.role === 'estabelecimento' || ctx.isSuperAdmin;
+    if (!allowed) {
+      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
+    }
+
+    const { id } = await context.params;
+    let query = (supabaseAdmin as any).from('categorias').delete().eq('id', id);
+    if (!ctx.isSuperAdmin && ctx.establishmentId) {
+      query = query.eq('estabelecimento_id', ctx.establishmentId);
+    }
+
+    const { error } = await query;
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch (e: any) {
+    const message = e?.message || 'Internal Server Error';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+

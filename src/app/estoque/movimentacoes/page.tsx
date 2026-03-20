@@ -118,21 +118,19 @@ export default function StockMovementsPage() {
     const init = async () => {
       try {
         setLoading(true);
-        const { data: auth } = await supabase.auth.getUser();
-        const user = auth.user;
-
-        if (!user) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token || null;
+        if (!token) {
           router.push('/login');
           return;
         }
 
-        const { data: profile } = await supabase
-          .from('usuarios')
-          .select('estabelecimento_id')
-          .eq('auth_user_id', user.id)
-          .maybeSingle();
-
-        const id = profile?.estabelecimento_id as string | null;
+        const roleRes = await fetch('/api/me/role', {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store'
+        });
+        const roleData = await roleRes.json().catch(() => ({}));
+        const id = (roleData?.establishment_id as string | null) ?? null;
 
         if (!id) {
           toastError('Estabelecimento não encontrado para este usuário.');

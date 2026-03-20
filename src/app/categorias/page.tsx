@@ -218,19 +218,21 @@ export default function CategoriasPage() {
         await deleteFile(itemToDelete.imagem_categoria_url, 'categories');
       }
 
-      // 2. Delete from DB
-      let query = supabase
-        .from('categorias')
-        .delete()
-        .eq('id', id);
-      
-      if (establishmentId) {
-        query = query.eq('estabelecimento_id', establishmentId); // Enforce ownership
+      // 2. Delete from DB via API (bypass RLS + enforce ownership server-side)
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || null;
+      if (!token) {
+        throw new Error('Sessão inválida');
       }
 
-      const { error } = await query;
-
-      if (error) throw error;
+      const res = await fetch(`/api/categorias/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error || 'Erro ao excluir categoria');
+      }
 
       await logAction({
         action: 'DELETE',

@@ -58,22 +58,27 @@ export default function EditarCategoriaPage() {
         setLoading(true);
 
         if (id) {
-          const { data: cat, error: catError } = await supabase
-            .from('categorias')
-            .select('*')
-            .eq('id', id)
-            .eq('estabelecimento_id', hookEstabId) // Enforce ownership
-            .single();
-
-          if (catError) throw catError;
-
-          if (cat) {
-            setNome(cat.nome_categoria);
-            setDescricao(cat.descricao || '');
-            setStatus(cat.status_categoria === 'ativo');
-            setImagemUrl(cat.imagem_categoria_url || '');
-            setOrdemExibicao(cat.ordem_exibicao || 0);
+          const { data: { session } } = await supabase.auth.getSession();
+          const token = session?.access_token || null;
+          if (!token) {
+            router.push('/login');
+            return;
           }
+
+          const res = await fetch(`/api/categorias/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+            cache: 'no-store'
+          });
+          const cat = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            throw new Error(cat?.error || 'Erro ao carregar categoria');
+          }
+
+          setNome(cat.nome_categoria || '');
+          setDescricao(cat.descricao || '');
+          setStatus(cat.status_categoria === 'ativo');
+          setImagemUrl(cat.imagem_categoria_url || '');
+          setOrdemExibicao(cat.ordem_exibicao || 0);
         }
 
       } catch (err) {
@@ -102,6 +107,12 @@ export default function EditarCategoriaPage() {
 
     try {
       setSaving(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || null;
+      if (!token) {
+        router.push('/login');
+        return;
+      }
 
       const payload = {
         estabelecimento_id: hookEstabId,
@@ -112,13 +123,15 @@ export default function EditarCategoriaPage() {
         ordem_exibicao: ordemExibicao, 
       };
 
-      const { error } = await supabase
-        .from('categorias')
-        .update(payload)
-        .eq('id', id)
-        .eq('estabelecimento_id', hookEstabId); // Enforce ownership
-      
-      if (error) throw error;
+      const res = await fetch(`/api/categorias/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error || 'Erro ao salvar categoria');
+      }
       
       await logAction({
         action: 'UPDATE',

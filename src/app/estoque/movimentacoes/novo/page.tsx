@@ -51,40 +51,27 @@ function NovaMovimentacaoContent() {
       try {
         setLoading(true);
 
-        const { data: auth } = await supabase.auth.getUser();
-        const user = auth.user;
-
-        if (!user) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token || null;
+        if (!token) {
           router.push('/login');
           return;
         }
 
-        const { data: profile } = await supabase
-          .from('usuarios')
-          .select('estabelecimento_id')
-          .eq('auth_user_id', user.id)
-          .maybeSingle();
+        const roleRes = await fetch('/api/me/role', {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store'
+        });
+        const roleData = await roleRes.json().catch(() => ({}));
 
-        const estabId = profile?.estabelecimento_id as string | null;
-
+        const estabId = (roleData?.establishment_id as string | null) ?? null;
         if (!estabId) {
           toastError('Estabelecimento não encontrado para este usuário.');
           return;
         }
 
         setEstablishmentId(estabId);
-
-        const { data: sessionData } = await supabase.auth.getSession();
-        const response = await fetch(`/api/estabelecimentos/${estabId}`, {
-          headers: { Authorization: `Bearer ${sessionData.session?.access_token}` }
-        });
-
-        if (response.ok) {
-          const estab = await response.json();
-          setEstablishmentName(
-            estab.nome_estabelecimento || estab.name || 'Estabelecimento'
-          );
-        }
+        setEstablishmentName(roleData?.establishment_name || 'Estabelecimento');
 
         const { data: prods, error: prodError } = await supabase
           .from('produtos')
